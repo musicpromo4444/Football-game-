@@ -7,6 +7,30 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 type Point = { x: number; y: number }
+type Formation = "4-3-3" | "4-4-2" | "3-5-2" | "4-2-3-1"
+type TeamInstruction = "Gegenpress" | "Possession" | "Counter Attack" | "Low Block" | "Direct Play"
+
+const formationSlots: Record<Formation, Point[]> = {
+  "4-3-3": [{ x: 28, y: 30 }, { x: 72, y: 30 }, { x: 35, y: 55 }, { x: 65, y: 55 }, { x: 50, y: 76 }],
+  "4-4-2": [{ x: 25, y: 32 }, { x: 75, y: 32 }, { x: 28, y: 55 }, { x: 72, y: 55 }, { x: 50, y: 76 }],
+  "3-5-2": [{ x: 30, y: 36 }, { x: 70, y: 36 }, { x: 50, y: 48 }, { x: 27, y: 61 }, { x: 73, y: 61 }],
+  "4-2-3-1": [{ x: 25, y: 34 }, { x: 75, y: 34 }, { x: 38, y: 58 }, { x: 62, y: 58 }, { x: 50, y: 76 }],
+}
+
+const instructionEffects: Record<TeamInstruction, { tempo: number; width: number; line: number }> = {
+  Gegenpress: { tempo: 1.35, width: 1.12, line: -7 },
+  Possession: { tempo: 0.72, width: 0.92, line: 2 },
+  "Counter Attack": { tempo: 1.2, width: 1.08, line: -3 },
+  "Low Block": { tempo: 0.62, width: 0.86, line: 10 },
+  "Direct Play": { tempo: 1.08, width: 1.02, line: -1 },
+}
+
+function loadTactics(): { formation: Formation; instruction: TeamInstruction } {
+  if (typeof window === "undefined") return { formation: "4-3-3", instruction: "Possession" }
+  const formation = (localStorage.getItem("pitchside-formation") as Formation) || "4-3-3"
+  const instruction = (localStorage.getItem("pitchside-instruction") as TeamInstruction) || "Possession"
+  return { formation, instruction }
+}
 
 const teammates: Point[] = [
   { x: 30, y: 30 },
@@ -48,7 +72,8 @@ export function MatchCanvas() {
   const [passes, setPasses] = useState(0)
   const [actions, setActions] = useState(0)
   const [message, setMessage] = useState("Swipe from the ball to pass")
-  const [positions, setPositions] = useState(() => playerArchetypes.map(({ x, y }) => ({ x, y })))
+  const [tactics] = useState(loadTactics)
+  const [positions, setPositions] = useState(() => formationSlots[loadTactics().formation].map((p) => ({ ...p })))
   const pitchRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -60,6 +85,34 @@ export function MatchCanvas() {
   useEffect(() => {
     if (time === 0) setRunning(false)
   }, [time])
+
+  useEffect(() => {
+    if (!running) return
+    const base = formationSlots[tactics.formation]
+    const effect = instructionEffects[tactics.instruction]
+    const id = setInterval(() => {
+      setPositions((current) => current.map((p, i) => {
+        const player = playerArchetypes[i]
+        const anchor = base[i] || p
+        const t = Date.now() / 1000
+        let x = anchor.x + Math.sin(t * 0.55 + i) * 3.5 * effect.width
+        let y = anchor.y + Math.cos(t * 0.43 + i * 0.8) * 3.2
+        if (player.role === "Winger" || player.role === "Wingback") x += i % 2 === 0 ? -7 * effect.width : 7 * effect.width
+        if (player.role === "Inside Forward") x += i % 2 === 0 ? 5 : -5
+        if (player.role === "Mezzala") x += i % 2 === 0 ? -4 : 4
+        if (player.role === "Playmaker" || player.role === "Deep-Lying Playmaker") y += 5
+        if (player.role === "Advanced Forward" || player.role === "Poacher" || player.role === "Pressing Forward") y -= 7
+        if (player.role === "Holding Midfielder" || player.role === "Ball-Playing Defender" || player.role === "Stopper") y += effect.line
+        if (tactics.instruction === "Gegenpress") { y -= 5; x += Math.sin(t + i) * 2 }
+        if (tactics.instruction === "Possession") { x = anchor.x + (x - anchor.x) * 0.55; y = anchor.y + (y - anchor.y) * 0.55 }
+        if (tactics.instruction === "Counter Attack" && player.pos === "FWD") y -= 9
+        if (tactics.instruction === "Low Block") y += 8
+        if (tactics.instruction === "Direct Play" && player.pos === "FWD") y -= 10
+        return { x: Math.max(8, Math.min(92, x)), y: Math.max(8, Math.min(90, y)) }
+      }))
+    }, Math.max(120, 520 / effect.tempo))
+    return () => clearInterval(id)
+  }, [running, tactics])
 
   const toPct = useCallback((clientX: number, clientY: number): Point => {
     const rect = pitchRef.current?.getBoundingClientRect()
@@ -113,6 +166,14 @@ export function MatchCanvas() {
 
   return (
     <div className="flex min-h-full flex-col px-5 pb-4">
+      <div className="mt-4 rounded-xl border border-primary/20 bg-card/70 px-3 py-2">
+        <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-muted-foreground">
+          <span>Formation</span><span className="font-bold text-primary">{tactics.formation}</span>
+          <span>Instruction</span><span className="font-bold text-accent">{tactics.instruction}</span>
+        </div>
+        <p className="mt-1 text-[10px] text-muted-foreground">Shape controls positioning · instruction controls team behaviour</p>
+      </div>
+
       {/* Scoreboard */}
       <div className="flex items-center justify-between pt-6">
         <div className="text-center">
@@ -193,7 +254,7 @@ export function MatchCanvas() {
           <div
             key={`a${p.name}`}
             className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 text-center"
-            style={{ left: `${p.x}%`, top: `${p.y}%` }}
+            style={{ left: `${positions[i]?.x ?? p.x}%`, top: `${positions[i]?.y ?? p.y}%` }}
           >
             {p.specialStyle ? <div className="mb-0.5 text-[7px] font-black uppercase text-chart-4"><Star className="mr-0.5 inline h-2.5 w-2.5 fill-current" />{p.specialName}</div> : null}<div className="mx-auto flex h-6 w-6 items-center justify-center rounded-full border border-white/40 bg-primary text-[9px] font-bold text-primary-foreground">
               {i + 1}
@@ -239,7 +300,7 @@ export function MatchCanvas() {
               <span className="text-[9px] font-bold uppercase tracking-wide text-primary">{p.role}</span>
             </div>
             <div className="mt-1 text-[9px] text-muted-foreground">
-              {p.bias === "attack" ? "Runs behind the defence" : p.bias === "pass" ? "Looks for forward passes" : p.bias === "defend" ? "Presses and wins the ball" : "Supports both phases"}
+              {p.role === "Winger" ? "Stays wide and looks for crosses" : p.role === "Inside Forward" ? "Cuts inside to attack goal" : p.role === "Playmaker" ? "Finds passing lanes" : p.role === "Ball Winner" ? "Presses and wins possession" : p.role === "Mezzala" ? "Attacks the half-space" : p.role === "Wingback" ? "Overlaps and recovers" : "Follows role instructions"}
             </div>
           </div>
         ))}
