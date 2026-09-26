@@ -3,8 +3,31 @@
 import type { Player } from "@/components/game/data"
 import type { AuctionPlayer } from "@/lib/auction"
 
-export const MAX_SQUAD_SIZE = 24
+export const SQUAD_CAPACITIES = [24, 32, 50] as const
+export const SQUAD_UPGRADE_GEMS = [0, 250, 600] as const
+export const MAX_SQUAD_SIZE = 50
 export const CLUB_SQUAD_KEY = "pitchside-club-squad"
+export const SQUAD_CAPACITY_KEY = "pitchside-squad-capacity"
+
+export function getSquadCapacity(): number {
+  if (typeof window === "undefined") return 24
+  const saved = Number(localStorage.getItem(SQUAD_CAPACITY_KEY) || 24)
+  return SQUAD_CAPACITIES.includes(saved as 24 | 32 | 50) ? saved : 24
+}
+
+export function upgradeSquadCapacity(): { success: boolean; capacity: number; cost: number } {
+  if (typeof window === "undefined") return { success: false, capacity: 24, cost: 0 }
+  const current = getSquadCapacity()
+  const index = SQUAD_CAPACITIES.indexOf(current as 24 | 32 | 50)
+  if (index < 0 || index >= SQUAD_CAPACITIES.length - 1) return { success: false, capacity: current, cost: 0 }
+  const next = SQUAD_CAPACITIES[index + 1]
+  const cost = SQUAD_UPGRADE_GEMS[index + 1]
+  const gems = Number(localStorage.getItem("pitchside-gems") || 340)
+  if (gems < cost) return { success: false, capacity: current, cost }
+  localStorage.setItem("pitchside-gems", String(gems - cost))
+  localStorage.setItem(SQUAD_CAPACITY_KEY, String(next))
+  return { success: true, capacity: next, cost }
+}
 
 export function auctionToPlayer(player: AuctionPlayer): Player {
   const role: Player["style"] =
@@ -28,7 +51,7 @@ export function loadClubSquad(base: Player[]): Player[] {
     const saved = JSON.parse(localStorage.getItem(CLUB_SQUAD_KEY) || "null")
     if (!Array.isArray(saved)) return base
     const extras = saved.filter((p) => p && typeof p.id === "string" && p.id.startsWith("auction-"))
-    return [...base, ...extras].slice(0, MAX_SQUAD_SIZE)
+    return [...base, ...extras].slice(0, getSquadCapacity())
   } catch {
     return base
   }
@@ -44,7 +67,7 @@ export function saveClubSquad(players: Player[]) {
 export function addAuctionPlayer(base: Player[], player: AuctionPlayer): { squad: Player[]; added: boolean } {
   const current = base.length ? base : loadClubSquad(base)
   if (current.some((p) => p.id === "auction-" + player.id)) return { squad: current, added: false }
-  if (current.length >= MAX_SQUAD_SIZE) return { squad: current, added: false }
+  if (current.length >= getSquadCapacity()) return { squad: current, added: false }
   const next = [...current, auctionToPlayer(player)]
   saveClubSquad(next)
   return { squad: next, added: true }
