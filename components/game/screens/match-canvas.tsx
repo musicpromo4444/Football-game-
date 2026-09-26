@@ -56,17 +56,23 @@ const teammates: Point[] = [
   { x: 50, y: 80 },
 ]
 const opponents: Point[] = [
-  { x: 40, y: 18 },
-  { x: 62, y: 45 },
-  { x: 35, y: 48 },
-  { x: 50, y: 12 },
+  { x: 50, y: 8 }, { x: 15, y: 18 }, { x: 37, y: 20 }, { x: 63, y: 20 }, { x: 85, y: 18 },
+  { x: 20, y: 36 }, { x: 43, y: 38 }, { x: 57, y: 38 }, { x: 80, y: 36 },
+  { x: 32, y: 55 }, { x: 68, y: 55 },
 ]
 
 const opponentStyles: { role: PlayerRole; skill: number; decision: "dribble" | "pass" | "run" | "shoot" }[] = [
-  { role: "Inside Forward", skill: 92, decision: "dribble" },
-  { role: "Playmaker", skill: 88, decision: "pass" },
-  { role: "Advanced Forward", skill: 82, decision: "run" },
-  { role: "Poacher", skill: 76, decision: "shoot" },
+  { role: "Sweeper Keeper", skill: 84, decision: "pass" },
+  { role: "Inverted Fullback", skill: 78, decision: "pass" },
+  { role: "Ball-Playing Defender", skill: 86, decision: "pass" },
+  { role: "Stopper", skill: 82, decision: "run" },
+  { role: "Wingback", skill: 80, decision: "run" },
+  { role: "Ball Winner", skill: 84, decision: "dribble" },
+  { role: "Mezzala", skill: 87, decision: "pass" },
+  { role: "Playmaker", skill: 91, decision: "pass" },
+  { role: "Winger", skill: 85, decision: "dribble" },
+  { role: "Advanced Forward", skill: 88, decision: "run" },
+  { role: "Poacher", skill: 86, decision: "shoot" },
 ]
 
 function loadLineupIds() {
