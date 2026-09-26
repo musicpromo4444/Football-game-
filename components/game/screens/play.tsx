@@ -21,6 +21,13 @@ import {
 import { Card, Pill, StatBar } from "@/components/game/ui-bits"
 import { MatchCanvas } from "@/components/game/screens/match-canvas"
 import {
+  queueForOnlineMatch,
+  acceptRematch,
+  declineRematch,
+  completeOnlineMatch,
+} from "@/lib/online-matchmaking"
+import { supabase } from "@/lib/supabase"
+import {
   wallet,
   manager,
   fixtures,
@@ -32,6 +39,89 @@ import {
 export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
   const [inMatch, setInMatch] = useState(false)
   const [showWatch, setShowWatch] = useState(false)
+  const [queueing, setQueueing] = useState(false)
+  const [onlineError, setOnlineError] = useState<string | null>(null)
+  const [matchId, setMatchId] = useState<string | null>(null)
+  const [rematchOffer, setRematchOffer] = useState<any>(null)
+  const [matchDone, setMatchDone] = useState(false)
+
+  useEffect(() => {
+    if (!supabase) return
+    let channel: ReturnType<typeof supabase.channel> | null = null
+    let cancelled = false
+
+    const connect = async () => {
+      const { data } = await supabase.auth.getSession()
+      if (!data.session || cancelled) return
+      const userId = data.session.user.id
+      channel = supabase
+        .channel("pitchside-online")
+        .on("postgres_changes", { event: "INSERT", schema: "public", table: "matches" }, (payload) => {
+          const row = payload.new as any
+          if (row.player_a === userId || row.player_b === userId) {
+            setMatchId(row.id)
+            setInMatch(true)
+            setQueueing(false)
+            setMatchDone(false)
+          }
+        })
+        .on("postgres_changes", { event: "INSERT", schema: "public", table: "rematch_offers" }, (payload) => {
+          const row = payload.new as any
+          if ((row.player_a === userId || row.player_b === userId) && row.status === "open") {
+            setRematchOffer(row)
+          }
+        })
+        .subscribe()
+    }
+    void connect()
+    return () => {
+      cancelled = true
+      if (channel) void supabase.removeChannel(channel)
+    }
+  }, [])
+
+  const startOnlineMatch = async () => {
+    setQueueing(true)
+    setOnlineError(null)
+    try {
+      const result = await queueForOnlineMatch()
+      if (result.match) {
+        setMatchId(result.match.match_id)
+        setInMatch(true)
+      }
+    } catch (error) {
+      setOnlineError(error instanceof Error ? error.message : "Online matchmaking failed.")
+      setQueueing(false)
+    }
+  }
+
+  const finishOnlineMatch = async (outcome: { home: number; away: number }) => {
+    if (!matchId || matchDone) return
+    setMatchDone(true)
+    try {
+      const result = await completeOnlineMatch(matchId, outcome.home, outcome.away)
+      if (result?.rematch_offer_id) {
+        setRematchOffer({ id: result.rematch_offer_id, status: "open" })
+      }
+    } catch (error) {
+      setOnlineError(error instanceof Error ? error.message : "Could not save the match result.")
+    }
+  }
+
+  const respondToRematch = async (accept: boolean) => {
+    if (!rematchOffer?.id) return
+    try {
+      const result = accept ? await acceptRematch(rematchOffer.id) : await declineRematch(rematchOffer.id)
+      setRematchOffer(null)
+      if (result?.next_match_id) {
+        setMatchId(result.next_match_id)
+        setMatchDone(false)
+        setInMatch(true)
+      }
+    } catch (error) {
+      setOnlineError(error instanceof Error ? error.message : "Could not respond to rematch.")
+    }
+  }
 
   if (inMatch) {
     return (
@@ -46,10 +136,21 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
           </button>
           <div>
             <p className="font-display text-lg font-bold leading-tight">Live Match</p>
-            <p className="text-xs text-muted-foreground">Ranked · Sudden Death</p>
+            <p className="text-xs text-muted-foreground">Online Ranked · Sudden Death</p>
           </div>
         </div>
-        <MatchCanvas />
+        <MatchCanvas onMatchComplete={finishOnlineMatch} />
+        {rematchOffer ? (
+          <div className="mx-5 mt-3 rounded-2xl border border-primary/40 bg-card p-4 shadow-xl">
+            <p className="font-display text-base font-black">Rematch?</p>
+            <p className="mt-1 text-xs text-muted-foreground">Both players must accept. Maximum 3 consecutive games.</p>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <button onClick={() => void respondToRematch(false)} className="rounded-xl border border-border px-4 py-3 text-sm font-bold">Decline</button>
+              <button onClick={() => void respondToRematch(true)} className="rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground">Accept</button>
+            </div>
+          </div>
+        ) : null}
+        {onlineError ? <p className="mx-5 mt-2 text-center text-[11px] text-destructive">{onlineError}</p> : null}
       </div>
     )
   }
@@ -59,7 +160,9 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
       <TopHeaderBar />
       <div className="space-y-5 px-5">
         <LiveStatusBanner />
-        <QuickPlay onQueue={() => setInMatch(true)} />
+        <QuickPlay onQueue={() => void startOnlineMatch()} />
+        {queueing ? <div className="rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-center text-xs font-semibold text-primary">Searching for an opponent in your current league…</div> : null}
+        {onlineError ? <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-center text-xs text-destructive">{onlineError}</div> : null}
         <SeasonPassWidget />
         <WeeklyResetGrid />
       </div>
