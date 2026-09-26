@@ -240,9 +240,18 @@ export function MatchCanvas() {
         }
       }))
 
-      // Defensive action is automatic. When the selected defender gets into
-      // tackle range, he chooses a safe standing/slide tackle based on angle.
-      // Harder contacts are rare and can injure the attacker.
+      // The opponent owns the visible ball during defense.
+      if (ballOwner === null) {
+        const carrier = opponentPositions[opponentCarrierRef.current]
+        if (carrier) {
+          lastBallRef.current = carrier
+          setBall({ ...carrier })
+        }
+      }
+
+      // Defensive action is automatic. The defender decides between a safe
+      // standing challenge and a slide when he is outside the carrier's body line.
+      // A hard slide is reserved for a closing angle and can cause contact/injury.
       if (ballOwner === null && selectedDefenderRef.current !== null) {
         setPositions((current) => {
           const defender = current[selectedDefenderRef.current!]
@@ -253,23 +262,25 @@ export function MatchCanvas() {
           const dy = carrier.y - defender.y
           const distance = Math.hypot(dx, dy)
           const frontAngle = dy > -2
+          const outsideBall = Math.abs(dx) > 2.2
+          const slide = outsideBall && distance < 9.5
           const defenderPlayer = playerArchetypes[selectedDefenderRef.current!]
           const tackleSkill =
             (defenderPlayer?.specialStyle === "Wall" ? 0.96 : 0.76) +
             (defenderPlayer?.role === "Ball Winner" ? 0.08 : 0) +
             (defenderPlayer?.role === "Stopper" ? 0.06 : 0)
-          if (distance < 6.5 && frontAngle) {
-            const clean = tackleSkill >= 0.84 || Math.random() > 0.2
+          if ((distance < 6.5 && frontAngle) || slide) {
+            const hardContact = slide && tackleSkill < 0.9
+            const clean = tackleSkill >= 0.86 || Math.random() > (hardContact ? 0.34 : 0.16)
             if (clean) {
               setBallOwner(selectedDefenderRef.current)
               setTurnover(true)
-              setMessage("TACKLE WON — clean challenge, possession changes instantly")
+              setMessage(slide ? "SLIDE TACKLE WON — ball recovered cleanly" : "SAFE TACKLE WON — possession changes instantly")
               lastBallRef.current = defender
             } else {
-              // A mistimed aggressive challenge can create a brief loose ball.
-              const hard = Math.random() > 0.72
-              setMessage(hard ? "HARD TACKLE — contact! The attacker is down." : "Tackle missed — the attacker keeps moving")
-              if (hard) setInjuredOpponent(carrierIndex)
+              const injury = hardContact && Math.random() > 0.58
+              setMessage(injury ? "HARD TACKLE — heavy contact, attacker injured" : "Tackle missed — attacker keeps the ball")
+              if (injury) setInjuredOpponent(carrierIndex)
             }
           }
           return current
@@ -588,7 +599,7 @@ export function MatchCanvas() {
         {/* tactical status */}
         {running && (
           <div className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2 rounded-full bg-background/70 px-3 py-1 text-[9px] font-bold uppercase tracking-widest text-primary backdrop-blur-sm">
-            {turnover ? "TURNOVER — COUNTER" : ballOwner === null ? "DEFEND — TAP A PLAYER" : tactics.preset.replace("-", " ")}
+            {turnover ? "TURNOVER — COUNTER" : ballOwner === null ? "DEFEND — AUTO TACKLE" : tactics.preset.replace("-", " ")}
           </div>
         )}
 
