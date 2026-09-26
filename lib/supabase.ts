@@ -2,7 +2,8 @@
 
 import { createClient } from "@supabase/supabase-js"
 
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+// Publishable key is safe for the browser; database access is protected by RLS.
+const url = "https://snymstpmekoecpdohyyg.supabase.co"
+const key = "sb_publishable_zEmO6Kq5qpg9puG0PuiAtw_ohI1VL2B"
 
-export const supabase = url && key ? createClient(url, key) : null
+export const supabase = createClient(url, key)
