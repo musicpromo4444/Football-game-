@@ -9,10 +9,23 @@ import { cn } from "@/lib/utils"
 
 type View = "squad" | "styles" | "training" | "market"
 type Formation = "4-3-3" | "4-4-2" | "3-5-2" | "4-2-3-1"
-type TeamInstruction = "Gegenpress" | "Possession" | "Counter Attack" | "Low Block" | "Direct Play"
+type TacticalPresetId = "possession" | "tiki-taka" | "gegenpress" | "counter-attack" | "direct-play" | "wing-play" | "long-ball" | "high-press" | "low-block" | "balanced"
+type TacticalPreset = { id: TacticalPresetId; name: string; formation: Formation; instruction: "Possession" | "Gegenpress" | "Counter Attack" | "Low Block" | "Direct Play"; description: string; motion: string }
+
+const tacticalPresets: TacticalPreset[] = [
+  { id: "possession", name: "Possession", formation: "4-3-3", instruction: "Possession", description: "Short passes, close support and patient buildup.", motion: "pass" },
+  { id: "tiki-taka", name: "Tiki-Taka", formation: "4-3-3", instruction: "Possession", description: "Quick one-touch passing and constant rotations.", motion: "pass" },
+  { id: "gegenpress", name: "Gegenpress", formation: "4-3-3", instruction: "Gegenpress", description: "Lose it, hunt it. The team swarms the ball immediately.", motion: "press" },
+  { id: "counter-attack", name: "Counter Attack", formation: "4-2-3-1", instruction: "Counter Attack", description: "Absorb pressure, then explode forward into space.", motion: "counter" },
+  { id: "direct-play", name: "Direct Play", formation: "4-1-4-1" as Formation, instruction: "Direct Play", description: "Move the ball forward early and attack space quickly.", motion: "direct" },
+  { id: "wing-play", name: "Wing Play", formation: "4-4-2", instruction: "Direct Play", description: "Stretch the pitch and attack through wide players.", motion: "wing" },
+  { id: "long-ball", name: "Long Ball", formation: "4-2-3-1", instruction: "Direct Play", description: "Find the forward early and attack second balls.", motion: "long" },
+  { id: "high-press", name: "High Press", formation: "4-3-3", instruction: "Gegenpress", description: "Push high and force mistakes near the opponent's goal.", motion: "high" },
+  { id: "low-block", name: "Low Block", formation: "3-5-2", instruction: "Low Block", description: "Stay compact, protect the box and break quickly.", motion: "low" },
+  { id: "balanced", name: "Balanced", formation: "4-2-3-1", instruction: "Possession", description: "A measured mix of buildup, pressing and defensive shape.", motion: "balanced" },
+]
 
 const formations: Formation[] = ["4-3-3", "4-4-2", "3-5-2", "4-2-3-1"]
-const instructions: TeamInstruction[] = ["Gegenpress", "Possession", "Counter Attack", "Low Block", "Direct Play"]
 
 const tabs: { id: View; label: string; icon: typeof Users }[] = [
   { id: "squad", label: "Squad", icon: Users },
@@ -38,10 +51,19 @@ export function SquadManager() {
   const [view, setView] = useState<View>("squad")
   const [activeStyle, setActiveStyle] = useState(playstyles[0])
   const [formation, setFormation] = useState<Formation>(() => typeof window === "undefined" ? "4-3-3" : (localStorage.getItem("pitchside-formation") as Formation) || "4-3-3")
-  const [instruction, setInstruction] = useState<TeamInstruction>(() => typeof window === "undefined" ? "Possession" : (localStorage.getItem("pitchside-instruction") as TeamInstruction) || "Possession")
+  const [presetId, setPresetId] = useState<TacticalPresetId>(() => typeof window === "undefined" ? "possession" : (localStorage.getItem("pitchside-tactical-preset") as TacticalPresetId) || "possession")
+  const activePreset = tacticalPresets.find((p) => p.id === presetId) || tacticalPresets[0]
+  const [instruction, setInstruction] = useState(activePreset.instruction)
 
   const chooseFormation = (value: Formation) => { setFormation(value); localStorage.setItem("pitchside-formation", value) }
-  const chooseInstruction = (value: TeamInstruction) => { setInstruction(value); localStorage.setItem("pitchside-instruction", value) }
+  const choosePreset = (preset: TacticalPreset) => {
+    setPresetId(preset.id)
+    setFormation(preset.formation)
+    setInstruction(preset.instruction)
+    localStorage.setItem("pitchside-tactical-preset", preset.id)
+    localStorage.setItem("pitchside-formation", preset.formation)
+    localStorage.setItem("pitchside-instruction", preset.instruction)
+  }
 
   return (
     <div className="pb-4">
@@ -103,15 +125,35 @@ export function SquadManager() {
               </p>
             </Card>
             <Card className="mb-3 p-4">
-              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Formation</p>
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                {formations.map((f) => <button key={f} onClick={() => chooseFormation(f)} className={cn("rounded-lg border px-3 py-2 text-sm font-bold", formation === f ? "border-primary bg-primary/15 text-primary" : "border-border bg-card/70")}>{f}</button>)}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Tactical preset</p>
+                  <p className="font-display text-lg font-bold text-primary">{activePreset.name}</p>
+                </div>
+                <span className="rounded-full bg-accent/10 px-2 py-1 text-[10px] font-bold text-accent">{activePreset.formation}</span>
               </div>
-              <p className="mt-4 text-[11px] uppercase tracking-wide text-muted-foreground">In-game team instruction</p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {instructions.map((i) => <button key={i} onClick={() => chooseInstruction(i)} className={cn("rounded-lg border px-3 py-2 text-xs font-bold", instruction === i ? "border-accent bg-accent/15 text-accent" : "border-border bg-card/70")}>{i}</button>)}
+              <p className="mt-1 text-xs text-muted-foreground">{activePreset.description}</p>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                {tacticalPresets.map((preset) => {
+                  const active = preset.id === presetId
+                  return (
+                    <button key={preset.id} onClick={() => choosePreset(preset)} className={cn("rounded-xl border p-2 text-left transition", active ? "border-primary bg-primary/15" : "border-border bg-card/70")}>
+                      <div className="relative mx-auto h-20 w-full max-w-[92px] overflow-hidden rounded-lg border border-white/15 bg-emerald-950/60">
+                        <div className="absolute left-1/2 top-1/2 h-px w-full -translate-x-1/2 bg-white/15" />
+                        <div className="absolute left-1/2 top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/15" />
+                        {[0,1,2,3,4].map((i) => (
+                          <span key={i} className={cn("absolute h-2.5 w-2.5 rounded-full border border-white/40", active ? "bg-primary" : "bg-primary/70")} style={{ left: [22,78,30,70,50][i] + "%", top: [25,25,52,52,72][i] + "%", animation: active ? "pulse 1.4s ease-in-out infinite alternate" : undefined }} />
+                        ))}
+                        {[0,1,2,3].map((i) => <span key={i} className="absolute h-2.5 w-2.5 rounded-full border border-white/30 bg-blue-400/70" style={{ left: [35,65,50,58][i] + "%", top: [18,38,48,62][i] + "%" }} />)}
+                        <span className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-white" style={{ animation: active ? "bounce 1.2s linear infinite" : undefined }} />
+                      </div>
+                      <p className={cn("mt-2 text-xs font-bold", active ? "text-primary" : "text-foreground")}>{preset.name}</p>
+                      <p className="text-[9px] leading-tight text-muted-foreground">{preset.description}</p>
+                    </button>
+                  )
+                })}
               </div>
-              <p className="mt-3 text-[10px] text-muted-foreground">Formation controls positioning. Instruction changes pressing, tempo, width and defensive line during matches.</p>
+              <p className="mt-3 text-[10px] text-muted-foreground">Green dots = your team · blue dots = opponents. Tap a preset to preview its movement and make it active in matches.</p>
             </Card>
             <div className="grid grid-cols-2 gap-2">
               {playstyles.map((s) => {
