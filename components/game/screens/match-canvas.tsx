@@ -603,10 +603,10 @@ export function MatchCanvas() {
       if (passerInjury === "light") passQuality *= 0.70
       if (passerInjury === "heavy") passQuality *= 0.40
       if (passer?.specialStyle === "Maestro") passQuality = 0.98
-      passQuality = Math.min(0.99, passQuality + (passer?.trainingBoost || 0) * 0.015)
       else if (passer?.specialStyle === "Mezzala") passQuality = 0.90
       else if (passer?.role === "Playmaker" || passer?.role === "Deep-Lying Playmaker") passQuality = 0.84
       else if (passer?.role === "Ball-Playing Defender") passQuality = 0.80
+      passQuality = Math.min(0.99, passQuality + (passer?.trainingBoost || 0) * 0.015)
 
       let intercepted = false
       if (passerPos && targetPos && targetIndex !== null) {
