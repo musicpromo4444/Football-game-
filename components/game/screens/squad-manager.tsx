@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Users, Layers, Dumbbell, Gavel, Battery, ChevronRight, Timer } from "lucide-react"
+import { Users, Layers, Dumbbell, Gavel, Battery, ChevronRight, Timer, Shield, Swords, SlidersHorizontal } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ScreenHeader, Card, Pill, StatBar } from "@/components/game/ui-bits"
 import { squad, playstyles, trainingGames, auctionLots } from "@/components/game/data"
@@ -25,10 +25,10 @@ const tacticalPresets: TacticalPreset[] = [
   { id: "balanced", name: "Balanced", formation: "4-2-3-1", instruction: "Possession", description: "A measured mix of buildup, pressing and defensive shape.", motion: "balanced" },
 ]
 
-const formations: Formation[] = ["4-3-3", "4-4-2", "3-5-2", "4-2-3-1"]
+const formations: Formation[] = ["4-3-3", "4-4-2", "3-5-2", "4-2-3-1", "4-1-4-1"]
 
 const tabs: { id: View; label: string; icon: typeof Users }[] = [
-  { id: "squad", label: "Squad", icon: Users },
+  { id: "squad", label: "Tactics", icon: SlidersHorizontal },
   { id: "styles", label: "Styles", icon: Layers },
   { id: "training", label: "Train", icon: Dumbbell },
   { id: "market", label: "Market", icon: Gavel },
@@ -69,7 +69,7 @@ export function SquadManager() {
 
   return (
     <div className="pb-4">
-      <ScreenHeader title="Squad & Playstyle" subtitle="Manage, train, and recruit" />
+      <ScreenHeader title="Tactics" subtitle="Set your formation, roles, and match approach" />
 
       <div className="px-5">
         <div className="flex rounded-xl border border-border bg-card/70 p-1">
@@ -94,28 +94,146 @@ export function SquadManager() {
       </div>
 
       <div className="mt-4 space-y-3 px-5">
-        {view === "squad" &&
-          squad.map((p) => (
-            <Card key={p.id} className="flex items-center gap-3 p-4">
-              <span className={cn("flex h-10 w-10 items-center justify-center rounded-xl text-xs font-bold", posColor[p.pos])}>
-                {p.pos}
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <p className="truncate font-semibold">{p.name}</p>
-                  <span className="font-display text-sm font-black text-primary">{p.rating}</span>
+        {view === "squad" && (
+          <div className="space-y-3">
+            <Card glow="cyan" className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Starting formation</p>
+                  <p className="font-display text-2xl font-black text-glow-cyan">{formation}</p>
                 </div>
-                <p className="mb-1.5 truncate text-xs text-muted-foreground">{p.style}</p>
-                <div className="flex items-center gap-2">
-                  <Battery className={cn("h-3.5 w-3.5", p.stamina < 40 ? "text-destructive" : "text-muted-foreground")} />
-                  <StatBar value={p.stamina} accent={staminaAccent(p.stamina)} />
-                  <span className="w-8 text-right text-xs font-semibold tabular-nums text-muted-foreground">
-                    {p.stamina}%
-                  </span>
-                </div>
+                <Pill accent="cyan">{activePreset.name}</Pill>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Set the shape first, then choose how the team behaves in attack and defence.
+              </p>
+            </Card>
+
+            <Card className="p-3">
+              <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Formation</p>
+              <div className="grid grid-cols-2 gap-2">
+                {formations.map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => chooseFormation(f)}
+                    className={cn(
+                      "rounded-xl border px-3 py-3 text-sm font-black transition",
+                      formation === f ? "border-primary bg-primary/15 text-primary" : "border-border bg-card/70 text-foreground",
+                    )}
+                  >
+                    {f}
+                  </button>
+                ))}
               </div>
             </Card>
-          ))}
+
+            <Card className="p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Tactical focus</p>
+                <span className="text-[10px] text-muted-foreground">Changes match behaviour</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: "defending", label: "Defending", icon: Shield },
+                  { id: "balanced", label: "Balanced", icon: SlidersHorizontal },
+                  { id: "attacking", label: "Attacking", icon: Swords },
+                ].map(({ id, label, icon: Icon }) => {
+                  const active = (typeof window !== "undefined" ? localStorage.getItem("pitchside-tactical-focus") : null) === id
+                  return (
+                    <button
+                      key={id}
+                      onClick={() => {
+                        localStorage.setItem("pitchside-tactical-focus", id)
+                        setPresetId(id === "defending" ? "low-block" : id === "attacking" ? "high-press" : "balanced")
+                      }}
+                      className={cn(
+                        "flex flex-col items-center gap-1 rounded-xl border px-2 py-3 text-[10px] font-bold",
+                        active ? "border-accent bg-accent/15 text-accent" : "border-border bg-card/70 text-muted-foreground",
+                      )}
+                    >
+                      <Icon className="h-4 w-4" />
+                      {label}
+                    </button>
+                  )
+                })}
+              </div>
+            </Card>
+
+            <Card className="overflow-hidden p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Team shape</p>
+                <span className="text-[10px] font-semibold text-primary">{activePreset.instruction}</span>
+              </div>
+
+              <div className="relative mx-auto aspect-[4/5] max-w-[290px] overflow-hidden rounded-2xl border border-primary/20 bg-emerald-950/60">
+                <div className="absolute inset-2 rounded-xl border border-white/15" />
+                <div className="absolute left-1/2 top-1/2 h-px w-[calc(100%-16px)] -translate-x-1/2 bg-white/15" />
+                <div className="absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/15" />
+                {squad.slice(0, 7).map((p, i) => {
+                  const slot = [
+                    { x: 50, y: 88 },
+                    { x: 24, y: 68 },
+                    { x: 50, y: 64 },
+                    { x: 76, y: 68 },
+                    { x: 32, y: 48 },
+                    { x: 68, y: 48 },
+                    { x: 50, y: 24 },
+                  ][i]
+                  return (
+                    <div
+                      key={p.id}
+                      className="absolute -translate-x-1/2 -translate-y-1/2 text-center"
+                      style={{ left: slot.x + "%", top: slot.y + "%" }}
+                    >
+                      <span className="mx-auto flex h-8 w-8 items-center justify-center rounded-full border border-white/50 bg-primary text-[9px] font-black text-primary-foreground">
+                        {p.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+                      </span>
+                      <span className="mt-0.5 block max-w-[70px] truncate rounded bg-background/75 px-1 text-[7px] font-bold">
+                        {p.style}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            </Card>
+
+            <Card className="p-3">
+              <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Starting XI</p>
+              <div className="space-y-2">
+                {squad.slice(0, 7).map((p, i) => (
+                  <div key={p.id} className="flex items-center gap-3 rounded-xl border border-border bg-card/70 px-3 py-2.5">
+                    <span className={cn("flex h-8 w-8 items-center justify-center rounded-lg text-[9px] font-black", posColor[p.pos])}>{p.pos}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-bold">{p.name}</p>
+                      <p className="truncate text-[10px] text-muted-foreground">{p.style}</p>
+                    </div>
+                    <span className="font-display text-xs font-black text-primary">{p.rating}</span>
+                    {i === 0 ? <Pill accent="cyan">GK</Pill> : null}
+                  </div>
+                ))}
+              </div>
+            </Card>
+
+            <Card className="p-3">
+              <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Quick tactical presets</p>
+              <div className="grid grid-cols-2 gap-2">
+                {tacticalPresets.slice(0, 8).map((preset) => (
+                  <button
+                    key={preset.id}
+                    onClick={() => choosePreset(preset)}
+                    className={cn(
+                      "rounded-xl border p-3 text-left",
+                      preset.id === presetId ? "border-primary bg-primary/15" : "border-border bg-card/70",
+                    )}
+                  >
+                    <p className="text-xs font-black">{preset.name}</p>
+                    <p className="mt-0.5 text-[9px] text-muted-foreground">{preset.formation} · {preset.instruction}</p>
+                  </button>
+                ))}
+              </div>
+            </Card>
+          </div>
+        )}
 
         {view === "styles" && (
           <div>
