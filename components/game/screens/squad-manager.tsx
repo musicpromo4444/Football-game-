@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Users, Layers, Dumbbell, Gavel, Battery, ChevronRight, Timer } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ScreenHeader, Card, Pill, StatBar } from "@/components/game/ui-bits"
@@ -8,7 +8,7 @@ import { squad, playstyles, trainingGames, auctionLots } from "@/components/game
 import { cn } from "@/lib/utils"
 
 type View = "squad" | "styles" | "training" | "market"
-type Formation = "4-3-3" | "4-4-2" | "3-5-2" | "4-2-3-1"
+type Formation = "4-3-3" | "4-4-2" | "3-5-2" | "4-2-3-1" | "4-1-4-1"
 type TacticalPresetId = "possession" | "tiki-taka" | "gegenpress" | "counter-attack" | "direct-play" | "wing-play" | "long-ball" | "high-press" | "low-block" | "balanced"
 type TacticalPreset = { id: TacticalPresetId; name: string; formation: Formation; instruction: "Possession" | "Gegenpress" | "Counter Attack" | "Low Block" | "Direct Play"; description: string; motion: string }
 
@@ -49,6 +49,8 @@ function staminaAccent(v: number): "cyan" | "emerald" | "amber" | "red" {
 
 export function SquadManager() {
   const [view, setView] = useState<View>("squad")
+  const [previewTick, setPreviewTick] = useState(0)
+  useEffect(() => { const id = window.setInterval(() => setPreviewTick((v) => v + 1), 500); return () => window.clearInterval(id) }, [])
   const [activeStyle, setActiveStyle] = useState(playstyles[0])
   const [formation, setFormation] = useState<Formation>(() => typeof window === "undefined" ? "4-3-3" : (localStorage.getItem("pitchside-formation") as Formation) || "4-3-3")
   const [presetId, setPresetId] = useState<TacticalPresetId>(() => typeof window === "undefined" ? "possession" : (localStorage.getItem("pitchside-tactical-preset") as TacticalPresetId) || "possession")
@@ -136,16 +138,28 @@ export function SquadManager() {
               <div className="mt-3 grid grid-cols-2 gap-2">
                 {tacticalPresets.map((preset) => {
                   const active = preset.id === presetId
+                  const phase = previewTick * 0.65
+                  const move = (i: number) => {
+                    const bx = [22,78,30,70,50][i]
+                    const by = [25,25,52,52,72][i]
+                    if (preset.motion === "pass") return { x: bx + Math.sin(phase + i) * 6, y: by + Math.cos(phase + i) * 3 }
+                    if (preset.motion === "press" || preset.motion === "high") return { x: bx + (50 - bx) * 0.08 + Math.sin(phase + i) * 2, y: by - 5 + Math.sin(phase + i) * 2 }
+                    if (preset.motion === "counter") return { x: bx + (i % 2 ? 5 : -5), y: by - 7 + Math.sin(phase + i) * 2 }
+                    if (preset.motion === "wing") return { x: i % 2 ? 86 : 14, y: by + Math.sin(phase + i) * 3 }
+                    if (preset.motion === "long") return { x: bx, y: by - 8 + Math.sin(phase + i) * 2 }
+                    if (preset.motion === "low") return { x: 50 + (bx - 50) * 0.65, y: by + 8 + Math.sin(phase + i) * 1.5 }
+                    return { x: bx + Math.sin(phase + i) * 2, y: by + Math.cos(phase + i) * 2 }
+                  }
                   return (
                     <button key={preset.id} onClick={() => choosePreset(preset)} className={cn("rounded-xl border p-2 text-left transition", active ? "border-primary bg-primary/15" : "border-border bg-card/70")}>
                       <div className="relative mx-auto h-20 w-full max-w-[92px] overflow-hidden rounded-lg border border-white/15 bg-emerald-950/60">
                         <div className="absolute left-1/2 top-1/2 h-px w-full -translate-x-1/2 bg-white/15" />
                         <div className="absolute left-1/2 top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/15" />
                         {[0,1,2,3,4].map((i) => (
-                          <span key={i} className={cn("absolute h-2.5 w-2.5 rounded-full border border-white/40", active ? "bg-primary" : "bg-primary/70")} style={{ left: [22,78,30,70,50][i] + "%", top: [25,25,52,52,72][i] + "%", animation: active ? "pulse 1.4s ease-in-out infinite alternate" : undefined }} />
+                          <span key={i} className={cn("absolute h-2.5 w-2.5 rounded-full border border-white/40", active ? "bg-primary" : "bg-primary/70")} style={{ left: move(i).x + "%", top: move(i).y + "%", transition: "left 450ms ease, top 450ms ease" }} />
                         ))}
                         {[0,1,2,3].map((i) => <span key={i} className="absolute h-2.5 w-2.5 rounded-full border border-white/30 bg-blue-400/70" style={{ left: [35,65,50,58][i] + "%", top: [18,38,48,62][i] + "%" }} />)}
-                        <span className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-white" style={{ animation: active ? "bounce 1.2s linear infinite" : undefined }} />
+                        <span className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-white" style={{ left: (50 + Math.sin(phase) * 18) + "%", transition: "left 450ms linear" }} />
                       </div>
                       <p className={cn("mt-2 text-xs font-bold", active ? "text-primary" : "text-foreground")}>{preset.name}</p>
                       <p className="text-[9px] leading-tight text-muted-foreground">{preset.description}</p>
