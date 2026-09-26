@@ -245,7 +245,7 @@ export function MatchCanvas() {
           <span
             key={`o${i}`}
             className="absolute h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/30 bg-destructive/70"
-            style={{ left: `${positions[i]?.x ?? p.x}%`, top: `${positions[i]?.y ?? p.y}%` }}
+            style={{ left: `${p.x}%`, top: `${p.y}%` }}
           />
         ))}
 
