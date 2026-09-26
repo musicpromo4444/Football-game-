@@ -29,32 +29,28 @@ export async function ensureOnlinePlayer(displayName = "PitchSide Player") {
 
 export async function queueForOnlineMatch(displayName?: string) {
   const user = await ensureOnlinePlayer(displayName)
-  const { data, error } = await supabase!.rpc("find_online_match")
+  const { data, error } = await supabase!.functions.invoke("pitchside-matchmaking", { body: { action: "queue" } })
   if (error) throw error
-  return { user, match: (data?.[0] as OnlineMatch | undefined) ?? null }
+  return { user, match: (data?.match as OnlineMatch | undefined) ?? null }
 }
 
 export async function acceptRematch(offerId: string) {
   if (!supabase) throw new Error("PitchSide online service is not configured.")
-  const { data, error } = await supabase.rpc("respond_to_rematch", { p_offer_id: offerId, p_accept: true })
+  const { data, error } = await supabase.functions.invoke("pitchside-matchmaking", { body: { action: "rematch", offerId, accept: true } })
   if (error) throw error
-  return data?.[0] ?? null
+  return data ?? null
 }
 
 export async function declineRematch(offerId: string) {
   if (!supabase) throw new Error("PitchSide online service is not configured.")
-  const { data, error } = await supabase.rpc("respond_to_rematch", { p_offer_id: offerId, p_accept: false })
+  const { data, error } = await supabase.functions.invoke("pitchside-matchmaking", { body: { action: "rematch", offerId, accept: false } })
   if (error) throw error
-  return data?.[0] ?? null
+  return data ?? null
 }
 
 export async function completeOnlineMatch(matchId: string, home: number, away: number) {
   if (!supabase) throw new Error("PitchSide online service is not configured.")
-  const { data, error } = await supabase.rpc("complete_match", {
-    p_match_id: matchId,
-    p_score_a: home,
-    p_score_b: away,
-  })
+  const { data, error } = await supabase.functions.invoke("pitchside-matchmaking", { body: { action: "complete", matchId, home, away } })
   if (error) throw error
-  return data?.[0] ?? null
+  return data ?? null
 }
