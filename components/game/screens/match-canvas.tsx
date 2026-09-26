@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Play, Pause, RotateCcw, Battery, Hand, Star } from "lucide-react"
+import { Play, Pause, RotateCcw, Hand, Star } from "lucide-react"
 import { squad, type PlayerRole } from "@/components/game/data"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -83,7 +83,6 @@ function loadLineupIds() {
   } catch { return squad.map((p) => p.id) }
 }
 
-const initialStamina = squad.map((p) => p.stamina)
 
 function format(t: number) {
   const m = Math.floor(t / 60)
@@ -110,8 +109,10 @@ export function MatchCanvas() {
   const [ballFlight, setBallFlight] = useState<Point | null>(null)
   const [selectedDefender, setSelectedDefender] = useState<number | null>(2)
   const [injuredOpponent, setInjuredOpponent] = useState<number | null>(null)
-  const [stamina, setStamina] = useState<number[]>(initialStamina)
-  const [substituted, setSubstituted] = useState<number[]>([])
+  const [injuries, setInjuries] = useState<Record<number, "light" | "heavy">>({})
+  const [opponentInjuries, setOpponentInjuries] = useState<Record<number, "light" | "heavy">>({})
+  const [substitutionPending, setSubstitutionPending] = useState<number | null>(null)
+  const [substitutionCountdown, setSubstitutionCountdown] = useState(0)
   const [turnover, setTurnover] = useState(false)
   const [shotResult, setShotResult] = useState<string | null>(null)
   const shotCooldownRef = useRef(false)
@@ -131,6 +132,18 @@ export function MatchCanvas() {
   }, [time])
 
   useEffect(() => {
+    if (substitutionPending === null) return
+    if (substitutionCountdown <= 0) {
+      setSubstitutionPending(null)
+      setInjuredOpponent(null)
+      setMessage("Substitution complete — play resumes")
+      return
+    }
+    const id = setTimeout(() => setSubstitutionCountdown((n) => n - 1), 1000)
+    return () => clearTimeout(id)
+  }, [substitutionPending, substitutionCountdown])
+
+  useEffect(() => {
     if (!running) return
     const base = formationSlots[tactics.formation]
     const preset = tacticalPresets[tactics.preset] || tacticalPresets.possession
@@ -139,6 +152,8 @@ export function MatchCanvas() {
       const ballNow = lastBallRef.current
       setPositions((current) => current.map((p, i) => {
         const player = playerArchetypes[i]
+        const injuryFactor = injuries[i] === "heavy" ? 0.4 : injuries[i] === "light" ? 0.7 : 1
+        if (injuries[i] === "heavy") return { ...anchor }
         const anchor = base[i] || p
         const dx = ballNow.x - p.x
         const dy = ballNow.y - p.y
@@ -247,20 +262,9 @@ export function MatchCanvas() {
         }
 
         return {
-          x: Math.max(7, Math.min(93, x)),
-          y: Math.max(7, Math.min(92, y)),
+          x: Math.max(7, Math.min(93, anchor.x + (x - anchor.x) * injuryFactor)),
+          y: Math.max(7, Math.min(92, anchor.y + (y - anchor.y) * injuryFactor)),
         }
-      }))
-
-      setStamina((current) => current.map((value, i) => {
-        const player = playerArchetypes[i]
-        const intensity = tactics.preset === "gegenpress" || tactics.preset === "high-press" ? 0.075
-          : tactics.preset === "counter-attack" || tactics.preset === "direct-play" ? 0.05
-          : 0.035
-        const active = ballOwner === i || selectedDefenderRef.current === i ? 1.8 : 0.55
-        const fatigueMultiplier = value < 35 ? 1.35 : value < 55 ? 1.1 : 1
-        const roleBoost = player?.role === "Pressing Forward" || player?.role === "Ball Winner" ? 1.25 : 1
-        return Math.max(0, value - intensity * active * roleBoost * fatigueMultiplier)
       }))
 
       // The opponent owns the visible ball during defense.
@@ -301,9 +305,19 @@ export function MatchCanvas() {
               setMessage(slide ? "SLIDE TACKLE WON — ball recovered cleanly" : "SAFE TACKLE WON — possession changes instantly")
               lastBallRef.current = defender
             } else {
-              const injury = hardContact && Math.random() > 0.58
-              setMessage(injury ? "HARD TACKLE — heavy contact, attacker injured" : "Tackle missed — attacker keeps the ball")
-              if (injury) setInjuredOpponent(carrierIndex)
+              const injuryRoll = Math.random()
+              const injury = hardContact && injuryRoll > 0.45
+              const severity = injuryRoll > 0.78 ? "heavy" : "light"
+              setMessage(injury ? `HARD TACKLE — ${severity} injury` : "Tackle missed — attacker keeps the ball")
+              if (injury) {
+                setInjuredOpponent(carrierIndex)
+                setOpponentInjuries((current) => ({ ...current, [carrierIndex]: severity }))
+                if (severity === "heavy") {
+                  setRunning(false)
+                  setSubstitutionPending(carrierIndex)
+                  setSubstitutionCountdown(8)
+                }
+              }
             }
           }
           return current
@@ -476,6 +490,9 @@ export function MatchCanvas() {
         const distance = Math.hypot(50 - (positions[ballOwner]?.x ?? 50), 4 - (positions[ballOwner]?.y ?? 50))
         let accuracy = 0.58
         let power = 0.65
+        const shooterInjury = injuries[ballOwner]
+        if (shooterInjury === "light") { accuracy *= 0.70; power *= 0.70 }
+        if (shooterInjury === "heavy") { accuracy *= 0.40; power *= 0.40 }
         let finishText = "SHOT"
 
         if (special === "Long-Range Sniper") {
@@ -563,6 +580,9 @@ export function MatchCanvas() {
       const passerPos = ballOwner !== null ? positions[ballOwner] : null
       const targetPos = targetIndex !== null ? positions[targetIndex] : null
       let passQuality = 0.68
+      const passerInjury = ballOwner !== null ? injuries[ballOwner] : undefined
+      if (passerInjury === "light") passQuality *= 0.70
+      if (passerInjury === "heavy") passQuality *= 0.40
       if (passer?.specialStyle === "Maestro") passQuality = 0.98
       else if (passer?.specialStyle === "Mezzala") passQuality = 0.90
       else if (passer?.role === "Playmaker" || passer?.role === "Deep-Lying Playmaker") passQuality = 0.84
@@ -658,8 +678,10 @@ export function MatchCanvas() {
     setInjuredOpponent(null)
     selectedDefenderRef.current = 2
     setSelectedDefender(2)
-    setStamina(initialStamina)
-    setSubstituted([])
+    setInjuries({})
+    setOpponentInjuries({})
+    setSubstitutionPending(null)
+    setSubstitutionCountdown(0)
     setTurnover(false)
     setShotResult(null)
     shotCooldownRef.current = false
@@ -744,6 +766,18 @@ export function MatchCanvas() {
           </svg>
         )}
 
+        {substitutionPending !== null && (
+          <div className="absolute inset-0 z-30 flex items-center justify-center bg-background/80 p-5 backdrop-blur-sm">
+            <div className="w-full rounded-2xl border border-primary/30 bg-card p-5 text-center shadow-2xl">
+              <div className="text-xs font-black uppercase tracking-[0.2em] text-destructive">Heavy Injury</div>
+              <div className="mt-2 text-lg font-black">Substitution</div>
+              <p className="mt-1 text-[11px] text-muted-foreground">The opponent can see the substitution before play resumes.</p>
+              <div className="mx-auto my-4 flex h-14 w-14 items-center justify-center rounded-full border-2 border-primary text-2xl font-black">{substitutionCountdown}</div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-primary">Preparing replacement</div>
+            </div>
+          </div>
+        )}
+
         {/* opponents — the ball carrier reacts to pressure instead of waiting for a tap */}
         {opponentPositions.map((p, i) => (
           <span
@@ -751,10 +785,13 @@ export function MatchCanvas() {
             className={cn(
               "absolute flex h-5 w-5 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/30 bg-destructive/70 transition-none",
               opponentCarrierRef.current === i && "ring-2 ring-destructive/40",
-              injuredOpponent === i && "opacity-50"
+              injuredOpponent === i && "opacity-50",
+              opponentInjuries[i] === "light" && "ring-2 ring-chart-4",
+              opponentInjuries[i] === "heavy" && "ring-2 ring-destructive"
             )}
             style={{ left: `${p.x}%`, top: `${p.y}%` }}
           >
+            {opponentInjuries[i] ? <span className="absolute -top-4 whitespace-nowrap text-[7px] font-black text-destructive">{opponentInjuries[i] === "heavy" ? "⚠ HEAVY" : "⚠ LIGHT"}</span> : null}
             {opponentCarrierRef.current === i ? <span className="h-1.5 w-1.5 rounded-full bg-white" /> : null}
           </span>
         ))}
@@ -766,6 +803,7 @@ export function MatchCanvas() {
             className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 text-center"
             style={{ left: `${positions[i]?.x ?? p.x}%`, top: `${positions[i]?.y ?? p.y}%` }}
           >
+            {injuries[i] ? <div className="mb-0.5 text-[7px] font-black text-destructive">{injuries[i] === "heavy" ? "⚠ HEAVY INJURY" : "⚠ LIGHT INJURY"}</div> : null}
             {p.specialStyle ? <div className="mb-0.5 text-[7px] font-black uppercase text-chart-4"><Star className="mr-0.5 inline h-2.5 w-2.5 fill-current" />{p.specialName}</div> : null}<div className="mx-auto flex h-6 w-6 items-center justify-center rounded-full border border-white/40 bg-primary text-[9px] font-bold text-primary-foreground">
               {i + 1}
             </div>
@@ -823,47 +861,9 @@ export function MatchCanvas() {
         <span className="font-display text-sm font-bold tabular-nums text-primary">{passes} / {actions}</span>
       </div>
 
-      {/* stamina */}
-      <div className="mt-3 grid grid-cols-2 gap-2">
-        {playerArchetypes.slice(0, 6).map((p, i) => {
-          const value = Math.round(stamina[i] ?? 0)
-          return (
-            <div key={p.name} className="rounded-xl border border-border bg-card/70 p-2.5">
-              <div className="flex items-center gap-1">
-                <Battery className={cn("h-3 w-3", value < 40 ? "text-destructive" : "text-muted-foreground")} />
-                <span className="truncate text-[11px] font-semibold">{p.name}</span>
-                <span className="ml-auto text-[9px] font-bold">{value}</span>
-              </div>
-              <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-secondary">
-                <div className={cn("h-full rounded-full", value < 40 ? "bg-destructive" : value < 70 ? "bg-chart-4" : "bg-accent")} style={{ width: value + "%" }} />
-              </div>
-            </div>
-          )
-        })}
-      </div>
-
-      {/* quick substitutions */}
-      <div className="mt-3 rounded-xl border border-border bg-card/70 p-3">
-        <div className="mb-2 flex items-center justify-between">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Bench / Quick Sub</span>
-          <span className="text-[9px] text-muted-foreground">Low stamina players become vulnerable</span>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          {playerArchetypes.map((p, i) => {
-            const value = Math.round(stamina[i] ?? 0)
-            const canSub = value < 45 && !substituted.includes(i)
-            return (
-              <button key={p.name} disabled={!canSub} onClick={() => {
-                setSubstituted((current) => [...current, i])
-                setStamina((current) => current.map((v, n) => n === i ? Math.min(100, v + 28) : v))
-                setMessage(`${p.name} replaced — fresh legs added`)
-              }} className={cn("rounded-lg border px-2 py-2 text-left text-[10px]", canSub ? "border-primary/40 bg-primary/10" : "border-border/50 opacity-60")}>
-                <span className="block font-semibold">{p.name}</span>
-                <span className="text-muted-foreground">{value}% · {canSub ? "SUB" : substituted.includes(i) ? "SUBBED" : "FIT"}</span>
-              </button>
-            )
-          })}
-        </div>
+      {/* injury status */}
+      <div className="mt-3 rounded-xl border border-border bg-card/70 px-3 py-2 text-[10px] text-muted-foreground">
+        Injuries replace stamina fatigue. Light injuries reduce attributes by 30%; heavy injuries reduce them by 60%.
       </div>
 
       {/* controls */}
