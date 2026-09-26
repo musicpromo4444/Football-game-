@@ -26,10 +26,10 @@ export type AuctionPlayer = {
 }
 
 export const DEFAULT_AUCTION_PLAYERS: AuctionPlayer[] = [
-  { id: "a1", name: "T. Bergström", position: "FWD", rating: 89, style: "Fluid Front Three", face: "TB", attributes: { pace: 91, passing: 82, shooting: 94, defending: 42, stamina: 86 }, startingBid: 4.2, currentBid: 4.2, buyNow: 7.5, endsAt: Date.now() + 2 * 60 * 1000, enabled: true },
-  { id: "a2", name: "O. Diallo", position: "MID", rating: 87, style: "Gegenpress", face: "OD", attributes: { pace: 84, passing: 92, shooting: 78, defending: 76, stamina: 91 }, startingBid: 3.1, currentBid: 3.1, buyNow: 5.8, endsAt: Date.now() + 9 * 60 * 1000, enabled: true },
-  { id: "a3", name: "V. Rossi", position: "DEF", rating: 84, style: "Catenaccio", face: "VR", attributes: { pace: 72, passing: 79, shooting: 48, defending: 94, stamina: 82 }, startingBid: 1.9, currentBid: 1.9, buyNow: 3.4, endsAt: Date.now() + 14 * 60 * 1000, enabled: true },
-  { id: "a4", name: "S. Haruki", position: "GK", rating: 82, style: "Sweeper Keeper", face: "SH", attributes: { pace: 61, passing: 83, shooting: 25, defending: 91, stamina: 78 }, startingBid: 1.2, currentBid: 1.2, buyNow: 2.6, endsAt: Date.now() + 21 * 60 * 1000, enabled: true },
+  { id: "a1", name: "T. Bergström", position: "FWD", rating: 89, style: "Fluid Front Three", face: "TB", attributes: { pace: 91, passing: 82, shooting: 94, defending: 42, stamina: 86 }, startingBid: 4200, currentBid: 4200, buyNow: 7500, endsAt: Date.now() + 2 * 60 * 1000, enabled: true },
+  { id: "a2", name: "O. Diallo", position: "MID", rating: 87, style: "Gegenpress", face: "OD", attributes: { pace: 84, passing: 92, shooting: 78, defending: 76, stamina: 91 }, startingBid: 3100, currentBid: 3100, buyNow: 5800, endsAt: Date.now() + 9 * 60 * 1000, enabled: true },
+  { id: "a3", name: "V. Rossi", position: "DEF", rating: 84, style: "Catenaccio", face: "VR", attributes: { pace: 72, passing: 79, shooting: 48, defending: 94, stamina: 82 }, startingBid: 1900, currentBid: 1900, buyNow: 3400, endsAt: Date.now() + 14 * 60 * 1000, enabled: true },
+  { id: "a4", name: "S. Haruki", position: "GK", rating: 82, style: "Sweeper Keeper", face: "SH", attributes: { pace: 61, passing: 83, shooting: 25, defending: 91, stamina: 78 }, startingBid: 1200, currentBid: 1200, buyNow: 2600, endsAt: Date.now() + 21 * 60 * 1000, enabled: true },
 ]
 
 export const AUCTION_KEY = "pitchside-auction-players"
