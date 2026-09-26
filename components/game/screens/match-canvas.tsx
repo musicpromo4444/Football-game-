@@ -763,7 +763,7 @@ export function MatchCanvas() {
 
         {/* ball */}
         <span
-          className={cn("absolute h-4 w-4", ballFlight && "animate-pulse") -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"
+          className={cn("absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300", ballFlight && "animate-pulse")}
           style={{ left: `${ball.x}%`, top: `${ball.y}%` }}
         />
 
