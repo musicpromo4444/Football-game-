@@ -129,14 +129,83 @@ export const playstyles: string[] = [
   "Diamond Core",
 ]
 
+export type PlayerRole =
+  | "Poacher" | "Advanced Forward" | "Target Forward" | "Inside Forward" | "Winger"
+  | "Playmaker" | "Shadow Striker" | "Box-to-Box" | "Ball Winner" | "Holding Midfielder"
+  | "Wingback" | "Ball-Playing Defender" | "Deep-Lying Playmaker" | "Inverted Fullback"
+  | "Sweeper Keeper" | "False Nine" | "Complete Forward" | "Mezzala" | "Pressing Forward" | "Stopper"
+
+export const playerRoles: { role: PlayerRole; behavior: string }[] = [
+  { role: "Poacher", behavior: "stays high and attacks gaps for finishes" },
+  { role: "Advanced Forward", behavior: "constantly runs behind the defensive line" },
+  { role: "Target Forward", behavior: "holds up play and attacks aerial balls" },
+  { role: "Inside Forward", behavior: "starts wide then cuts inside to shoot" },
+  { role: "Winger", behavior: "stays wide, beats the fullback and creates accurate crosses" },
+  { role: "Playmaker", behavior: "finds passing lanes and creates chances" },
+  { role: "Shadow Striker", behavior: "arrives late into the box" },
+  { role: "Box-to-Box", behavior: "supports both penalty areas" },
+  { role: "Ball Winner", behavior: "presses and hunts possession" },
+  { role: "Holding Midfielder", behavior: "protects the defence and holds position" },
+  { role: "Wingback", behavior: "overlaps wide and recovers into defence" },
+  { role: "Ball-Playing Defender", behavior: "steps out and starts attacks with passes" },
+  { role: "Deep-Lying Playmaker", behavior: "controls tempo from deep" },
+  { role: "Inverted Fullback", behavior: "moves inside to support midfield" },
+  { role: "Sweeper Keeper", behavior: "comes off the line and covers through balls" },
+  { role: "False Nine", behavior: "drops deep and pulls defenders out" },
+  { role: "Complete Forward", behavior: "combines runs, link play and finishing" },
+  { role: "Mezzala", behavior: "attacks the half-space and creates overloads" },
+  { role: "Pressing Forward", behavior: "relentlessly pressures defenders" },
+  { role: "Stopper", behavior: "steps out early to confront attackers" },
+]
+
+export type SpecialPlayerStyle =
+  | "Hammer" | "Free-Kick Specialist" | "Mezzala" | "Pressing Forward" | "Long-Range Sniper"
+  | "Dribble King" | "Maestro" | "Wall" | "Wingback Master" | "Guardian"
+
+export const specialPlayerStyles: { style: SpecialPlayerStyle; behavior: string }[] = [
+  { style: "Hammer", behavior: "dominates aerial duels and attacks crosses with elite headers" },
+  { style: "Free-Kick Specialist", behavior: "exceptional curl, dip and accuracy on free kicks" },
+  { style: "Mezzala", behavior: "intelligently attacks half-spaces from midfield" },
+  { style: "Pressing Forward", behavior: "forces mistakes with relentless defensive pressure" },
+  { style: "Long-Range Sniper", behavior: "creates space for unusually accurate distance shots" },
+  { style: "Dribble King", behavior: "uses elite close control to beat defenders 1v1" },
+  { style: "Maestro", behavior: "plays unusually precise weighted through-balls" },
+  { style: "Wall", behavior: "elite tackling, interception and defensive duels" },
+  { style: "Wingback Master", behavior: "wins the ball, carries wide and delivers highly accurate crosses" },
+  { style: "Guardian", behavior: "elite positioning, reactions and one-on-one saves" },
+]
+
+export type SpecialPlayer = {
+  id: string
+  name: string
+  style: SpecialPlayerStyle
+  role: PlayerRole
+}
+
+export const specialPlayers: SpecialPlayer[] = [
+  { id: "sp1", name: "The Anvil", style: "Hammer", role: "Target Forward" },
+  { id: "sp2", name: "Curve Saint", style: "Free-Kick Specialist", role: "Playmaker" },
+  { id: "sp3", name: "Silk Runner", style: "Mezzala", role: "Mezzala" },
+  { id: "sp4", name: "Hound", style: "Pressing Forward", role: "Pressing Forward" },
+  { id: "sp5", name: "The Cannon", style: "Long-Range Sniper", role: "Advanced Forward" },
+  { id: "sp6", name: "Velvet Feet", style: "Dribble King", role: "Inside Forward" },
+  { id: "sp7", name: "The Architect", style: "Maestro", role: "Playmaker" },
+  { id: "sp8", name: "Iron Wall", style: "Wall", role: "Ball-Playing Defender" },
+  { id: "sp9", name: "Wing Phantom", style: "Wingback Master", role: "Wingback" },
+  { id: "sp10", name: "The Guardian", style: "Guardian", role: "Sweeper Keeper" },
+]
+
 export type Player = {
   id: string
   name: string
   pos: "GK" | "DEF" | "MID" | "FWD"
   rating: number
   stamina: number
-  style: string
+  style: PlayerRole
+  specialStyle?: SpecialPlayerStyle
+  specialName?: string
 }
+
 
 export const squad: Player[] = [
   { id: "p1", name: "L. Farrow", pos: "GK", rating: 84, stamina: 92, style: "Sweeper Keeper" },
