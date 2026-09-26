@@ -111,6 +111,7 @@ export function MatchCanvas() {
   const [selectedDefender, setSelectedDefender] = useState<number | null>(2)
   const [injuredOpponent, setInjuredOpponent] = useState<number | null>(null)
   const [stamina, setStamina] = useState<number[]>(initialStamina)
+  const [substituted, setSubstituted] = useState<number[]>([])
   const [turnover, setTurnover] = useState(false)
   const [shotResult, setShotResult] = useState<string | null>(null)
   const shotCooldownRef = useRef(false)
@@ -257,8 +258,9 @@ export function MatchCanvas() {
           : tactics.preset === "counter-attack" || tactics.preset === "direct-play" ? 0.05
           : 0.035
         const active = ballOwner === i || selectedDefenderRef.current === i ? 1.8 : 0.55
+        const fatigueMultiplier = value < 35 ? 1.35 : value < 55 ? 1.1 : 1
         const roleBoost = player?.role === "Pressing Forward" || player?.role === "Ball Winner" ? 1.25 : 1
-        return Math.max(0, value - intensity * active * roleBoost)
+        return Math.max(0, value - intensity * active * roleBoost * fatigueMultiplier)
       }))
 
       // The opponent owns the visible ball during defense.
@@ -657,6 +659,7 @@ export function MatchCanvas() {
     selectedDefenderRef.current = 2
     setSelectedDefender(2)
     setStamina(initialStamina)
+    setSubstituted([])
     setTurnover(false)
     setShotResult(null)
     shotCooldownRef.current = false
@@ -837,6 +840,30 @@ export function MatchCanvas() {
             </div>
           )
         })}
+      </div>
+
+      {/* quick substitutions */}
+      <div className="mt-3 rounded-xl border border-border bg-card/70 p-3">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Bench / Quick Sub</span>
+          <span className="text-[9px] text-muted-foreground">Low stamina players become vulnerable</span>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {playerArchetypes.map((p, i) => {
+            const value = Math.round(stamina[i] ?? 0)
+            const canSub = value < 45 && !substituted.includes(i)
+            return (
+              <button key={p.name} disabled={!canSub} onClick={() => {
+                setSubstituted((current) => [...current, i])
+                setStamina((current) => current.map((v, n) => n === i ? Math.min(100, v + 28) : v))
+                setMessage(`${p.name} replaced — fresh legs added`)
+              }} className={cn("rounded-lg border px-2 py-2 text-left text-[10px]", canSub ? "border-primary/40 bg-primary/10" : "border-border/50 opacity-60")}>
+                <span className="block font-semibold">{p.name}</span>
+                <span className="text-muted-foreground">{value}% · {canSub ? "SUB" : substituted.includes(i) ? "SUBBED" : "FIT"}</span>
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {/* controls */}
