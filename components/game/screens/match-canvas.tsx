@@ -75,7 +75,7 @@ const opponentStyles: { role: PlayerRole; skill: number; decision: "dribble" | "
   { role: "Poacher", skill: 86, decision: "shoot" },
 ]
 
-function loadLineupIds() {
+function loadTrainingState(): Record<string, { completesAt: number; boost: number }> {\n  if (typeof window === "undefined") return {}\n  try { return JSON.parse(localStorage.getItem("pitchside-training") || "{}") || {} } catch { return {} }\n}\n\nfunction loadLineupIds() {
   if (typeof window === "undefined") return squad.map((p) => p.id)
   try {
     const saved = JSON.parse(localStorage.getItem("pitchside-lineup") || "null")
@@ -101,7 +101,7 @@ export function MatchCanvas() {
   const [actions, setActions] = useState(0)
   const [message, setMessage] = useState("Swipe from the ball to pass")
   const [tactics] = useState(loadTactics)
-  const playerArchetypes = useMemo(() => loadLineupIds().map((id) => squad.find((p) => p.id === id)).filter(Boolean).map((p) => ({ name: p!.name, role: p!.style as PlayerRole, specialStyle: p!.specialStyle, specialName: p!.specialName, pos: p!.pos, stamina: p!.stamina })), [])
+  const playerArchetypes = useMemo(() => {\n    const training = loadTrainingState(); const now = Date.now()\n    return loadLineupIds().map((id) => squad.find((p) => p.id === id)).filter(Boolean).map((p) => ({\n      id: p!.id, name: p!.name, role: p!.style as PlayerRole, specialStyle: p!.specialStyle, specialName: p!.specialName, pos: p!.pos, stamina: p!.stamina,\n      trainingBoost: training[p!.id] && now >= training[p!.id].completesAt ? training[p!.id].boost : 0,\n      trainingActive: !!training[p!.id] && now < training[p!.id].completesAt,\n    }))\n  }, [])\n  const trainingUnavailable = playerArchetypes.filter((p) => p.trainingActive)\n  const trainingBlocked = trainingUnavailable.length > 0
   const [positions, setPositions] = useState(() => formationSlots[loadTactics().formation].map((p) => ({ ...p })))
   const [opponentPositions, setOpponentPositions] = useState(() => opponents.map((p) => ({ ...p })))
   const [ballOwner, setBallOwner] = useState<number | null>(null)
@@ -152,7 +152,7 @@ export function MatchCanvas() {
       const ballNow = lastBallRef.current
       setPositions((current) => current.map((p, i) => {
         const player = playerArchetypes[i]
-        const injuryFactor = injuries[i] === "heavy" ? 0.4 : injuries[i] === "light" ? 0.7 : 1
+        const injuryFactor = injuries[i] === "heavy" ? 0.4 : injuries[i] === "light" ? 0.7 : 1\n        const trainingFactor = 1 + (player?.trainingBoost || 0) * 0.01
         const anchor = base[i] || p
         if (injuries[i] === "heavy") return { ...anchor }
         const dx = ballNow.x - p.x
@@ -180,7 +180,7 @@ export function MatchCanvas() {
         }
 
         if (tactics.preset === "counter-attack") {
-          y -= player.pos === "FWD" ? 15 : i === 1 ? 8 : 2
+          y -= (player.pos === "FWD" ? 15 : i === 1 ? 8 : 2) * trainingFactor
           if (i === 0 || i === 1) x += side * 3
         }
 
@@ -212,7 +212,7 @@ export function MatchCanvas() {
         }
 
         if (tactics.preset === "direct-play") {
-          y -= player.pos === "FWD" ? 13 : 4
+          y -= (player.pos === "FWD" ? 13 : 4) * trainingFactor
         }
 
         // Defensive AI: every unselected defender keeps working even while the user
@@ -526,7 +526,7 @@ export function MatchCanvas() {
         }
 
         // Guardian reads the shot with elite positioning/reactions.
-        const guardianSave = 0.22 + (special === "Long-Range Sniper" ? 0.03 : 0)
+        accuracy = Math.min(0.99, accuracy + (shooter?.trainingBoost || 0) * 0.015)\n        power = Math.min(0.99, power + (shooter?.trainingBoost || 0) * 0.015)\n        const guardianSave = 0.22 + (special === "Long-Range Sniper" ? 0.03 : 0)
         const saved = Math.random() > accuracy || Math.random() < guardianSave
         const rebound = saved && Math.random() < (power > 0.88 ? 0.46 : 0.28)
 
@@ -583,7 +583,7 @@ export function MatchCanvas() {
       const passerInjury = ballOwner !== null ? injuries[ballOwner] : undefined
       if (passerInjury === "light") passQuality *= 0.70
       if (passerInjury === "heavy") passQuality *= 0.40
-      if (passer?.specialStyle === "Maestro") passQuality = 0.98
+      if (passer?.specialStyle === "Maestro") passQuality = 0.98\n      passQuality = Math.min(0.99, passQuality + (passer?.trainingBoost || 0) * 0.015)
       else if (passer?.specialStyle === "Mezzala") passQuality = 0.90
       else if (passer?.role === "Playmaker" || passer?.role === "Deep-Lying Playmaker") passQuality = 0.84
       else if (passer?.role === "Ball-Playing Defender") passQuality = 0.80
