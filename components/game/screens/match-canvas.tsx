@@ -91,6 +91,7 @@ export function MatchCanvas() {
   const [running, setRunning] = useState(false)
   const [ball, setBall] = useState<Point>({ x: 50, y: 55 })
   const [drag, setDrag] = useState<{ start: Point; current: Point } | null>(null)
+  const pointerModeRef = useRef<"ball" | "player">("ball")
   const [score, setScore] = useState({ home: 2, away: 1 })
   const [passes, setPasses] = useState(0)
   const [actions, setActions] = useState(0)
@@ -394,7 +395,19 @@ export function MatchCanvas() {
   const onPointerDown = (e: React.PointerEvent) => {
     e.currentTarget.setPointerCapture(e.pointerId)
     const p = toPct(e.clientX, e.clientY)
-    setDrag({ start: ball, current: p })
+    const tappedPlayer = positions.reduce<number | null>((best, player, i) => {
+      const d = Math.hypot(p.x - player.x, p.y - player.y)
+      if (d > 8) return best
+      if (best === null) return i
+      return d < Math.hypot(p.x - positions[best].x, p.y - positions[best].y) ? i : best
+    }, null)
+    if (tappedPlayer !== null) {
+      pointerModeRef.current = "player"
+      setDrag({ start: p, current: p })
+    } else {
+      pointerModeRef.current = "ball"
+      setDrag({ start: ball, current: p })
+    }
   }
 
   const onPointerMove = (e: React.PointerEvent) => {
@@ -409,12 +422,12 @@ export function MatchCanvas() {
     // A tap on one of our players instantly switches the controlled defender.
     // No animation or loading delay: the icon appears on the same interaction.
     if (dist <= 6) {
-      const tapped = positions.reduce<number | null>((best, p, i) => {
+      const tapped = pointerModeRef.current === "player" ? positions.reduce<number | null>((best, p, i) => {
         const d = Math.hypot(drag.current.x - p.x, drag.current.y - p.y)
         if (d > 8) return best
         if (best === null) return i
         return d < Math.hypot(drag.current.x - positions[best].x, drag.current.y - positions[best].y) ? i : best
-      }, null)
+      }, null) : null
       if (tapped !== null) {
         selectedDefenderRef.current = tapped
         setSelectedDefender(tapped)
@@ -422,6 +435,7 @@ export function MatchCanvas() {
           ? `${playerArchetypes[tapped]?.name ?? "Defender"} selected — closing the ball carrier`
           : `${playerArchetypes[tapped]?.name ?? "Player"} selected`)
       }
+      pointerModeRef.current = "ball"
       setDrag(null)
       return
     }
@@ -759,7 +773,7 @@ export function MatchCanvas() {
         {message}<span className="mt-1 block text-[9px] opacity-70">{ballOwner === null ? "Dribblers evade, playmakers release passes, runners attack the defender." : "Tap a teammate to switch control instantly."}</span>
       </div>
 
-      {/* passes counter */
+      {/* passes counter */}
       <div className="mt-3 grid grid-cols-2 gap-2">
         {playerArchetypes.slice(0, 4).map((p) => (
           <div key={p.name} className="rounded-xl border border-border bg-card/70 px-3 py-2">
