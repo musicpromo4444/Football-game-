@@ -101,6 +101,7 @@ export function MatchCanvas() {
   const [opponentPositions, setOpponentPositions] = useState(() => opponents.map((p) => ({ ...p })))
   const [ballOwner, setBallOwner] = useState<number | null>(null)
   const [opponentBallCarrier, setOpponentBallCarrier] = useState(0)
+  const [ballFlight, setBallFlight] = useState<Point | null>(null)
   const [selectedDefender, setSelectedDefender] = useState<number | null>(0)
   const [injuredOpponent, setInjuredOpponent] = useState<number | null>(null)
   const [turnover, setTurnover] = useState(false)
@@ -507,6 +508,7 @@ export function MatchCanvas() {
           setTurnover(true)
           lastBallRef.current = { x: 50, y: 14 }
           setBall({ x: 50, y: 14 })
+          setBallFlight({ x: 50, y: 14 })
         } else {
           setShotResult("SAVED")
           setMessage(`GUARDIAN SAVE — ${finishText.toLowerCase()} denied`)
@@ -516,6 +518,7 @@ export function MatchCanvas() {
           setTurnover(true)
           lastBallRef.current = { x: 50, y: 9 }
           setBall({ x: 50, y: 9 })
+          setBallFlight({ x: 50, y: 9 })
         }
         setActions((n) => n + 1)
         setDrag(null)
@@ -523,6 +526,7 @@ export function MatchCanvas() {
       }
 
       lastBallRef.current = nextBall
+      setBallFlight(nextBall)
       setBall(nextBall)
       setPasses((n) => n + 1)
       setActions((n) => n + 1)
@@ -570,6 +574,7 @@ export function MatchCanvas() {
           .map((op, oi) => ({ op, oi, d: targetPos ? Math.hypot(op.x - targetPos.x, op.y - targetPos.y) : 99 }))
           .sort((a, b) => a.d - b.d)[0]
         setBallOwner(null)
+        setBallFlight(interceptor.op)
         opponentCarrierRef.current = interceptor.oi
         setOpponentBallCarrier(interceptor.oi)
         lastBallRef.current = interceptor.op
@@ -580,6 +585,7 @@ export function MatchCanvas() {
           : "PASS INTERCEPTED — defender wins possession")
       } else {
         setBallOwner(targetIndex)
+        setBallFlight(nextBall)
         setTurnover(false)
         if (passer?.specialStyle === "Maestro") {
           setMessage("MAESTRO PASS — weighted around the defender")
@@ -625,6 +631,7 @@ export function MatchCanvas() {
     const center = { x: 50, y: 55 }
     lastBallRef.current = center
     setBall(center)
+    setBallFlight(null)
     setOpponentPositions(opponents.map((p) => ({ ...p })))
     setBallOwner(null)
     setOpponentBallCarrier(0)
@@ -756,7 +763,7 @@ export function MatchCanvas() {
 
         {/* ball */}
         <span
-          className="absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"
+          className={cn("absolute h-4 w-4", ballFlight && "animate-pulse") -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"
           style={{ left: `${ball.x}%`, top: `${ball.y}%` }}
         />
 
