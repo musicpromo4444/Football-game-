@@ -241,8 +241,17 @@ export function SquadManager() {
     if (!selectedPlayerId || selectedPlayerId === targetId) return
     setLineup((current) => {
       const a = current.indexOf(selectedPlayerId), b = current.indexOf(targetId)
-      if (a < 0 || b < 0) return current
-      const next = [...current]; [next[a], next[b]] = [next[b], next[a]]
+      if (a < 0 && b < 0) return current
+      const next = [...current]
+      if (a >= 0 && b >= 0) {
+        ;[next[a], next[b]] = [next[b], next[a]]
+      } else if (a >= 0) {
+        next[a] = targetId
+      } else if (b >= 0) {
+        next[b] = selectedPlayerId
+      } else {
+        return current
+      }
       localStorage.setItem("pitchside-lineup", JSON.stringify(next))
       return next
     })
