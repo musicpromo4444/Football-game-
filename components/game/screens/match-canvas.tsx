@@ -83,11 +83,7 @@ function loadLineupIds() {
   } catch { return squad.map((p) => p.id) }
 }
 
-const teamStamina = [
-  { name: "Silvana", value: 55 },
-  { name: "Cruz", value: 38 },
-  { name: "Adeyemi", value: 69 },
-]
+const initialStamina = squad.map((p) => p.stamina)
 
 function format(t: number) {
   const m = Math.floor(t / 60)
@@ -114,6 +110,7 @@ export function MatchCanvas() {
   const [ballFlight, setBallFlight] = useState<Point | null>(null)
   const [selectedDefender, setSelectedDefender] = useState<number | null>(2)
   const [injuredOpponent, setInjuredOpponent] = useState<number | null>(null)
+  const [stamina, setStamina] = useState<number[]>(initialStamina)
   const [turnover, setTurnover] = useState(false)
   const [shotResult, setShotResult] = useState<string | null>(null)
   const shotCooldownRef = useRef(false)
@@ -252,6 +249,16 @@ export function MatchCanvas() {
           x: Math.max(7, Math.min(93, x)),
           y: Math.max(7, Math.min(92, y)),
         }
+      }))
+
+      setStamina((current) => current.map((value, i) => {
+        const player = playerArchetypes[i]
+        const intensity = tactics.preset === "gegenpress" || tactics.preset === "high-press" ? 0.075
+          : tactics.preset === "counter-attack" || tactics.preset === "direct-play" ? 0.05
+          : 0.035
+        const active = ballOwner === i || selectedDefenderRef.current === i ? 1.8 : 0.55
+        const roleBoost = player?.role === "Pressing Forward" || player?.role === "Ball Winner" ? 1.25 : 1
+        return Math.max(0, value - intensity * active * roleBoost)
       }))
 
       // The opponent owns the visible ball during defense.
@@ -647,8 +654,9 @@ export function MatchCanvas() {
     setOpponentBallCarrier(0)
     opponentCarrierRef.current = 0
     setInjuredOpponent(null)
-    selectedDefenderRef.current = 0
-    setSelectedDefender(0)
+    selectedDefenderRef.current = 2
+    setSelectedDefender(2)
+    setStamina(initialStamina)
     setTurnover(false)
     setShotResult(null)
     shotCooldownRef.current = false
