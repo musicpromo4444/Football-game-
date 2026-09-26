@@ -40,6 +40,8 @@ export function MatchCanvas() {
   const [drag, setDrag] = useState<{ start: Point; current: Point } | null>(null)
   const [score, setScore] = useState({ home: 2, away: 1 })
   const [passes, setPasses] = useState(0)
+  const [actions, setActions] = useState(0)
+  const [message, setMessage] = useState("Swipe from the ball to pass")
   const pitchRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -60,6 +62,16 @@ export function MatchCanvas() {
       y: Math.max(0, Math.min(100, ((clientY - rect.top) / rect.height) * 100)),
     }
   }, [])
+
+  const classifySwipe = (start: Point, end: Point) => {
+    const dx = end.x - start.x
+    const dy = end.y - start.y
+    const dist = Math.hypot(dx, dy)
+    if (dist < 6) return "tap"
+    if (dy < -14 && Math.abs(dx) < 30) return "shoot"
+    if (dy < -7) return "through"
+    return "pass"
+  }
 
   const onPointerDown = (e: React.PointerEvent) => {
     e.currentTarget.setPointerCapture(e.pointerId)
@@ -200,7 +212,7 @@ export function MatchCanvas() {
         <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Gesture passes
         </span>
-        <span className="font-display text-sm font-bold tabular-nums text-primary">{passes}</span>
+        <span className="font-display text-sm font-bold tabular-nums text-primary">{passes} / {actions}</span>
       </div>
 
       {/* stamina */}
