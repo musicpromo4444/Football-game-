@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react"
 import { Users, Layers, Dumbbell, Gavel, ChevronRight, Timer, Shield, Swords, SlidersHorizontal, Star, Coins, Gem, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ScreenHeader, Card, Pill, StatBar } from "@/components/game/ui-bits"
-import { squad, auctionLots, wallet } from "@/components/game/data"
+import { squad, wallet } from "@/components/game/data"
+import { formatAuctionTime, readAuctionPlayers, saveAuctionPlayers, type AuctionPlayer } from "@/lib/auction"
 import { cn } from "@/lib/utils"
 
 type View = "squad" | "styles" | "training" | "market"
@@ -147,6 +148,8 @@ export function SquadManager() {
   const [trainingLedger, setTrainingLedger] = useState<TrainingLedger>(loadTrainingLedger)
   const [adTraining, setAdTraining] = useState<{ playerId: string; tier: TrainingTier; seconds: number } | null>(null)
   const [superPlayerId, setSuperPlayerId] = useState<string | null>(null)
+  const [auctionNow, setAuctionNow] = useState(() => Date.now())
+  const [auctionPlayers, setAuctionPlayers] = useState<AuctionPlayer[]>(() => readAuctionPlayers())
   const [currency, setCurrency] = useState<{ coins: number; gems: number }>(() => {
     if (typeof window === "undefined") return wallet
     try { return JSON.parse(localStorage.getItem("pitchside-wallet") || "") || wallet } catch { return wallet }
@@ -522,45 +525,66 @@ export function SquadManager() {
             <Card className="flex items-center justify-between p-4">
               <div>
                 <p className="font-display text-sm font-bold">Transfer Auction</p>
-                <p className="text-xs text-muted-foreground">Live bids · values in M coins</p>
+                <p className="text-xs text-muted-foreground">Admin-controlled players · values in M coins</p>
               </div>
-              <Pill accent="emerald">Open</Pill>
+              <Pill accent="emerald">{auctionPlayers.filter((p) => p.enabled && p.endsAt > auctionNow).length} Live</Pill>
             </Card>
-            {auctionLots.map((lot) => (
+            {auctionPlayers.filter((p) => p.enabled && p.endsAt > auctionNow).map((lot) => (
               <Card key={lot.id} className="p-4">
                 <div className="flex items-center gap-3">
-                  <span className={cn("flex h-10 w-10 items-center justify-center rounded-xl text-xs font-bold", posColor[lot.pos])}>
-                    {lot.pos}
-                  </span>
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-primary/30 bg-primary/10 font-black text-primary">{lot.face}</div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <p className="truncate font-semibold">{lot.name}</p>
+                      <span className="rounded bg-secondary px-1.5 py-0.5 text-[9px] font-black">{lot.position}</span>
                       <span className="font-display text-sm font-black text-primary">{lot.rating}</span>
                     </div>
                     <p className="truncate text-xs text-muted-foreground">{lot.style}</p>
+                    <p className="mt-1 text-[9px] text-muted-foreground">PAC {lot.attributes.pace} · PAS {lot.attributes.passing} · SHO {lot.attributes.shooting} · DEF {lot.attributes.defending} · STA {lot.attributes.stamina}</p>
                   </div>
                   <div className="flex items-center gap-1 text-xs font-semibold text-chart-4">
                     <Timer className="h-3.5 w-3.5" />
-                    <span className="font-mono tabular-nums">{lot.timeLeft}</span>
+                    <span className="font-mono tabular-nums">{formatAuctionTime(lot.endsAt, auctionNow)}</span>
                   </div>
                 </div>
                 <div className="mt-3 flex items-center gap-2">
                   <div className="flex-1 rounded-lg bg-secondary/60 px-3 py-2">
                     <p className="text-[10px] uppercase text-muted-foreground">Current bid</p>
-                    <p className="font-display text-sm font-bold tabular-nums">{lot.bid}M</p>
+                    <p className="font-display text-sm font-bold tabular-nums">{lot.currentBid.toFixed(1)}M</p>
                   </div>
-                  <Button className="h-11 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary/90">
-                    Bid
+                  <Button
+                    disabled={currency.coins < Math.ceil(lot.currentBid * 1000000)}
+                    onClick={() => {
+                      const nextBid = Number((lot.currentBid + 0.1).toFixed(1))
+                      const next = auctionPlayers.map((p) => p.id === lot.id ? { ...p, currentBid: nextBid } : p)
+                      setAuctionPlayers(next)
+                      saveAuctionPlayers(next)
+                      setCurrency((current) => ({ ...current, coins: current.coins - Math.ceil(nextBid * 1000000) }))
+                    }}
+                    className="h-11 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground"
+                  >
+                    Bid +0.1M
                   </Button>
                   <Button
+                    disabled={currency.coins < Math.ceil(lot.buyNow * 1000000)}
+                    onClick={() => {
+                      const next = auctionPlayers.map((p) => p.id === lot.id ? { ...p, enabled: false, endsAt: auctionNow } : p)
+                      setAuctionPlayers(next)
+                      saveAuctionPlayers(next)
+                      setCurrency((current) => ({ ...current, coins: current.coins - Math.ceil(lot.buyNow * 1000000) }))
+                    }}
                     variant="outline"
-                    className="h-11 rounded-xl border-accent/40 bg-accent/10 px-4 text-sm font-semibold text-accent hover:bg-accent/20"
+                    className="h-11 rounded-xl border-accent/40 bg-accent/10 px-4 text-sm font-semibold text-accent"
                   >
                     {lot.buyNow}M
                   </Button>
                 </div>
               </Card>
             ))}
+            {!auctionPlayers.some((p) => p.enabled && p.endsAt > auctionNow) ? (
+              <Card className="p-5 text-center"><p className="font-bold">No active auction players</p><p className="mt-1 text-xs text-muted-foreground">The admin controls the next auction.</p></Card>
+            ) : null}
+            <a href="/admin" className="block rounded-xl border border-border bg-card/70 px-4 py-3 text-center text-xs font-bold text-muted-foreground">Admin auction controls</a>
           </div>
         )}
       </div>
