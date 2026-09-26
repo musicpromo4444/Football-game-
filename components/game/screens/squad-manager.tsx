@@ -127,7 +127,11 @@ export function SquadManager() {
     setSelectedPlayerId(null)
   }
 
-  const chooseFormation = (value: Formation) => { setFormation(value); localStorage.setItem("pitchside-formation", value) }
+  const chooseFormation = (value: Formation) => {
+    setFormation(value)
+    setSelectedPlayerId(null)
+    localStorage.setItem("pitchside-formation", value)
+  }
   const choosePreset = (preset: TacticalPreset) => {
     setPresetId(preset.id)
     setFormation(preset.formation)
@@ -242,25 +246,47 @@ export function SquadManager() {
                 <div className="absolute inset-2 rounded-xl border border-white/15" />
                 <div className="absolute left-1/2 top-1/2 h-px w-[calc(100%-16px)] -translate-x-1/2 bg-white/15" />
                 <div className="absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/15" />
-                {lineup.map((playerId, i) => {\n                  const p = squad.find((player) => player.id === playerId) || squad[i]
-                  const slot = [
-                    { x: 50, y: 88 }, { x: 20, y: 69 }, { x: 50, y: 68 }, { x: 80, y: 69 },
-                    { x: 33, y: 48 }, { x: 67, y: 48 }, { x: 50, y: 22 },
-                  ][i]
-                  return (
-                    <button type="button" key={p.id} onClick={() => selectedPlayerId ? swapPlayer(p.id) : setSelectedPlayerId(p.id)} className={cn("absolute -translate-x-1/2 -translate-y-1/2 text-center rounded-xl p-1 transition", selectedPlayerId === p.id ? "bg-primary/25 ring-2 ring-primary scale-110" : "hover:bg-white/10") } style={{ left: slot.x + "%", top: slot.y + "%" }} aria-label={selectedPlayerId ? `Swap with ${p.name}` : `Select ${p.name}`}>
-                      <div className="relative mx-auto flex h-9 w-9 items-center justify-center rounded-full border-2 border-white/60 bg-primary text-[8px] font-black text-primary-foreground shadow-[0_0_16px_rgba(0,0,0,.35)]">
-                        {p.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
-                        <span className="absolute -right-1 -top-1 rounded-full bg-background px-1 text-[6px] text-primary">{p.rating}</span>
-                      </div>
-                      <span className="mt-0.5 block max-w-[62px] truncate rounded bg-background/80 px-1 text-[7px] font-bold">{p.name}</span>
-                    </div>
-                  )
-                })}
+                {(() => {
+                  const shapes: Record<Formation, { x: number; y: number }[]> = {
+                    "4-3-3": [{x:50,y:88},{x:18,y:68},{x:40,y:70},{x:60,y:70},{x:82,y:68},{x:28,y:48},{x:50,y:42}],
+                    "4-4-2": [{x:50,y:88},{x:18,y:68},{x:40,y:70},{x:60,y:70},{x:82,y:68},{x:25,y:45},{x:75,y:45}],
+                    "3-5-2": [{x:50,y:88},{x:28,y:67},{x:50,y:70},{x:72,y:67},{x:25,y:45},{x:50,y:45},{x:75,y:45}],
+                    "4-2-3-1": [{x:50,y:88},{x:18,y:68},{x:40,y:70},{x:60,y:70},{x:82,y:68},{x:38,y:48},{x:62,y:48}],
+                    "4-1-4-1": [{x:50,y:88},{x:18,y:68},{x:40,y:70},{x:60,y:70},{x:82,y:68},{x:50,y:52},{x:50,y:28}],
+                  }
+                  const slots = shapes[formation]
+                  return lineup.slice(0, 7).map((playerId, i) => {
+                    const p = squad.find((player) => player.id === playerId) || squad[i]
+                    const slot = slots[i]
+                    if (!p || !slot) return null
+                    return (
+                      <button
+                        type="button"
+                        key={p.id}
+                        onClick={() => selectedPlayerId ? swapPlayer(p.id) : setSelectedPlayerId(p.id)}
+                        className={cn(
+                          "absolute -translate-x-1/2 -translate-y-1/2 rounded-xl p-1 text-center transition",
+                          selectedPlayerId === p.id ? "scale-110 bg-primary/25 ring-2 ring-primary" : "hover:bg-white/10",
+                        )}
+                        style={{ left: slot.x + "%", top: slot.y + "%" }}
+                        aria-label={selectedPlayerId ? `Swap with ${p.name}` : `Select ${p.name}`}
+                      >
+                        <div className="relative mx-auto flex h-9 w-9 items-center justify-center rounded-full border-2 border-white/60 bg-primary text-[8px] font-black text-primary-foreground">
+                          {p.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+                          <span className="absolute -right-1 -top-1 rounded-full bg-background px-1 text-[6px] text-primary">{p.rating}</span>
+                        </div>
+                        <span className="mt-0.5 block max-w-[62px] truncate rounded bg-background/80 px-1 text-[7px] font-bold">{p.name}</span>
+                      </button>
+                    )
+                  })
+                })()}
               </div>
-              <div className="mt-2 flex items-center justify-between gap-2">\n                <p className="text-[9px] text-muted-foreground">{selectedPlayer ? `${selectedPlayer.name} selected — tap another player to swap` : "Tap a player to select, then tap another to swap."}</p>\n                {selectedPlayer ? <button type="button" onClick={() => setSelectedPlayerId(null)} className="rounded-lg border border-border px-2 py-1 text-[9px] font-bold">Cancel</button> : null}\n              </div>
-            </Card>
-
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <p className="text-[9px] text-muted-foreground">
+                  {selectedPlayer ? `${selectedPlayer.name} selected — tap another player to swap` : `Formation ${formation}: players are arranged into its correct shape.`}
+                </p>
+                {selectedPlayer ? <button type="button" onClick={() => setSelectedPlayerId(null)} className="rounded-lg border border-border px-2 py-1 text-[9px] font-bold">Cancel</button> : null}
+              </div>
             <div className="grid grid-cols-1 gap-2">
               {lineup.map((id) => { const p = squad.find((player) => player.id === id); return p ? <button type="button" key={p.id} onClick={() => setSelectedPlayerId(p.id)} className="text-left">{<PlayerCard player={p} />}</button> : null })}
             </div>
