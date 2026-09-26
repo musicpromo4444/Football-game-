@@ -546,7 +546,8 @@ export function MatchCanvas() {
         })
         if (defenderOnLine) {
           const errorChance = 0.03 + (1 - passQuality) * 0.38
-          intercepted = Math.random() < errorChance
+          const dribbleProtection = passer?.specialStyle === "Dribble King" ? 0.45 : 1
+          intercepted = Math.random() < errorChance * dribbleProtection
         }
       }
 
@@ -574,7 +575,10 @@ export function MatchCanvas() {
       }
 
       // The selected tactic changes what happens after the gesture.
-      if (tactics.preset === "possession" || tactics.preset === "tiki-taka") {
+      // Keep interception feedback visible instead of overwriting it.
+      if (intercepted) {
+        setMessage(passer?.specialStyle ? `${passer.specialStyle} pass has a slight execution error — defender gets a touch` : "PASS INTERCEPTED — defender wins possession")
+      } else if (tactics.preset === "possession" || tactics.preset === "tiki-taka") {
         setMessage(action === "through" ? "Threaded pass — teammates rotate into support" : "Short pass — teammates move into passing lanes")
       } else if (tactics.preset === "gegenpress" || tactics.preset === "high-press") {
         setMessage("Turnover pressure — nearest players hunt the ball")
