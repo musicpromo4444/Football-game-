@@ -1,4 +1,4 @@
-export type TabId = "private" | "league" | "play" | "squad" | "settings"
+export type TabId = "private" | "league" | "play" | "squad" | "shop" | "settings"
 
 export type StandingRow = {
   pos: number
