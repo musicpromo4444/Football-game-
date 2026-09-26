@@ -147,6 +147,13 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
   }, [time])
 
   useEffect(() => {
+    if (time === 0 && !completionSentRef.current) {
+      completionSentRef.current = true
+      onMatchComplete?.(score)
+    }
+  }, [time, score, onMatchComplete])
+
+  useEffect(() => {
     if (substitutionPending === null) return
     if (substitutionCountdown <= 0) {
       setSubstitutionPending(null)
@@ -685,6 +692,7 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
   }
 
   const reset = () => {
+    completionSentRef.current = false
     setTime(120)
     setRunning(false)
     const center = { x: 50, y: 55 }
