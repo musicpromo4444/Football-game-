@@ -349,6 +349,7 @@ export function SquadManager() {
             <div className="grid grid-cols-1 gap-2">
               {lineup.map((id) => { const p = squad.find((player) => player.id === id); return p ? <button type="button" key={p.id} onClick={() => setSelectedPlayerId(p.id)} className="text-left">{<PlayerCard player={p} />}</button> : null })}
             </div>
+            </Card>
 
             <Card className="p-3">
               <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Starting XI</p>
