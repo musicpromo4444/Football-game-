@@ -315,7 +315,6 @@ export function MatchCanvas() {
 
           if (i === opponentCarrierRef.current) {
             const style = opponentStyles[i]
-            const defender = selectedDefenderRef.current === null ? null : current[opponentCarrierRef.current]
             const homeDefender = positions[selectedDefenderRef.current ?? 0]
             const pressureDistance = homeDefender ? Math.hypot(homeDefender.x - p.x, homeDefender.y - p.y) : 99
             const danger = Math.max(0, 1 - pressureDistance / 20)
@@ -592,9 +591,11 @@ export function MatchCanvas() {
         setMessage("Direct play — runners push forward")
       }
 
-      if (nextBall.y < 22 && Math.abs(nextBall.x - 50) < 22) {
+      if (action === "through" && nextBall.y < 22 && Math.abs(nextBall.x - 50) < 22 && ballOwner !== null) {
         setScore((s) => ({ ...s, home: s.home + 1 }))
+        setShotResult("GOAL")
         setMessage("GOAL! Tactical move finished.")
+        setBallOwner(null)
       }
     }
     setDrag(null)
