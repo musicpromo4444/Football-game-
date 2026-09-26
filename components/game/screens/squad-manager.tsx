@@ -8,6 +8,11 @@ import { squad, playstyles, trainingGames, auctionLots } from "@/components/game
 import { cn } from "@/lib/utils"
 
 type View = "squad" | "styles" | "training" | "market"
+type Formation = "4-3-3" | "4-4-2" | "3-5-2" | "4-2-3-1"
+type TeamInstruction = "Gegenpress" | "Possession" | "Counter Attack" | "Low Block" | "Direct Play"
+
+const formations: Formation[] = ["4-3-3", "4-4-2", "3-5-2", "4-2-3-1"]
+const instructions: TeamInstruction[] = ["Gegenpress", "Possession", "Counter Attack", "Low Block", "Direct Play"]
 
 const tabs: { id: View; label: string; icon: typeof Users }[] = [
   { id: "squad", label: "Squad", icon: Users },
@@ -32,6 +37,11 @@ function staminaAccent(v: number): "cyan" | "emerald" | "amber" | "red" {
 export function SquadManager() {
   const [view, setView] = useState<View>("squad")
   const [activeStyle, setActiveStyle] = useState(playstyles[0])
+  const [formation, setFormation] = useState<Formation>(() => typeof window === "undefined" ? "4-3-3" : (localStorage.getItem("pitchside-formation") as Formation) || "4-3-3")
+  const [instruction, setInstruction] = useState<TeamInstruction>(() => typeof window === "undefined" ? "Possession" : (localStorage.getItem("pitchside-instruction") as TeamInstruction) || "Possession")
+
+  const chooseFormation = (value: Formation) => { setFormation(value); localStorage.setItem("pitchside-formation", value) }
+  const chooseInstruction = (value: TeamInstruction) => { setInstruction(value); localStorage.setItem("pitchside-instruction", value) }
 
   return (
     <div className="pb-4">
@@ -91,6 +101,17 @@ export function SquadManager() {
               <p className="mt-1 text-xs text-muted-foreground">
                 Tap any of the 25 styles below to set your team&apos;s tactical identity.
               </p>
+            </Card>
+            <Card className="mb-3 p-4">
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Formation</p>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                {formations.map((f) => <button key={f} onClick={() => chooseFormation(f)} className={cn("rounded-lg border px-3 py-2 text-sm font-bold", formation === f ? "border-primary bg-primary/15 text-primary" : "border-border bg-card/70")}>{f}</button>)}
+              </div>
+              <p className="mt-4 text-[11px] uppercase tracking-wide text-muted-foreground">In-game team instruction</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {instructions.map((i) => <button key={i} onClick={() => chooseInstruction(i)} className={cn("rounded-lg border px-3 py-2 text-xs font-bold", instruction === i ? "border-accent bg-accent/15 text-accent" : "border-border bg-card/70")}>{i}</button>)}
+              </div>
+              <p className="mt-3 text-[10px] text-muted-foreground">Formation controls positioning. Instruction changes pressing, tempo, width and defensive line during matches.</p>
             </Card>
             <div className="grid grid-cols-2 gap-2">
               {playstyles.map((s) => {
