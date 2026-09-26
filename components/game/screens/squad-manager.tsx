@@ -7,6 +7,7 @@ import { ScreenHeader, Card, Pill, StatBar } from "@/components/game/ui-bits"
 import { squad, wallet, type Player } from "@/components/game/data"
 import { formatAuctionTime, readAuctionPlayers, saveAuctionPlayers, type AuctionPlayer } from "@/lib/auction"
 import { cn } from "@/lib/utils"
+import { readWallet, saveWallet } from "@/lib/economy"
 import { MAX_SQUAD_SIZE, SQUAD_CAPACITIES, SQUAD_UPGRADE_GEMS, addAuctionPlayer, getSquadCapacity, loadClubSquad, saveClubSquad, upgradeSquadCapacity } from "@/lib/club-squad"
 
 type View = "squad" | "styles" | "training" | "market"
@@ -168,7 +169,7 @@ export function SquadManager() {
   }, [])
   useEffect(() => { localStorage.setItem("pitchside-training", JSON.stringify(trainingState)) }, [trainingState])
   useEffect(() => { localStorage.setItem("pitchside-training-ledger", JSON.stringify(trainingLedger)) }, [trainingLedger])
-  useEffect(() => { localStorage.setItem("pitchside-wallet", JSON.stringify(currency)) }, [currency])
+  useEffect(() => { saveWallet(currency) }, [currency])
 
   useEffect(() => {
     const completedNow = Object.values(trainingState).filter((record) => trainingNow >= record.completesAt)
@@ -565,7 +566,7 @@ export function SquadManager() {
                   {squadCapacity < MAX_SQUAD_SIZE ? (
                     <Button onClick={() => {
                       const result = upgradeSquadCapacity()
-                      if (result.success) setSquadCapacity(result.capacity)
+                      if (result.success) { setSquadCapacity(result.capacity); setCurrency(readWallet()) }
                     }} size="sm" className="h-8 rounded-lg px-3 text-[10px]">
                       Upgrade to {SQUAD_CAPACITIES[SQUAD_CAPACITIES.indexOf(squadCapacity as 24 | 32 | 50) + 1]} · {SQUAD_UPGRADE_GEMS[SQUAD_CAPACITIES.indexOf(squadCapacity as 24 | 32 | 50) + 1]} Gems
                     </Button>
