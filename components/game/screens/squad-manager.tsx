@@ -159,7 +159,7 @@ export function SquadManager() {
   const trainingLockRemaining = Math.max(0, trainingLedger.lockedUntil - trainingNow)
 
   useEffect(() => {
-    const id = window.setInterval(() => setTrainingNow(Date.now()), 1000)
+    const id = window.setInterval(() => { setTrainingNow(Date.now()); setAuctionNow(Date.now()) }, 1000)
     return () => window.clearInterval(id)
   }, [])
   useEffect(() => { localStorage.setItem("pitchside-training", JSON.stringify(trainingState)) }, [trainingState])
@@ -525,7 +525,7 @@ export function SquadManager() {
             <Card className="flex items-center justify-between p-4">
               <div>
                 <p className="font-display text-sm font-bold">Transfer Auction</p>
-                <p className="text-xs text-muted-foreground">Admin-controlled players · values in M coins</p>
+                <p className="text-xs text-muted-foreground">Admin-controlled players · values in coins</p>
               </div>
               <Pill accent="emerald">{auctionPlayers.filter((p) => p.enabled && p.endsAt > auctionNow).length} Live</Pill>
             </Card>
@@ -550,23 +550,23 @@ export function SquadManager() {
                 <div className="mt-3 flex items-center gap-2">
                   <div className="flex-1 rounded-lg bg-secondary/60 px-3 py-2">
                     <p className="text-[10px] uppercase text-muted-foreground">Current bid</p>
-                    <p className="font-display text-sm font-bold tabular-nums">{lot.currentBid.toFixed(1)}M</p>
+                    <p className="font-display text-sm font-bold tabular-nums">{lot.currentBid.toLocaleString()}</p>
                   </div>
                   <Button
-                    disabled={currency.coins < Math.ceil(lot.currentBid * 1000000)}
+                    disabled={currency.coins < lot.currentBid + 100}
                     onClick={() => {
-                      const nextBid = Number((lot.currentBid + 0.1).toFixed(1))
+                      const nextBid = Number((lot.currentBid + 100).toFixed(1))
                       const next = auctionPlayers.map((p) => p.id === lot.id ? { ...p, currentBid: nextBid } : p)
                       setAuctionPlayers(next)
                       saveAuctionPlayers(next)
-                      setCurrency((current) => ({ ...current, coins: current.coins - Math.ceil(nextBid * 1000000) }))
+                      setCurrency((current) => ({ ...current, coins: current.coins - nextBid }))
                     }}
                     className="h-11 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground"
                   >
-                    Bid +0.1M
+                    Bid +100
                   </Button>
                   <Button
-                    disabled={currency.coins < Math.ceil(lot.buyNow * 1000000)}
+                    disabled={currency.coins < lot.buyNow}
                     onClick={() => {
                       const next = auctionPlayers.map((p) => p.id === lot.id ? { ...p, enabled: false, endsAt: auctionNow } : p)
                       setAuctionPlayers(next)
