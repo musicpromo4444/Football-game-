@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Users, Layers, Dumbbell, Gavel, Battery, ChevronRight, Timer, Shield, Swords, SlidersHorizontal } from "lucide-react"
+import { Users, Layers, Dumbbell, Gavel, Battery, ChevronRight, Timer, Shield, Swords, SlidersHorizontal, Star } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ScreenHeader, Card, Pill, StatBar } from "@/components/game/ui-bits"
 import { squad, playstyles, trainingGames, auctionLots } from "@/components/game/data"
@@ -45,6 +45,62 @@ function staminaAccent(v: number): "cyan" | "emerald" | "amber" | "red" {
   if (v < 40) return "red"
   if (v < 70) return "amber"
   return "emerald"
+}
+
+function PlayerFace({ player }: { player: (typeof squad)[number] }) {
+  const initials = player.name.replace(/[^A-Za-z ]/g, "").split(" ").map((n) => n[0]).join("").slice(0, 2)
+  return (
+    <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white/30 bg-gradient-to-b from-amber-200/90 via-orange-300/80 to-amber-700/90 shadow-inner">
+      <div className="absolute -top-1 h-5 w-12 rounded-full bg-slate-900/90" />
+      <span className="relative mt-2 text-sm font-black text-slate-950">{initials}</span>
+      <span className="absolute left-3 top-7 h-1 w-1 rounded-full bg-slate-950" />
+      <span className="absolute right-3 top-7 h-1 w-1 rounded-full bg-slate-950" />
+      <span className="absolute bottom-2 h-1 w-3 rounded-full bg-slate-950/70" />
+    </div>
+  )
+}
+
+function PlayerCard({ player, compact = false }: { player: (typeof squad)[number]; compact?: boolean }) {
+  const main = [player.rating, Math.min(99, Math.round((player.rating + player.stamina) / 2)), Math.min(99, player.rating - 3), Math.min(99, player.stamina + 5)]
+  return (
+    <div className={cn(
+      "relative overflow-hidden rounded-2xl border border-primary/25 bg-gradient-to-br from-card via-card to-primary/5 shadow-lg",
+      compact ? "p-2" : "p-3",
+    )}>
+      <div className="absolute right-2 top-2 rounded-full bg-primary/15 px-1.5 py-0.5 text-[8px] font-black text-primary">
+        {player.rating} OVR
+      </div>
+      <div className="flex items-center gap-2">
+        <PlayerFace player={player} />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-black">{player.name}</p>
+          <p className="truncate text-[9px] font-semibold text-primary">{player.specialName || player.style}</p>
+          <p className="mt-0.5 truncate text-[9px] text-muted-foreground">{player.style} · {player.pos}</p>
+        </div>
+      </div>
+      {!compact && (
+        <>
+          <div className="mt-2 grid grid-cols-4 gap-1">
+            {[
+              ["RAT", main[0]],
+              ["PAS", main[1]],
+              ["DEF", main[2]],
+              ["STA", player.stamina],
+            ].map(([label, value]) => (
+              <div key={label} className="rounded-lg bg-secondary/60 px-1 py-1 text-center">
+                <p className="text-[7px] font-bold text-muted-foreground">{label}</p>
+                <p className="text-[10px] font-black">{value}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-2 flex items-center gap-1 text-[8px] font-bold text-amber-300">
+            <Star className="h-3 w-3 fill-current" />
+            Special: {player.specialStyle || "Standard"}
+          </div>
+        </>
+      )}
+    </div>
+  )
 }
 
 export function SquadManager() {
@@ -161,41 +217,39 @@ export function SquadManager() {
 
             <Card className="overflow-hidden p-3">
               <div className="mb-2 flex items-center justify-between">
-                <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Team shape</p>
-                <span className="text-[10px] font-semibold text-primary">{activePreset.instruction}</span>
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Starting XI</p>
+                  <p className="text-[10px] text-muted-foreground">Fixed squad players · tap a card to inspect abilities</p>
+                </div>
+                <Pill accent="cyan">{squad.length} players</Pill>
               </div>
 
               <div className="relative mx-auto aspect-[4/5] max-w-[290px] overflow-hidden rounded-2xl border border-primary/20 bg-emerald-950/60">
                 <div className="absolute inset-2 rounded-xl border border-white/15" />
                 <div className="absolute left-1/2 top-1/2 h-px w-[calc(100%-16px)] -translate-x-1/2 bg-white/15" />
                 <div className="absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/15" />
-                {squad.slice(0, 7).map((p, i) => {
+                {squad.map((p, i) => {
                   const slot = [
-                    { x: 50, y: 88 },
-                    { x: 24, y: 68 },
-                    { x: 50, y: 64 },
-                    { x: 76, y: 68 },
-                    { x: 32, y: 48 },
-                    { x: 68, y: 48 },
-                    { x: 50, y: 24 },
+                    { x: 50, y: 88 }, { x: 20, y: 69 }, { x: 50, y: 68 }, { x: 80, y: 69 },
+                    { x: 33, y: 48 }, { x: 67, y: 48 }, { x: 50, y: 22 },
                   ][i]
                   return (
-                    <div
-                      key={p.id}
-                      className="absolute -translate-x-1/2 -translate-y-1/2 text-center"
-                      style={{ left: slot.x + "%", top: slot.y + "%" }}
-                    >
-                      <span className="mx-auto flex h-8 w-8 items-center justify-center rounded-full border border-white/50 bg-primary text-[9px] font-black text-primary-foreground">
+                    <div key={p.id} className="absolute -translate-x-1/2 -translate-y-1/2 text-center" style={{ left: slot.x + "%", top: slot.y + "%" }}>
+                      <div className="relative mx-auto flex h-9 w-9 items-center justify-center rounded-full border-2 border-white/60 bg-primary text-[8px] font-black text-primary-foreground shadow-[0_0_16px_rgba(0,0,0,.35)]">
                         {p.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
-                      </span>
-                      <span className="mt-0.5 block max-w-[70px] truncate rounded bg-background/75 px-1 text-[7px] font-bold">
-                        {p.style}
-                      </span>
+                        <span className="absolute -right-1 -top-1 rounded-full bg-background px-1 text-[6px] text-primary">{p.rating}</span>
+                      </div>
+                      <span className="mt-0.5 block max-w-[62px] truncate rounded bg-background/80 px-1 text-[7px] font-bold">{p.name}</span>
                     </div>
                   )
                 })}
               </div>
+              <p className="mt-2 text-center text-[9px] text-muted-foreground">Formation positions update with your selected shape.</p>
             </Card>
+
+            <div className="grid grid-cols-1 gap-2">
+              {squad.map((p) => <PlayerCard key={p.id} player={p} />)}
+            </div>
 
             <Card className="p-3">
               <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Starting XI</p>
