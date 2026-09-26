@@ -62,6 +62,13 @@ const opponents: Point[] = [
   { x: 50, y: 12 },
 ]
 
+const opponentStyles: { role: PlayerRole; skill: number; decision: "dribble" | "pass" | "run" | "shoot" }[] = [
+  { role: "Inside Forward", skill: 92, decision: "dribble" },
+  { role: "Playmaker", skill: 88, decision: "pass" },
+  { role: "Advanced Forward", skill: 82, decision: "run" },
+  { role: "Poacher", skill: 76, decision: "shoot" },
+]
+
 const playerArchetypes = squad.slice(1, 6).map((p, i) => ({
   name: p.name, role: p.style as PlayerRole, specialStyle: p.specialStyle, specialName: p.specialName,
   x: [30, 70, 22, 78, 50][i], y: [30, 28, 62, 64, 80][i],
@@ -92,11 +99,14 @@ export function MatchCanvas() {
   const [positions, setPositions] = useState(() => formationSlots[loadTactics().formation].map((p) => ({ ...p })))
   const [opponentPositions, setOpponentPositions] = useState(() => opponents.map((p) => ({ ...p })))
   const [ballOwner, setBallOwner] = useState<number | null>(null)
+  const [opponentBallCarrier, setOpponentBallCarrier] = useState(0)
   const [selectedDefender, setSelectedDefender] = useState<number | null>(0)
+  const [injuredOpponent, setInjuredOpponent] = useState<number | null>(null)
   const [turnover, setTurnover] = useState(false)
   const pitchRef = useRef<HTMLDivElement>(null)
   const lastBallRef = useRef(ball)
   const selectedDefenderRef = useRef<number | null>(0)
+  const opponentCarrierRef = useRef(0)
 
   useEffect(() => {
     if (!running || time <= 0) return
@@ -230,20 +240,37 @@ export function MatchCanvas() {
         }
       }))
 
-      // Automatic tackle: the selected defender wins the ball when he closes
-      // the carrier. Other defenders stay available for cover/interception.
+      // Defensive action is automatic. When the selected defender gets into
+      // tackle range, he chooses a safe standing/slide tackle based on angle.
+      // Harder contacts are rare and can injure the attacker.
       if (ballOwner === null && selectedDefenderRef.current !== null) {
         setPositions((current) => {
           const defender = current[selectedDefenderRef.current!]
-          const carrier = opponentPositions.reduce((best, op, oi) => {
-            const d = Math.hypot(ballNow.x - op.x, ballNow.y - op.y)
-            return d < best.distance ? { index: oi, distance: d } : best
-          }, { index: 0, distance: Infinity })
-          if (defender && carrier.distance < 8) {
-            setBallOwner(selectedDefenderRef.current)
-            setTurnover(true)
-            setMessage("TACKLE WON — defender wins it and starts the transition")
-            lastBallRef.current = defender
+          const carrierIndex = opponentCarrierRef.current
+          const carrier = opponentPositions[carrierIndex]
+          if (!defender || !carrier) return current
+          const dx = carrier.x - defender.x
+          const dy = carrier.y - defender.y
+          const distance = Math.hypot(dx, dy)
+          const frontAngle = dy > -2
+          const defenderPlayer = playerArchetypes[selectedDefenderRef.current!]
+          const tackleSkill =
+            (defenderPlayer?.specialStyle === "Wall" ? 0.96 : 0.76) +
+            (defenderPlayer?.role === "Ball Winner" ? 0.08 : 0) +
+            (defenderPlayer?.role === "Stopper" ? 0.06 : 0)
+          if (distance < 6.5 && frontAngle) {
+            const clean = tackleSkill >= 0.84 || Math.random() > 0.2
+            if (clean) {
+              setBallOwner(selectedDefenderRef.current)
+              setTurnover(true)
+              setMessage("TACKLE WON — clean challenge, possession changes instantly")
+              lastBallRef.current = defender
+            } else {
+              // A mistimed aggressive challenge can create a brief loose ball.
+              const hard = Math.random() > 0.72
+              setMessage(hard ? "HARD TACKLE — contact! The attacker is down." : "Tackle missed — the attacker keeps moving")
+              if (hard) setInjuredOpponent(carrierIndex)
+            }
           }
           return current
         })
@@ -260,19 +287,75 @@ export function MatchCanvas() {
         })
       }
 
-      // Opponents react to the ball: compact when defending, press when it enters their zone.
-      setOpponentPositions((current) => current.map((p, i) => {
-        const dx = ballNow.x - p.x
-        const dy = ballNow.y - p.y
-        const d = Math.hypot(dx, dy)
-        const press = d < 32 ? 0.12 : 0.035
-        const compactX = 50 + (p.x - 50) * 0.985
-        const compactY = p.y + (ballNow.y - p.y) * press
-        return {
-          x: Math.max(8, Math.min(92, compactX + dx * press)),
-          y: Math.max(6, Math.min(88, compactY + dy * 0.04)),
-        }
-      }))
+      // Opponent AI: the ball carrier makes a decision when the selected defender
+      // closes in. The response depends on his player behaviour and skill.
+      if (ballOwner === null) {
+        setOpponentPositions((current) => current.map((p, i) => {
+          const carrier = current[opponentCarrierRef.current] || p
+          const dx = ballNow.x - p.x
+          const dy = ballNow.y - p.y
+          const d = Math.hypot(dx, dy)
+          const toGoalX = 50 - p.x
+          const toGoalY = 4 - p.y
+          let x = p.x + dx * (d < 30 ? 0.05 : 0.025)
+          let y = p.y + dy * (d < 30 ? 0.05 : 0.025)
+
+          if (i === opponentCarrierRef.current) {
+            const style = opponentStyles[i]
+            const defender = selectedDefenderRef.current === null ? null : current[opponentCarrierRef.current]
+            const homeDefender = positions[selectedDefenderRef.current ?? 0]
+            const pressureDistance = homeDefender ? Math.hypot(homeDefender.x - p.x, homeDefender.y - p.y) : 99
+            const danger = Math.max(0, 1 - pressureDistance / 20)
+            const skill = style.skill / 100
+
+            if (pressureDistance < 18) {
+              if (style.decision === "dribble") {
+                // Dribbler takes the ball away from the defender, with better
+                // escape movement at higher skill.
+                const escapeX = p.x - (homeDefender?.x ?? p.x)
+                const escapeY = p.y - (homeDefender?.y ?? p.y)
+                x += escapeX * (0.18 + skill * 0.12)
+                y += escapeY * (0.18 + skill * 0.12)
+                x += Math.sin(t * 4 + i) * 1.5
+                y += Math.cos(t * 4 + i) * 1.0
+              } else if (style.decision === "pass") {
+                // Playmakers release early toward the teammate with the clearest
+                // forward/goal angle rather than waiting to be tackled.
+                const target = current
+                  .map((op, oi) => ({ op, oi, score: (4 - Math.abs(op.x - 50) / 18) + (op.y < p.y ? 2 : 0) }))
+                  .filter(v => v.oi !== i)
+                  .sort((a, b) => b.score - a.score)[0]
+                if (target) {
+                  setOpponentBallCarrier(target.oi)
+                  opponentCarrierRef.current = target.oi
+                  lastBallRef.current = target.op
+                  setBall({ ...target.op })
+                  setMessage(`${style.role} releases the ball before the tackle`)
+                }
+              } else if (style.decision === "run") {
+                // Direct runners attack the defender and try to break through.
+                x += toGoalX * (0.06 + skill * 0.04)
+                y += toGoalY * (0.06 + skill * 0.04)
+              } else {
+                // Goal-focused players keep attacking the goal rather than
+                // automatically avoiding the defender.
+                x += toGoalX * 0.08
+                y += toGoalY * 0.1
+              }
+            } else {
+              x += toGoalX * 0.025
+              y += toGoalY * 0.035
+            }
+          } else {
+            // Off-ball opponents make supporting runs into useful passing areas.
+            const support = (i - opponentCarrierRef.current) * 3
+            x += (50 + support - p.x) * 0.025
+            y += (ballNow.y - p.y) * 0.025
+          }
+
+          return { x: Math.max(8, Math.min(92, x)), y: Math.max(6, Math.min(88, y)) }
+        }))
+      }
     }, 180)
     return () => clearInterval(id)
   }, [running, tactics, ballOwner])
@@ -384,6 +467,9 @@ export function MatchCanvas() {
     setBall(center)
     setOpponentPositions(opponents.map((p) => ({ ...p })))
     setBallOwner(null)
+    setOpponentBallCarrier(0)
+    opponentCarrierRef.current = 0
+    setInjuredOpponent(null)
     selectedDefenderRef.current = 0
     setSelectedDefender(0)
     setTurnover(false)
@@ -468,13 +554,19 @@ export function MatchCanvas() {
           </svg>
         )}
 
-        {/* opponents — move toward the ball instead of staying as static dots */}
+        {/* opponents — the ball carrier reacts to pressure instead of waiting for a tap */}
         {opponentPositions.map((p, i) => (
           <span
             key={`o${i}`}
-            className="absolute h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/30 bg-destructive/70"
+            className={cn(
+              "absolute flex h-5 w-5 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/30 bg-destructive/70 transition-none",
+              opponentCarrierRef.current === i && "ring-2 ring-destructive/40",
+              injuredOpponent === i && "opacity-50"
+            )}
             style={{ left: `${p.x}%`, top: `${p.y}%` }}
-          />
+          >
+            {opponentCarrierRef.current === i ? <span className="h-1.5 w-1.5 rounded-full bg-white" /> : null}
+          </span>
         ))}
 
         {/* player archetypes — the selected defender gets an instant control ring */}
@@ -510,13 +602,13 @@ export function MatchCanvas() {
         {!drag && (
           <div className="pointer-events-none absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-background/70 px-3 py-1.5 text-[11px] font-medium text-muted-foreground backdrop-blur-sm">
             <Hand className="h-3.5 w-3.5" />
-            {ballOwner === null ? "Tap a defender to switch · close down the ball carrier" : "Swipe from the ball to pass"}
+            {ballOwner === null ? "Defenders tackle automatically when positioned correctly" : "Swipe from the ball to pass"}
           </div>
         )}
       </div>
 
       <div className="mt-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-center text-[10px] font-semibold text-muted-foreground">
-        {message}<span className="mt-1 block text-[9px] opacity-70">{ballOwner === null ? "AI defenders cover passing lanes while your selected defender presses." : "Tap a teammate to switch control instantly."}</span>
+        {message}<span className="mt-1 block text-[9px] opacity-70">{ballOwner === null ? "Dribblers evade, playmakers release passes, runners attack the defender." : "Tap a teammate to switch control instantly."}</span>
       </div>
 
       {/* passes counter */
