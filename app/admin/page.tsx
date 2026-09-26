@@ -5,6 +5,7 @@ import { ArrowLeft, Plus, Save, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, Pill, ScreenHeader } from "@/components/game/ui-bits"
 import { AuctionPlayer, DEFAULT_AUCTION_PLAYERS, readAuctionPlayers, saveAuctionPlayers } from "@/lib/auction"
+import { AuctionDisplaySettings, DEFAULT_AUCTION_DISPLAY, readAuctionDisplay, saveAuctionDisplay } from "@/lib/auction-display"
 
 const emptyPlayer = (): AuctionPlayer => ({
   id: `a-${Date.now()}`,
@@ -25,11 +26,13 @@ export default function AdminPage() {
   const [players, setPlayers] = useState<AuctionPlayer[]>([])
   const [count, setCount] = useState(4)
   const [saved, setSaved] = useState(false)
+  const [display, setDisplay] = useState<AuctionDisplaySettings>(DEFAULT_AUCTION_DISPLAY)
 
   useEffect(() => {
     const loaded = readAuctionPlayers()
     setPlayers(loaded)
     setCount(loaded.length)
+    setDisplay(readAuctionDisplay())
   }, [])
 
   const enabledPlayers = useMemo(() => players.filter((p) => p.enabled), [players])
@@ -59,6 +62,19 @@ export default function AdminPage() {
     <main className="min-h-screen bg-background pb-8">
       <ScreenHeader title="PitchSide Admin" subtitle="Auction control" />
       <div className="space-y-3 px-5">
+        <Card className="p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div><p className="text-xs uppercase tracking-wide text-muted-foreground">Auction button</p><p className="font-bold">{display.enabled ? "Visible to players" : "Hidden from players"}</p></div>
+            <label className="flex items-center gap-2 text-xs font-bold"><input type="checkbox" checked={display.enabled} onChange={(e) => setDisplay({ ...display, enabled: e.target.checked })} /> ON</label>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <label className="text-[10px] font-bold text-muted-foreground">Icon<input value={display.icon} onChange={(e) => setDisplay({ ...display, icon: e.target.value })} className="mt-1 w-full rounded-lg border border-border bg-secondary/50 px-2 py-2 text-xs" /></label>
+            <label className="text-[10px] font-bold text-muted-foreground">Name<input value={display.title} onChange={(e) => setDisplay({ ...display, title: e.target.value })} className="mt-1 w-full rounded-lg border border-border bg-secondary/50 px-2 py-2 text-xs" /></label>
+          </div>
+          <label className="mt-2 block text-[10px] font-bold text-muted-foreground">Write-up<input value={display.writeUp} onChange={(e) => setDisplay({ ...display, writeUp: e.target.value })} className="mt-1 w-full rounded-lg border border-border bg-secondary/50 px-2 py-2 text-xs" /></label>
+          <Button onClick={() => { saveAuctionDisplay(display); setSaved(true); window.setTimeout(() => setSaved(false), 1800) }} variant="outline" className="mt-3 w-full rounded-xl">Save auction button</Button>
+        </Card>
+
         <Card glow="cyan" className="p-4">
           <div className="flex items-center justify-between gap-3">
             <div><p className="text-xs uppercase tracking-wide text-muted-foreground">Auction players</p><p className="font-display text-2xl font-black text-primary">{enabledPlayers.length}</p></div>
