@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Users, Layers, Dumbbell, Gavel, Battery, ChevronRight, Timer, Shield, Swords, SlidersHorizontal, Star } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ScreenHeader, Card, Pill, StatBar } from "@/components/game/ui-bits"
@@ -112,6 +112,20 @@ export function SquadManager() {
   const [presetId, setPresetId] = useState<TacticalPresetId>(() => typeof window === "undefined" ? "possession" : (localStorage.getItem("pitchside-tactical-preset") as TacticalPresetId) || "possession")
   const activePreset = tacticalPresets.find((p) => p.id === presetId) || tacticalPresets[0]
   const [instruction, setInstruction] = useState(activePreset.instruction)
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null)
+  const [lineup, setLineup] = useState<string[]>(() => typeof window === "undefined" ? squad.map((p) => p.id) : JSON.parse(localStorage.getItem("pitchside-lineup") || JSON.stringify(squad.map((p) => p.id))))
+  const selectedPlayer = useMemo(() => squad.find((p) => p.id === selectedPlayerId) || null, [selectedPlayerId])
+  const swapPlayer = (targetId: string) => {
+    if (!selectedPlayerId || selectedPlayerId === targetId) return
+    setLineup((current) => {
+      const a = current.indexOf(selectedPlayerId), b = current.indexOf(targetId)
+      if (a < 0 || b < 0) return current
+      const next = [...current]; [next[a], next[b]] = [next[b], next[a]]
+      localStorage.setItem("pitchside-lineup", JSON.stringify(next))
+      return next
+    })
+    setSelectedPlayerId(null)
+  }
 
   const chooseFormation = (value: Formation) => { setFormation(value); localStorage.setItem("pitchside-formation", value) }
   const choosePreset = (preset: TacticalPreset) => {
@@ -228,13 +242,13 @@ export function SquadManager() {
                 <div className="absolute inset-2 rounded-xl border border-white/15" />
                 <div className="absolute left-1/2 top-1/2 h-px w-[calc(100%-16px)] -translate-x-1/2 bg-white/15" />
                 <div className="absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/15" />
-                {squad.map((p, i) => {
+                {lineup.map((playerId, i) => {\n                  const p = squad.find((player) => player.id === playerId) || squad[i]
                   const slot = [
                     { x: 50, y: 88 }, { x: 20, y: 69 }, { x: 50, y: 68 }, { x: 80, y: 69 },
                     { x: 33, y: 48 }, { x: 67, y: 48 }, { x: 50, y: 22 },
                   ][i]
                   return (
-                    <div key={p.id} className="absolute -translate-x-1/2 -translate-y-1/2 text-center" style={{ left: slot.x + "%", top: slot.y + "%" }}>
+                    <button type="button" key={p.id} onClick={() => selectedPlayerId ? swapPlayer(p.id) : setSelectedPlayerId(p.id)} className={cn("absolute -translate-x-1/2 -translate-y-1/2 text-center rounded-xl p-1 transition", selectedPlayerId === p.id ? "bg-primary/25 ring-2 ring-primary scale-110" : "hover:bg-white/10") } style={{ left: slot.x + "%", top: slot.y + "%" }} aria-label={selectedPlayerId ? `Swap with ${p.name}` : `Select ${p.name}`}>
                       <div className="relative mx-auto flex h-9 w-9 items-center justify-center rounded-full border-2 border-white/60 bg-primary text-[8px] font-black text-primary-foreground shadow-[0_0_16px_rgba(0,0,0,.35)]">
                         {p.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
                         <span className="absolute -right-1 -top-1 rounded-full bg-background px-1 text-[6px] text-primary">{p.rating}</span>
@@ -244,11 +258,11 @@ export function SquadManager() {
                   )
                 })}
               </div>
-              <p className="mt-2 text-center text-[9px] text-muted-foreground">Formation positions update with your selected shape.</p>
+              <div className="mt-2 flex items-center justify-between gap-2">\n                <p className="text-[9px] text-muted-foreground">{selectedPlayer ? `${selectedPlayer.name} selected — tap another player to swap` : "Tap a player to select, then tap another to swap."}</p>\n                {selectedPlayer ? <button type="button" onClick={() => setSelectedPlayerId(null)} className="rounded-lg border border-border px-2 py-1 text-[9px] font-bold">Cancel</button> : null}\n              </div>
             </Card>
 
             <div className="grid grid-cols-1 gap-2">
-              {squad.map((p) => <PlayerCard key={p.id} player={p} />)}
+              {lineup.map((id) => { const p = squad.find((player) => player.id === id); return p ? <button type="button" key={p.id} onClick={() => setSelectedPlayerId(p.id)} className="text-left">{<PlayerCard player={p} />}</button> : null })}
             </div>
 
             <Card className="p-3">
