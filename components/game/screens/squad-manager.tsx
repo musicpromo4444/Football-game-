@@ -113,7 +113,14 @@ export function SquadManager() {
   const activePreset = tacticalPresets.find((p) => p.id === presetId) || tacticalPresets[0]
   const [instruction, setInstruction] = useState(activePreset.instruction)
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null)
-  const [lineup, setLineup] = useState<string[]>(() => typeof window === "undefined" ? squad.map((p) => p.id) : JSON.parse(localStorage.getItem("pitchside-lineup") || JSON.stringify(squad.map((p) => p.id))))
+  const [lineup, setLineup] = useState<string[]>(() => {
+    const defaults = squad.map((p) => p.id)
+    if (typeof window === "undefined") return defaults
+    try {
+      const saved = JSON.parse(localStorage.getItem("pitchside-lineup") || "null")
+      return Array.isArray(saved) && saved.length === squad.length ? saved : defaults
+    } catch { return defaults }
+  })
   const selectedPlayer = useMemo(() => squad.find((p) => p.id === selectedPlayerId) || null, [selectedPlayerId])
   const swapPlayer = (targetId: string) => {
     if (!selectedPlayerId || selectedPlayerId === targetId) return
@@ -248,14 +255,29 @@ export function SquadManager() {
                 <div className="absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/15" />
                 {(() => {
                   const shapes: Record<Formation, { x: number; y: number }[]> = {
-                    "4-3-3": [{x:50,y:88},{x:18,y:68},{x:40,y:70},{x:60,y:70},{x:82,y:68},{x:28,y:48},{x:50,y:42}],
-                    "4-4-2": [{x:50,y:88},{x:18,y:68},{x:40,y:70},{x:60,y:70},{x:82,y:68},{x:25,y:45},{x:75,y:45}],
-                    "3-5-2": [{x:50,y:88},{x:28,y:67},{x:50,y:70},{x:72,y:67},{x:25,y:45},{x:50,y:45},{x:75,y:45}],
-                    "4-2-3-1": [{x:50,y:88},{x:18,y:68},{x:40,y:70},{x:60,y:70},{x:82,y:68},{x:38,y:48},{x:62,y:48}],
-                    "4-1-4-1": [{x:50,y:88},{x:18,y:68},{x:40,y:70},{x:60,y:70},{x:82,y:68},{x:50,y:52},{x:50,y:28}],
+                    "4-3-3": [
+                      {x:50,y:91},{x:14,y:72},{x:37,y:75},{x:63,y:75},{x:86,y:72},
+                      {x:28,y:54},{x:50,y:50},{x:72,y:54},{x:18,y:29},{x:50,y:24},{x:82,y:29},
+                    ],
+                    "4-4-2": [
+                      {x:50,y:91},{x:14,y:72},{x:37,y:75},{x:63,y:75},{x:86,y:72},
+                      {x:15,y:50},{x:38,y:53},{x:62,y:53},{x:85,y:50},{x:35,y:27},{x:65,y:27},
+                    ],
+                    "3-5-2": [
+                      {x:50,y:91},{x:25,y:73},{x:50,y:76},{x:75,y:73},
+                      {x:10,y:50},{x:30,y:53},{x:50,y:56},{x:70,y:53},{x:90,y:50},{x:38,y:27},{x:62,y:27},
+                    ],
+                    "4-2-3-1": [
+                      {x:50,y:91},{x:14,y:72},{x:37,y:75},{x:63,y:75},{x:86,y:72},
+                      {x:37,y:55},{x:63,y:55},{x:20,y:37},{x:50,y:34},{x:80,y:37},{x:50,y:18},
+                    ],
+                    "4-1-4-1": [
+                      {x:50,y:91},{x:14,y:72},{x:37,y:75},{x:63,y:75},{x:86,y:72},
+                      {x:50,y:58},{x:15,y:43},{x:38,y:47},{x:62,y:47},{x:85,y:43},{x:50,y:23},
+                    ],
                   }
                   const slots = shapes[formation]
-                  return lineup.slice(0, 7).map((playerId, i) => {
+                  return lineup.slice(0, 11).map((playerId, i) => {
                     const p = squad.find((player) => player.id === playerId) || squad[i]
                     const slot = slots[i]
                     if (!p || !slot) return null
@@ -294,7 +316,7 @@ export function SquadManager() {
             <Card className="p-3">
               <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Starting XI</p>
               <div className="space-y-2">
-                {squad.slice(0, 7).map((p, i) => (
+                {squad.slice(0, 11).map((p, i) => (
                   <div key={p.id} className="flex items-center gap-3 rounded-xl border border-border bg-card/70 px-3 py-2.5">
                     <span className={cn("flex h-8 w-8 items-center justify-center rounded-lg text-[9px] font-black", posColor[p.pos])}>{p.pos}</span>
                     <div className="min-w-0 flex-1">
