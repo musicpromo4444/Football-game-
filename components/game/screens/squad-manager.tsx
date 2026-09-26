@@ -4,9 +4,10 @@ import { useEffect, useMemo, useState } from "react"
 import { Users, Layers, Dumbbell, Gavel, ChevronRight, Timer, Shield, Swords, SlidersHorizontal, Star, Coins, Gem, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ScreenHeader, Card, Pill, StatBar } from "@/components/game/ui-bits"
-import { squad, wallet } from "@/components/game/data"
+import { squad, wallet, type Player } from "@/components/game/data"
 import { formatAuctionTime, readAuctionPlayers, saveAuctionPlayers, type AuctionPlayer } from "@/lib/auction"
 import { cn } from "@/lib/utils"
+import { MAX_SQUAD_SIZE, addAuctionPlayer, loadClubSquad, saveClubSquad } from "@/lib/club-squad"
 
 type View = "squad" | "styles" | "training" | "market"
 type Formation = "4-3-3" | "4-4-2" | "3-5-2" | "4-2-3-1" | "4-1-4-1"
@@ -70,7 +71,7 @@ function staminaAccent(v: number): "cyan" | "emerald" | "amber" | "red" {
   return "emerald"
 }
 
-function PlayerFace({ player }: { player: (typeof squad)[number] }) {
+function PlayerFace({ player }: { player: Player }) {
   const initials = player.name.replace(/[^A-Za-z ]/g, "").split(" ").map((n) => n[0]).join("").slice(0, 2)
   return (
     <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white/30 bg-gradient-to-b from-amber-200/90 via-orange-300/80 to-amber-700/90 shadow-inner">
@@ -83,7 +84,7 @@ function PlayerFace({ player }: { player: (typeof squad)[number] }) {
   )
 }
 
-function PlayerCard({ player, compact = false }: { player: (typeof squad)[number]; compact?: boolean }) {
+function PlayerCard({ player, compact = false }: { player: Player; compact?: boolean }) {
   const main = [player.rating, Math.min(99, Math.round((player.rating + player.stamina) / 2)), Math.min(99, player.rating - 3), Math.min(99, player.stamina + 5)]
   return (
     <div className={cn(
@@ -134,13 +135,14 @@ export function SquadManager() {
   const [presetId, setPresetId] = useState<TacticalPresetId>(() => typeof window === "undefined" ? "possession" : (localStorage.getItem("pitchside-tactical-preset") as TacticalPresetId) || "possession")
   const activePreset = tacticalPresets.find((p) => p.id === presetId) || tacticalPresets[0]
   const [instruction, setInstruction] = useState(activePreset.instruction)
+  const [teamPlayers, setTeamPlayers] = useState<Player[]>(() => loadClubSquad(squad))
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null)
   const [lineup, setLineup] = useState<string[]>(() => {
-    const defaults = squad.map((p) => p.id)
+    const defaults = loadClubSquad(squad).map((p) => p.id)
     if (typeof window === "undefined") return defaults
     try {
       const saved = JSON.parse(localStorage.getItem("pitchside-lineup") || "null")
-      return Array.isArray(saved) && saved.length === squad.length ? saved : defaults
+      return Array.isArray(saved) && saved.every((id) => defaults.includes(id)) ? saved : defaults
     } catch { return defaults }
   })
   const [trainingNow, setTrainingNow] = useState(() => Date.now())
@@ -183,7 +185,30 @@ export function SquadManager() {
     }
   }, [trainingNow, trainingLedger.lockedUntil])
 
-  const selectedPlayer = useMemo(() => squad.find((p) => p.id === selectedPlayerId) || null, [selectedPlayerId])
+  useEffect(() => { saveClubSquad(teamPlayers) }, [teamPlayers])
+
+  useEffect(() => {
+    const ended = auctionPlayers.filter((lot) => lot.enabled && lot.endsAt <= auctionNow)
+    if (!ended.length) return
+    let nextAuction = [...auctionPlayers]
+    let nextSquad = teamPlayers
+    let changed = false
+    for (const lot of ended) {
+      const result = addAuctionPlayer(nextSquad, lot)
+      if (result.added) {
+        nextSquad = result.squad
+        nextAuction = nextAuction.map((p) => p.id === lot.id ? { ...p, enabled: false } : p)
+        changed = true
+      }
+    }
+    if (changed) {
+      setTeamPlayers(nextSquad)
+      setAuctionPlayers(nextAuction)
+      saveAuctionPlayers(nextAuction)
+    }
+  }, [auctionNow, auctionPlayers, teamPlayers])
+
+  const selectedPlayer = useMemo(() => teamPlayers.find((p) => p.id === selectedPlayerId) || null, [teamPlayers, selectedPlayerId])
   const beginTraining = (playerId: string, tier: TrainingTier) => {
     const existing = trainingState[playerId]
     if (trainingCycleLocked || activeTrainingCount >= MAX_CONCURRENT_TRAINING) return
@@ -334,9 +359,9 @@ export function SquadManager() {
               <div className="mb-2 flex items-center justify-between">
                 <div>
                   <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Starting XI</p>
-                  <p className="text-[10px] text-muted-foreground">Fixed squad players · tap a card to inspect abilities</p>
+                  <p className="text-[10px] text-muted-foreground">Your full squad · starting XI is selected for matches</p>
                 </div>
-                <Pill accent="cyan">{squad.length} players</Pill>
+                <Pill accent="cyan">{teamPlayers.length}/{MAX_SQUAD_SIZE}</Pill>
               </div>
 
               <div className="relative mx-auto aspect-[4/5] max-w-[290px] overflow-hidden rounded-2xl border border-primary/20 bg-emerald-950/60">
@@ -368,7 +393,7 @@ export function SquadManager() {
                   }
                   const slots = shapes[formation]
                   return lineup.slice(0, 11).map((playerId, i) => {
-                    const p = squad.find((player) => player.id === playerId) || squad[i]
+                    const p = teamPlayers.find((player) => player.id === playerId) || squad[i]
                     const slot = slots[i]
                     if (!p || !slot) return null
                     return (
@@ -400,14 +425,14 @@ export function SquadManager() {
                 {selectedPlayer ? <button type="button" onClick={() => setSelectedPlayerId(null)} className="rounded-lg border border-border px-2 py-1 text-[9px] font-bold">Cancel</button> : null}
               </div>
             <div className="grid grid-cols-1 gap-2">
-              {lineup.map((id) => { const p = squad.find((player) => player.id === id); return p ? <button type="button" key={p.id} onClick={() => setSelectedPlayerId(p.id)} className="text-left">{<PlayerCard player={p} />}</button> : null })}
+              {lineup.map((id) => { const p = teamPlayers.find((player) => player.id === id); return p ? <button type="button" key={p.id} onClick={() => setSelectedPlayerId(p.id)} className="text-left">{<PlayerCard player={p} />}</button> : null })}
             </div>
             </Card>
 
             <Card className="p-3">
               <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Starting XI</p>
               <div className="space-y-2">
-                {squad.slice(0, 11).map((p, i) => (
+                {teamPlayers.slice(0, 11).map((p, i) => (
                   <div key={p.id} className="flex items-center gap-3 rounded-xl border border-border bg-card/70 px-3 py-2.5">
                     <span className={cn("flex h-8 w-8 items-center justify-center rounded-lg text-[9px] font-black", posColor[p.pos])}>{p.pos}</span>
                     <div className="min-w-0 flex-1">
@@ -502,7 +527,7 @@ export function SquadManager() {
               </div>
               <div className="mt-3 grid grid-cols-3 gap-2 text-center text-[10px]"><div className="rounded-xl border border-border p-2"><b>Light</b><span className="mt-1 block text-muted-foreground">Ad · +1 all</span></div><div className="rounded-xl border border-border p-2"><b>Heavy</b><span className="mt-1 block text-muted-foreground">Ad · +3 all</span></div><div className="rounded-xl border border-primary/30 bg-primary/10 p-2"><b>Super</b><span className="mt-1 block text-muted-foreground">Paid · +5 all</span></div></div>
             </Card>
-            {squad.map((p) => {
+            {teamPlayers.map((p) => {
               const record = trainingState[p.id]; const active = !!record && trainingNow < record.completesAt; const locked = !!record && trainingNow < record.weeklyUnlockAt; const complete = !!record && trainingNow >= record.completesAt;
               return (
                 <Card key={p.id} className={cn("p-3", active && "border-amber-400/40 bg-amber-400/5")}>
@@ -516,7 +541,7 @@ export function SquadManager() {
               )
             })}
             {adTraining ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-6"><Card glow="cyan" className="relative w-full max-w-sm p-5 text-center"><button onClick={() => setAdTraining(null)} className="absolute right-4 top-4"><X className="h-4 w-4"/></button><p className="text-xs uppercase tracking-widest text-muted-foreground">Sponsored Training</p><p className="mt-2 font-display text-xl font-black">Watch ad to start {adTraining.tier} training</p><p className="mt-2 text-sm text-muted-foreground">Ad finishes in {adTraining.seconds}s. Training then runs for 24 hours.</p></Card></div> : null}
-            {superPlayerId ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-6"><Card glow="cyan" className="w-full max-w-sm p-5"><div className="flex items-center justify-between"><p className="font-display text-lg font-black">Super Training</p><button onClick={() => setSuperPlayerId(null)}><X className="h-4 w-4"/></button></div><p className="mt-2 text-xs text-muted-foreground">Train {squad.find((p) => p.id === superPlayerId)?.name} for 24 hours and add +5 to every attribute.</p><div className="mt-4 grid grid-cols-2 gap-2"><Button onClick={() => confirmSuperTraining(true)} disabled={currency.gems < SUPER_GEMS} className="h-12 rounded-xl"><Gem className="mr-1 h-4 w-4"/>{SUPER_GEMS} Gems</Button><Button onClick={() => confirmSuperTraining(false)} disabled={currency.coins < SUPER_COINS} variant="outline" className="h-12 rounded-xl"><Coins className="mr-1 h-4 w-4"/>{SUPER_COINS.toLocaleString()} Coins</Button></div></Card></div> : null}
+            {superPlayerId ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-6"><Card glow="cyan" className="w-full max-w-sm p-5"><div className="flex items-center justify-between"><p className="font-display text-lg font-black">Super Training</p><button onClick={() => setSuperPlayerId(null)}><X className="h-4 w-4"/></button></div><p className="mt-2 text-xs text-muted-foreground">Train {teamPlayers.find((p) => p.id === superPlayerId)?.name} for 24 hours and add +5 to every attribute.</p><div className="mt-4 grid grid-cols-2 gap-2"><Button onClick={() => confirmSuperTraining(true)} disabled={currency.gems < SUPER_GEMS} className="h-12 rounded-xl"><Gem className="mr-1 h-4 w-4"/>{SUPER_GEMS} Gems</Button><Button onClick={() => confirmSuperTraining(false)} disabled={currency.coins < SUPER_COINS} variant="outline" className="h-12 rounded-xl"><Coins className="mr-1 h-4 w-4"/>{SUPER_COINS.toLocaleString()} Coins</Button></div></Card></div> : null}
           </div>
         )}
 
@@ -525,7 +550,7 @@ export function SquadManager() {
             <Card className="flex items-center justify-between p-4">
               <div>
                 <p className="font-display text-sm font-bold">Transfer Auction</p>
-                <p className="text-xs text-muted-foreground">Admin-controlled players · values in coins</p>
+                <p className="text-xs text-muted-foreground">Admin-controlled players · {teamPlayers.length}/{MAX_SQUAD_SIZE} squad spaces used</p>
               </div>
               <Pill accent="emerald">{auctionPlayers.filter((p) => p.enabled && p.endsAt > auctionNow).length} Live</Pill>
             </Card>
@@ -553,7 +578,7 @@ export function SquadManager() {
                     <p className="font-display text-sm font-bold tabular-nums">{lot.currentBid.toLocaleString()}</p>
                   </div>
                   <Button
-                    disabled={currency.coins < lot.currentBid + 100}
+                    disabled={teamPlayers.length >= MAX_SQUAD_SIZE || currency.coins < lot.currentBid + 100}
                     onClick={() => {
                       const nextBid = Number((lot.currentBid + 100).toFixed(1))
                       const next = auctionPlayers.map((p) => p.id === lot.id ? { ...p, currentBid: nextBid } : p)
@@ -568,15 +593,21 @@ export function SquadManager() {
                   <Button
                     disabled={currency.coins < lot.buyNow}
                     onClick={() => {
+                      if (teamPlayers.length >= MAX_SQUAD_SIZE) return
+                      if (currency.coins < lot.buyNow) return
+                      const result = addAuctionPlayer(teamPlayers, lot)
+                      if (!result.added) return
                       const next = auctionPlayers.map((p) => p.id === lot.id ? { ...p, enabled: false, endsAt: auctionNow } : p)
+                      setTeamPlayers(result.squad)
                       setAuctionPlayers(next)
                       saveAuctionPlayers(next)
-                      setCurrency((current) => ({ ...current, coins: current.coins - Math.ceil(lot.buyNow * 1000000) }))
+                      setCurrency((current) => ({ ...current, coins: current.coins - lot.buyNow }))
                     }}
+                    disabled={teamPlayers.length >= MAX_SQUAD_SIZE || currency.coins < lot.buyNow}
                     variant="outline"
                     className="h-11 rounded-xl border-accent/40 bg-accent/10 px-4 text-sm font-semibold text-accent"
                   >
-                    {lot.buyNow}M
+                    Buy {lot.buyNow.toLocaleString()}
                   </Button>
                 </div>
               </Card>
