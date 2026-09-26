@@ -42,7 +42,7 @@ export function saveClubSquad(players: Player[]) {
 }
 
 export function addAuctionPlayer(base: Player[], player: AuctionPlayer): { squad: Player[]; added: boolean } {
-  const current = loadClubSquad(base)
+  const current = base.length ? base : loadClubSquad(base)
   if (current.some((p) => p.id === "auction-" + player.id)) return { squad: current, added: false }
   if (current.length >= MAX_SQUAD_SIZE) return { squad: current, added: false }
   const next = [...current, auctionToPlayer(player)]
