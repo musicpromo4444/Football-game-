@@ -11,6 +11,7 @@ import { LeagueHub } from "@/components/game/screens/league-hub"
 import { PrivateLeagues } from "@/components/game/screens/private-leagues"
 import { SquadManager } from "@/components/game/screens/squad-manager"
 import { Settings } from "@/components/game/screens/settings"
+import { Shop } from "@/components/game/screens/shop"
 import { DailyLoginModal } from "@/components/game/daily-login-modal"
 
 export function AppShell() {
@@ -29,6 +30,7 @@ export function AppShell() {
           {tab === "league" && <LeagueHub />}
           {tab === "play" && <Play onNavigate={setTab} />}
           {tab === "squad" && <SquadManager />}
+          {tab === "shop" && <Shop />}
           {tab === "settings" && <Settings />}
         </main>
         <BottomNav active={tab} onChange={setTab} />
