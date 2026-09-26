@@ -7,14 +7,28 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 type Point = { x: number; y: number }
-type Formation = "4-3-3" | "4-4-2" | "3-5-2" | "4-2-3-1"
+type Formation = "4-3-3" | "4-4-2" | "3-5-2" | "4-2-3-1" | "4-1-4-1"
 type TeamInstruction = "Gegenpress" | "Possession" | "Counter Attack" | "Low Block" | "Direct Play"
+type TacticalPresetId = "possession" | "tiki-taka" | "gegenpress" | "counter-attack" | "direct-play" | "wing-play" | "long-ball" | "high-press" | "low-block" | "balanced"
+const tacticalPresets: Record<TacticalPresetId, { formation: Formation; instruction: TeamInstruction; width: number; tempo: number; line: number; direct: number }> = {
+  possession: { formation: "4-3-3", instruction: "Possession", width: 0.9, tempo: 0.72, line: 2, direct: 0.2 },
+  "tiki-taka": { formation: "4-3-3", instruction: "Possession", width: 0.82, tempo: 0.9, line: 1, direct: 0.1 },
+  gegenpress: { formation: "4-3-3", instruction: "Gegenpress", width: 1.12, tempo: 1.35, line: -7, direct: 0.45 },
+  "counter-attack": { formation: "4-2-3-1", instruction: "Counter Attack", width: 1.08, tempo: 1.2, line: -3, direct: 0.8 },
+  "direct-play": { formation: "4-1-4-1", instruction: "Direct Play", width: 1.02, tempo: 1.08, line: -1, direct: 0.9 },
+  "wing-play": { formation: "4-4-2", instruction: "Direct Play", width: 1.28, tempo: 1.0, line: -2, direct: 0.65 },
+  "long-ball": { formation: "4-2-3-1", instruction: "Direct Play", width: 1.0, tempo: 1.18, line: -1, direct: 1.0 },
+  "high-press": { formation: "4-3-3", instruction: "Gegenpress", width: 1.05, tempo: 1.3, line: -10, direct: 0.5 },
+  "low-block": { formation: "3-5-2", instruction: "Low Block", width: 0.82, tempo: 0.62, line: 10, direct: 0.75 },
+  balanced: { formation: "4-2-3-1", instruction: "Possession", width: 1.0, tempo: 0.95, line: 0, direct: 0.5 },
+}
 
 const formationSlots: Record<Formation, Point[]> = {
   "4-3-3": [{ x: 28, y: 30 }, { x: 72, y: 30 }, { x: 35, y: 55 }, { x: 65, y: 55 }, { x: 50, y: 76 }],
   "4-4-2": [{ x: 25, y: 32 }, { x: 75, y: 32 }, { x: 28, y: 55 }, { x: 72, y: 55 }, { x: 50, y: 76 }],
   "3-5-2": [{ x: 30, y: 36 }, { x: 70, y: 36 }, { x: 50, y: 48 }, { x: 27, y: 61 }, { x: 73, y: 61 }],
   "4-2-3-1": [{ x: 25, y: 34 }, { x: 75, y: 34 }, { x: 38, y: 58 }, { x: 62, y: 58 }, { x: 50, y: 76 }],
+  "4-1-4-1": [{ x: 25, y: 34 }, { x: 75, y: 34 }, { x: 30, y: 54 }, { x: 70, y: 54 }, { x: 50, y: 76 }],
 }
 
 const instructionEffects: Record<TeamInstruction, { tempo: number; width: number; line: number }> = {
@@ -25,11 +39,13 @@ const instructionEffects: Record<TeamInstruction, { tempo: number; width: number
   "Direct Play": { tempo: 1.08, width: 1.02, line: -1 },
 }
 
-function loadTactics(): { formation: Formation; instruction: TeamInstruction } {
-  if (typeof window === "undefined") return { formation: "4-3-3", instruction: "Possession" }
-  const formation = (localStorage.getItem("pitchside-formation") as Formation) || "4-3-3"
-  const instruction = (localStorage.getItem("pitchside-instruction") as TeamInstruction) || "Possession"
-  return { formation, instruction }
+function loadTactics(): { formation: Formation; instruction: TeamInstruction; preset: TacticalPresetId } {
+  if (typeof window === "undefined") return { formation: "4-3-3", instruction: "Possession", preset: "possession" }
+  const preset = (localStorage.getItem("pitchside-tactical-preset") as TacticalPresetId) || "possession"
+  const config = tacticalPresets[preset] || tacticalPresets.possession
+  const formation = (localStorage.getItem("pitchside-formation") as Formation) || config.formation
+  const instruction = (localStorage.getItem("pitchside-instruction") as TeamInstruction) || config.instruction
+  return { formation, instruction, preset }
 }
 
 const teammates: Point[] = [
@@ -89,7 +105,8 @@ export function MatchCanvas() {
   useEffect(() => {
     if (!running) return
     const base = formationSlots[tactics.formation]
-    const effect = instructionEffects[tactics.instruction]
+    const preset = tacticalPresets[tactics.preset] || tacticalPresets.possession
+    const effect = { tempo: preset.tempo, width: preset.width, line: preset.line }
     const id = setInterval(() => {
       setPositions((current) => current.map((p, i) => {
         const player = playerArchetypes[i]
@@ -108,6 +125,13 @@ export function MatchCanvas() {
         if (tactics.instruction === "Counter Attack" && player.pos === "FWD") y -= 9
         if (tactics.instruction === "Low Block") y += 8
         if (tactics.instruction === "Direct Play" && player.pos === "FWD") y -= 10
+        if (tactics.preset === "tiki-taka") { x += Math.sin(t * 1.8 + i) * 2.5; y += Math.cos(t * 1.7 + i) * 2 }
+        if (tactics.preset === "wing-play" && (player.role === "Winger" || player.role === "Wingback")) x += i % 2 === 0 ? -9 : 9
+        if (tactics.preset === "high-press") { y -= 8; x += Math.sin(t * 1.4 + i) * 2 }
+        if (tactics.preset === "low-block") { y += 8; x = 50 + (x - 50) * 0.78 }
+        if (tactics.preset === "long-ball" || tactics.preset === "direct-play") { if (player.pos === "FWD") y -= 12 }
+        if (tactics.preset === "counter-attack" && player.pos === "FWD") { y -= 14; x += Math.sin(t + i) * 2 }
+        if (tactics.preset === "possession" || tactics.preset === "tiki-taka") { x = 50 + (x - 50) * (tactics.preset === "tiki-taka" ? 0.78 : 0.72) }
         return { x: Math.max(8, Math.min(92, x)), y: Math.max(8, Math.min(90, y)) }
       }))
     }, Math.max(120, 520 / effect.tempo))
@@ -169,7 +193,7 @@ export function MatchCanvas() {
       <div className="mt-4 rounded-xl border border-primary/20 bg-card/70 px-3 py-2">
         <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-muted-foreground">
           <span>Formation</span><span className="font-bold text-primary">{tactics.formation}</span>
-          <span>Instruction</span><span className="font-bold text-accent">{tactics.instruction}</span>
+          <span>Preset</span><span className="font-bold text-accent">{tactics.preset.replace("-", " ")}</span>
         </div>
         <p className="mt-1 text-[10px] text-muted-foreground">Shape controls positioning · instruction controls team behaviour</p>
       </div>
