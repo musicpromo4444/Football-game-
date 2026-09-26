@@ -2,6 +2,7 @@
 
 import type { Player } from "@/components/game/data"
 import type { AuctionPlayer } from "@/lib/auction"
+import { readWallet, saveWallet } from "@/lib/economy"
 
 export const SQUAD_CAPACITIES = [24, 32, 50] as const
 export const SQUAD_UPGRADE_GEMS = [0, 250, 600] as const
@@ -22,9 +23,9 @@ export function upgradeSquadCapacity(): { success: boolean; capacity: number; co
   if (index < 0 || index >= SQUAD_CAPACITIES.length - 1) return { success: false, capacity: current, cost: 0 }
   const next = SQUAD_CAPACITIES[index + 1]
   const cost = SQUAD_UPGRADE_GEMS[index + 1]
-  const gems = Number(localStorage.getItem("pitchside-gems") || 340)
-  if (gems < cost) return { success: false, capacity: current, cost }
-  localStorage.setItem("pitchside-gems", String(gems - cost))
+  const wallet = readWallet()
+  if (wallet.gems < cost) return { success: false, capacity: current, cost }
+  saveWallet({ ...wallet, gems: wallet.gems - cost })
   localStorage.setItem(SQUAD_CAPACITY_KEY, String(next))
   return { success: true, capacity: next, cost }
 }
