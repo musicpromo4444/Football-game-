@@ -215,6 +215,10 @@ export const squad: Player[] = [
   { id: "p5", name: "J. Petrov", pos: "MID", rating: 83, stamina: 81, style: "Playmaker", specialStyle: "Maestro", specialName: "The Architect" },
   { id: "p6", name: "A. Cruz", pos: "FWD", rating: 90, stamina: 38, style: "False Nine", specialStyle: "Hammer", specialName: "The Anvil" },
   { id: "p7", name: "K. Adeyemi", pos: "FWD", rating: 85, stamina: 69, style: "Inside Forward", specialStyle: "Dribble King", specialName: "Velvet Feet" },
+  { id: "p8", name: "S. Okoro", pos: "DEF", rating: 82, stamina: 78, style: "Stopper" },
+  { id: "p9", name: "E. Mensah", pos: "DEF", rating: 80, stamina: 84, style: "Wingback" },
+  { id: "p10", name: "N. Ibrahim", pos: "MID", rating: 84, stamina: 88, style: "Box-to-Box" },
+  { id: "p11", name: "R. Silva", pos: "FWD", rating: 82, stamina: 76, style: "Winger" },
 ]
 
 export type AuctionLot = {
