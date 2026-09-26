@@ -103,6 +103,8 @@ export function MatchCanvas() {
   const [selectedDefender, setSelectedDefender] = useState<number | null>(0)
   const [injuredOpponent, setInjuredOpponent] = useState<number | null>(null)
   const [turnover, setTurnover] = useState(false)
+  const [shotResult, setShotResult] = useState<string | null>(null)
+  const shotCooldownRef = useRef(false)
   const pitchRef = useRef<HTMLDivElement>(null)
   const lastBallRef = useRef(ball)
   const selectedDefenderRef = useRef<number | null>(0)
@@ -428,6 +430,85 @@ export function MatchCanvas() {
     if (dist > 6) {
       const nextBall = { ...drag.current }
       const action = classifySwipe(drag.start, nextBall)
+
+      // Shooting is role-based: the player decides how to finish based on his
+      // role/special style, while the Guardian goalkeeper reacts to the shot.
+      if (action === "shoot" && ballOwner !== null && !shotCooldownRef.current) {
+        shotCooldownRef.current = true
+        setTimeout(() => { shotCooldownRef.current = false }, 900)
+
+        const shooter = playerArchetypes[ballOwner]
+        const shooterRole = shooter?.role
+        const special = shooter?.specialStyle
+        const distance = Math.hypot(50 - (positions[ballOwner]?.x ?? 50), 4 - (positions[ballOwner]?.y ?? 50))
+        let accuracy = 0.58
+        let power = 0.65
+        let finishText = "SHOT"
+
+        if (special === "Long-Range Sniper") {
+          accuracy = distance > 35 ? 0.91 : 0.82
+          power = 0.96
+          finishText = "LONG-RANGE SNIPER"
+        } else if (special === "Hammer") {
+          accuracy = 0.78
+          power = 0.95
+          finishText = "HAMMER HEADER"
+        } else if (shooterRole === "Poacher") {
+          accuracy = 0.9
+          power = 0.7
+          finishText = "POACHER FINISH"
+        } else if (shooterRole === "Inside Forward") {
+          accuracy = 0.82
+          power = 0.78
+          finishText = "INSIDE-FORWARD FINISH"
+        } else if (shooterRole === "Advanced Forward" || shooterRole === "Complete Forward") {
+          accuracy = 0.8
+          power = 0.84
+          finishText = "FORWARD FINISH"
+        } else if (shooterRole === "Target Forward") {
+          accuracy = 0.72
+          power = 0.88
+          finishText = "TARGET-MAN FINISH"
+        } else if (shooterRole === "Playmaker" || shooterRole === "Deep-Lying Playmaker") {
+          accuracy = 0.64
+          power = 0.62
+          finishText = "PLACED SHOT"
+        }
+
+        // Guardian reads the shot with elite positioning/reactions.
+        const guardianSave = 0.22 + (special === "Long-Range Sniper" ? 0.03 : 0)
+        const saved = Math.random() > accuracy || Math.random() < guardianSave
+        const rebound = saved && Math.random() < (power > 0.88 ? 0.46 : 0.28)
+
+        if (!saved) {
+          setScore((s) => ({ ...s, home: s.home + 1 }))
+          setShotResult("GOAL")
+          setMessage(`${finishText} — GOAL!`)
+          setTurnover(false)
+        } else if (rebound) {
+          setShotResult("REBOUND")
+          setMessage(`GUARDIAN SAVE — rebound spills loose!`)
+          setBallOwner(null)
+          opponentCarrierRef.current = 0
+          setOpponentBallCarrier(0)
+          setTurnover(true)
+          lastBallRef.current = { x: 50, y: 14 }
+          setBall({ x: 50, y: 14 })
+        } else {
+          setShotResult("SAVED")
+          setMessage(`GUARDIAN SAVE — ${finishText.toLowerCase()} denied`)
+          setBallOwner(null)
+          opponentCarrierRef.current = 0
+          setOpponentBallCarrier(0)
+          setTurnover(true)
+          lastBallRef.current = { x: 50, y: 9 }
+          setBall({ x: 50, y: 9 })
+        }
+        setActions((n) => n + 1)
+        setDrag(null)
+        return
+      }
+
       lastBallRef.current = nextBall
       setBall(nextBall)
       setPasses((n) => n + 1)
@@ -533,6 +614,8 @@ export function MatchCanvas() {
     selectedDefenderRef.current = 0
     setSelectedDefender(0)
     setTurnover(false)
+    setShotResult(null)
+    shotCooldownRef.current = false
     setPasses(0)
     setActions(0)
     setMessage("Swipe from the ball to pass")
@@ -556,8 +639,8 @@ export function MatchCanvas() {
         </div>
 
         <div className="flex flex-col items-center">
-          <span className="rounded-full bg-destructive/20 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-destructive">
-            Sudden Death
+          <span className={cn("rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest", shotResult === "GOAL" ? "bg-accent/20 text-accent" : "bg-destructive/20 text-destructive")}>
+            {shotResult ? shotResult : "Sudden Death"}
           </span>
           <p
             className={cn(
