@@ -488,13 +488,13 @@ export function SquadManager() {
                 <span className="rounded-full bg-accent/10 px-2 py-1 text-[10px] font-bold text-accent">{activePreset.formation}</span>
               </div>
               <p className="mt-1 text-xs text-muted-foreground">{activePreset.description}</p>
-              <div className="mt-3 grid grid-cols-2 gap-2">
+              <div className="mt-3 grid grid-cols-2 gap-3">
                 {tacticalPresets.map((preset) => {
                   const active = preset.id === presetId
-                  const phase = previewTick * 0.65
+                  const phase = active ? previewTick * 0.65 : 0
                   const move = (i: number) => {
-                    const bx = [22,78,30,70,50][i]
-                    const by = [25,25,52,52,72][i]
+                    const bx = [22,78,30,70,50][i], by = [25,25,52,52,72][i]
+                    if (preset.motion === "tiki") return { x: bx + Math.sin(phase * 1.8 + i) * 9, y: by + Math.cos(phase * 1.8 + i) * 5 }
                     if (preset.motion === "pass") return { x: bx + Math.sin(phase + i) * 6, y: by + Math.cos(phase + i) * 3 }
                     if (preset.motion === "press" || preset.motion === "high") return { x: bx + (50 - bx) * 0.08 + Math.sin(phase + i) * 2, y: by - 5 + Math.sin(phase + i) * 2 }
                     if (preset.motion === "counter") return { x: bx + (i % 2 ? 5 : -5), y: by - 7 + Math.sin(phase + i) * 2 }
@@ -504,19 +504,17 @@ export function SquadManager() {
                     return { x: bx + Math.sin(phase + i) * 2, y: by + Math.cos(phase + i) * 2 }
                   }
                   return (
-                    <button key={preset.id} onClick={() => choosePreset(preset)} className={cn("rounded-xl border p-2 text-left transition", active ? "border-primary bg-primary/15" : "border-border bg-card/70")}>
-                      <div className="relative mx-auto h-20 w-full max-w-[92px] overflow-hidden rounded-lg border border-white/15 bg-emerald-950/60">
+                    <div key={preset.id} className={cn("rounded-xl border p-2 transition", active ? "border-primary bg-primary/15" : "border-border bg-card/70")}>
+                      <div className="relative mx-auto h-24 w-full overflow-hidden rounded-lg border border-white/15 bg-emerald-950/60">
                         <div className="absolute left-1/2 top-1/2 h-px w-full -translate-x-1/2 bg-white/15" />
-                        <div className="absolute left-1/2 top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/15" />
-                        {[0,1,2,3,4].map((i) => (
-                          <span key={i} className={cn("absolute h-2.5 w-2.5 rounded-full border border-white/40", active ? "bg-primary" : "bg-primary/70")} style={{ left: move(i).x + "%", top: move(i).y + "%", transition: "left 450ms ease, top 450ms ease" }} />
-                        ))}
-                        {[0,1,2,3].map((i) => <span key={i} className="absolute h-2.5 w-2.5 rounded-full border border-white/30 bg-blue-400/70" style={{ left: [35,65,50,58][i] + "%", top: [18,38,48,62][i] + "%" }} />)}
-                        <span className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-white" style={{ left: (50 + Math.sin(phase) * 18) + "%", transition: "left 450ms linear" }} />
+                        <div className="absolute left-1/2 top-1/2 h-7 w-7 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/15" />
+                        {[0,1,2,3,4].map((i) => { const p=move(i); return <span key={i} className="absolute h-2.5 w-2.5 rounded-full border border-white/40 bg-primary/80" style={{left:p.x+"%",top:p.y+"%",transition:"left 450ms ease, top 450ms ease"}} /> })}
+                        {[0,1,2,3].map((i) => <span key={i} className="absolute h-2.5 w-2.5 rounded-full border border-white/30 bg-blue-400/70" style={{ left: [35,65,50,58][i]+"%", top: [18,38,48,62][i]+"%" }} />)}
+                        <span className="absolute bottom-1 h-1 w-1 rounded-full bg-white" style={{ left: (50 + (active ? Math.sin(phase) * 18 : 0))+"%", transition:"left 450ms linear" }} />
                       </div>
                       <p className={cn("mt-2 text-xs font-bold", active ? "text-primary" : "text-foreground")}>{preset.name}</p>
-                      <p className="text-[9px] leading-tight text-muted-foreground">{preset.description}</p>
-                    </button>
+                      <Button type="button" onClick={() => choosePreset(preset)} size="sm" className="mt-2 h-8 w-full rounded-lg text-[10px]">{active ? "Playing" : "Play Preview"}</Button>
+                    </div>
                   )
                 })}
               </div>
