@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Play, Pause, RotateCcw, Battery, Hand, Star } from "lucide-react"
 import { squad, type PlayerRole } from "@/components/game/data"
 import { Button } from "@/components/ui/button"
@@ -24,11 +24,11 @@ const tacticalPresets: Record<TacticalPresetId, { formation: Formation; instruct
 }
 
 const formationSlots: Record<Formation, Point[]> = {
-  "4-3-3": [{ x: 28, y: 30 }, { x: 72, y: 30 }, { x: 35, y: 55 }, { x: 65, y: 55 }, { x: 50, y: 76 }],
-  "4-4-2": [{ x: 25, y: 32 }, { x: 75, y: 32 }, { x: 28, y: 55 }, { x: 72, y: 55 }, { x: 50, y: 76 }],
-  "3-5-2": [{ x: 30, y: 36 }, { x: 70, y: 36 }, { x: 50, y: 48 }, { x: 27, y: 61 }, { x: 73, y: 61 }],
-  "4-2-3-1": [{ x: 25, y: 34 }, { x: 75, y: 34 }, { x: 38, y: 58 }, { x: 62, y: 58 }, { x: 50, y: 76 }],
-  "4-1-4-1": [{ x: 25, y: 34 }, { x: 75, y: 34 }, { x: 30, y: 54 }, { x: 70, y: 54 }, { x: 50, y: 76 }],
+  "4-3-3": [{x:50,y:90},{x:15,y:72},{x:37,y:75},{x:63,y:75},{x:85,y:72},{x:28,y:54},{x:50,y:51},{x:72,y:54},{x:18,y:31},{x:50,y:25},{x:82,y:31}],
+  "4-4-2": [{x:50,y:90},{x:15,y:72},{x:37,y:75},{x:63,y:75},{x:85,y:72},{x:15,y:51},{x:38,y:53},{x:62,y:53},{x:85,y:51},{x:36,y:29},{x:64,y:29}],
+  "3-5-2": [{x:50,y:90},{x:25,y:74},{x:50,y:76},{x:75,y:74},{x:10,y:51},{x:30,y:54},{x:50,y:56},{x:70,y:54},{x:90,y:51},{x:38,y:29},{x:62,y:29}],
+  "4-2-3-1": [{x:50,y:90},{x:15,y:72},{x:37,y:75},{x:63,y:75},{x:85,y:72},{x:37,y:56},{x:63,y:56},{x:20,y:39},{x:50,y:35},{x:80,y:39},{x:50,y:19}],
+  "4-1-4-1": [{x:50,y:90},{x:15,y:72},{x:37,y:75},{x:63,y:75},{x:85,y:72},{x:50,y:59},{x:15,y:45},{x:38,y:48},{x:62,y:48},{x:85,y:45},{x:50,y:25}],
 }
 
 const instructionEffects: Record<TeamInstruction, { tempo: number; width: number; line: number }> = {
@@ -69,10 +69,13 @@ const opponentStyles: { role: PlayerRole; skill: number; decision: "dribble" | "
   { role: "Poacher", skill: 76, decision: "shoot" },
 ]
 
-const playerArchetypes = squad.slice(1, 6).map((p, i) => ({
-  name: p.name, role: p.style as PlayerRole, specialStyle: p.specialStyle, specialName: p.specialName,
-  x: [30, 70, 22, 78, 50][i], y: [30, 28, 62, 64, 80][i],
-}))
+function loadLineupIds() {
+  if (typeof window === "undefined") return squad.map((p) => p.id)
+  try {
+    const saved = JSON.parse(localStorage.getItem("pitchside-lineup") || "null")
+    return Array.isArray(saved) ? saved : squad.map((p) => p.id)
+  } catch { return squad.map((p) => p.id) }
+}
 
 const teamStamina = [
   { name: "Silvana", value: 55 },
@@ -97,19 +100,20 @@ export function MatchCanvas() {
   const [actions, setActions] = useState(0)
   const [message, setMessage] = useState("Swipe from the ball to pass")
   const [tactics] = useState(loadTactics)
+  const playerArchetypes = useMemo(() => loadLineupIds().map((id) => squad.find((p) => p.id === id)).filter(Boolean).map((p) => ({ name: p!.name, role: p!.style as PlayerRole, specialStyle: p!.specialStyle, specialName: p!.specialName, pos: p!.pos, stamina: p!.stamina })), [])
   const [positions, setPositions] = useState(() => formationSlots[loadTactics().formation].map((p) => ({ ...p })))
   const [opponentPositions, setOpponentPositions] = useState(() => opponents.map((p) => ({ ...p })))
   const [ballOwner, setBallOwner] = useState<number | null>(null)
   const [opponentBallCarrier, setOpponentBallCarrier] = useState(0)
   const [ballFlight, setBallFlight] = useState<Point | null>(null)
-  const [selectedDefender, setSelectedDefender] = useState<number | null>(0)
+  const [selectedDefender, setSelectedDefender] = useState<number | null>(2)
   const [injuredOpponent, setInjuredOpponent] = useState<number | null>(null)
   const [turnover, setTurnover] = useState(false)
   const [shotResult, setShotResult] = useState<string | null>(null)
   const shotCooldownRef = useRef(false)
   const pitchRef = useRef<HTMLDivElement>(null)
   const lastBallRef = useRef(ball)
-  const selectedDefenderRef = useRef<number | null>(0)
+  const selectedDefenderRef = useRef<number | null>(2)
   const opponentCarrierRef = useRef(0)
 
   useEffect(() => {
@@ -782,7 +786,7 @@ export function MatchCanvas() {
 
       {/* passes counter */}
       <div className="mt-3 grid grid-cols-2 gap-2">
-        {playerArchetypes.slice(0, 4).map((p) => (
+        {playerArchetypes.slice(0, 6).map((p) => (
           <div key={p.name} className="rounded-xl border border-border bg-card/70 px-3 py-2">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold">{p.name}</span>
