@@ -821,24 +821,22 @@ export function MatchCanvas() {
       </div>
 
       {/* stamina */}
-      <div className="mt-3 grid grid-cols-3 gap-2">
-        {teamStamina.map((s) => (
-          <div key={s.name} className="rounded-xl border border-border bg-card/70 p-2.5">
-            <div className="flex items-center gap-1">
-              <Battery className={cn("h-3 w-3", s.value < 40 ? "text-destructive" : "text-muted-foreground")} />
-              <span className="truncate text-[11px] font-semibold">{s.name}</span>
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        {playerArchetypes.slice(0, 6).map((p, i) => {
+          const value = Math.round(stamina[i] ?? 0)
+          return (
+            <div key={p.name} className="rounded-xl border border-border bg-card/70 p-2.5">
+              <div className="flex items-center gap-1">
+                <Battery className={cn("h-3 w-3", value < 40 ? "text-destructive" : "text-muted-foreground")} />
+                <span className="truncate text-[11px] font-semibold">{p.name}</span>
+                <span className="ml-auto text-[9px] font-bold">{value}</span>
+              </div>
+              <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-secondary">
+                <div className={cn("h-full rounded-full", value < 40 ? "bg-destructive" : value < 70 ? "bg-chart-4" : "bg-accent")} style={{ width: value + "%" }} />
+              </div>
             </div>
-            <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-secondary">
-              <div
-                className={cn(
-                  "h-full rounded-full",
-                  s.value < 40 ? "bg-destructive" : s.value < 70 ? "bg-chart-4" : "bg-accent",
-                )}
-                style={{ width: `${s.value}%` }}
-              />
-            </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       {/* controls */}
