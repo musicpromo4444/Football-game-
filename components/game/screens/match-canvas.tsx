@@ -95,7 +95,7 @@ function format(t: number) {
   return `${m}:${s.toString().padStart(2, "0")}`
 }
 
-export function MatchCanvas() {
+export type MatchOutcome = { home: number; away: number }\n\nexport function MatchCanvas({ onMatchComplete }: { onMatchComplete?: (outcome: MatchOutcome) => void }) {
   const [time, setTime] = useState(120)
   const [running, setRunning] = useState(false)
   const [ball, setBall] = useState<Point>({ x: 50, y: 55 })
@@ -133,7 +133,7 @@ export function MatchCanvas() {
   const pitchRef = useRef<HTMLDivElement>(null)
   const lastBallRef = useRef(ball)
   const selectedDefenderRef = useRef<number | null>(2)
-  const opponentCarrierRef = useRef(0)
+  const opponentCarrierRef = useRef(0)\n  const completionSentRef = useRef(false)
 
   useEffect(() => {
     if (trainingBlocked) { setRunning(false); return }
