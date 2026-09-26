@@ -208,13 +208,13 @@ export type Player = {
 
 
 export const squad: Player[] = [
-  { id: "p1", name: "L. Farrow", pos: "GK", rating: 84, stamina: 92, style: "Sweeper Keeper" },
-  { id: "p2", name: "D. Nakamura", pos: "DEF", rating: 81, stamina: 74, style: "Inverted Fullbacks" },
-  { id: "p3", name: "R. Okafor", pos: "DEF", rating: 86, stamina: 63, style: "High Line" },
-  { id: "p4", name: "M. Silvana", pos: "MID", rating: 88, stamina: 55, style: "Tiki-Taka" },
-  { id: "p5", name: "J. Petrov", pos: "MID", rating: 83, stamina: 81, style: "Box Midfield" },
-  { id: "p6", name: "A. Cruz", pos: "FWD", rating: 90, stamina: 38, style: "False Nine" },
-  { id: "p7", name: "K. Adeyemi", pos: "FWD", rating: 85, stamina: 69, style: "Counter Blitz" },
+  { id: "p1", name: "L. Farrow", pos: "GK", rating: 84, stamina: 92, style: "Sweeper Keeper", specialStyle: "Guardian", specialName: "The Guardian" },
+  { id: "p2", name: "D. Nakamura", pos: "DEF", rating: 81, stamina: 74, style: "Inverted Fullback", specialStyle: "Wingback Master", specialName: "Wing Phantom" },
+  { id: "p3", name: "R. Okafor", pos: "DEF", rating: 86, stamina: 63, style: "Ball-Playing Defender", specialStyle: "Wall", specialName: "Iron Wall" },
+  { id: "p4", name: "M. Silvana", pos: "MID", rating: 88, stamina: 55, style: "Mezzala", specialStyle: "Mezzala", specialName: "Silk Runner" },
+  { id: "p5", name: "J. Petrov", pos: "MID", rating: 83, stamina: 81, style: "Playmaker", specialStyle: "Maestro", specialName: "The Architect" },
+  { id: "p6", name: "A. Cruz", pos: "FWD", rating: 90, stamina: 38, style: "False Nine", specialStyle: "Hammer", specialName: "The Anvil" },
+  { id: "p7", name: "K. Adeyemi", pos: "FWD", rating: 85, stamina: 69, style: "Inside Forward", specialStyle: "Dribble King", specialName: "Velvet Feet" },
 ]
 
 export type AuctionLot = {
