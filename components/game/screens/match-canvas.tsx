@@ -153,8 +153,8 @@ export function MatchCanvas() {
       setPositions((current) => current.map((p, i) => {
         const player = playerArchetypes[i]
         const injuryFactor = injuries[i] === "heavy" ? 0.4 : injuries[i] === "light" ? 0.7 : 1
-        if (injuries[i] === "heavy") return { ...anchor }
         const anchor = base[i] || p
+        if (injuries[i] === "heavy") return { ...anchor }
         const dx = ballNow.x - p.x
         const dy = ballNow.y - p.y
         const distanceToBall = Math.hypot(dx, dy)
