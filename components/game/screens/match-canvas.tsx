@@ -440,9 +440,58 @@ export function MatchCanvas() {
         return d < Math.hypot(nextBall.x - positions[best].x, nextBall.y - positions[best].y) ? i : best
       }, null)
 
-      // A clean pass gives the receiving player control; a loose pass remains contestable.
-      setBallOwner(targetIndex)
-      setTurnover(false)
+      // Passing quality: ordinary passes can be intercepted; elite special passers
+      // make the ball much harder to read, with only rare subtle errors.
+      const passer = ballOwner !== null ? playerArchetypes[ballOwner] : null
+      const passerPos = ballOwner !== null ? positions[ballOwner] : null
+      const targetPos = targetIndex !== null ? positions[targetIndex] : null
+      let passQuality = 0.68
+      if (passer?.specialStyle === "Maestro") passQuality = 0.98
+      else if (passer?.specialStyle === "Mezzala") passQuality = 0.90
+      else if (passer?.role === "Playmaker" || passer?.role === "Deep-Lying Playmaker") passQuality = 0.84
+      else if (passer?.role === "Ball-Playing Defender") passQuality = 0.80
+
+      let intercepted = false
+      if (passerPos && targetPos && targetIndex !== null) {
+        const vx = targetPos.x - passerPos.x
+        const vy = targetPos.y - passerPos.y
+        const len = Math.hypot(vx, vy)
+        const defenderOnLine = len > 1 && opponentPositions.some((op) => {
+          const wx = op.x - passerPos.x
+          const wy = op.y - passerPos.y
+          const projection = Math.max(0, Math.min(1, (wx * vx + wy * vy) / (len * len)))
+          const cx = passerPos.x + vx * projection
+          const cy = passerPos.y + vy * projection
+          return Math.hypot(op.x - cx, op.y - cy) < 5.5
+        })
+        if (defenderOnLine) {
+          const errorChance = 0.03 + (1 - passQuality) * 0.38
+          intercepted = Math.random() < errorChance
+        }
+      }
+
+      if (intercepted) {
+        const interceptor = opponentPositions
+          .map((op, oi) => ({ op, oi, d: targetPos ? Math.hypot(op.x - targetPos.x, op.y - targetPos.y) : 99 }))
+          .sort((a, b) => a.d - b.d)[0]
+        setBallOwner(null)
+        opponentCarrierRef.current = interceptor.oi
+        setOpponentBallCarrier(interceptor.oi)
+        lastBallRef.current = interceptor.op
+        setBall({ ...interceptor.op })
+        setTurnover(true)
+        setMessage(passer?.specialStyle
+          ? `${passer.specialStyle} pass has a slight execution error — defender gets a touch`
+          : "PASS INTERCEPTED — defender wins possession")
+      } else {
+        setBallOwner(targetIndex)
+        setTurnover(false)
+        if (passer?.specialStyle === "Maestro") {
+          setMessage("MAESTRO PASS — weighted around the defender")
+        } else if (passer?.specialStyle === "Mezzala") {
+          setMessage("MEZZALA PASS — half-space delivery beats the interception")
+        }
+      }
 
       // The selected tactic changes what happens after the gesture.
       if (tactics.preset === "possession" || tactics.preset === "tiki-taka") {
