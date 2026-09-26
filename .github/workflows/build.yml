@@ -1,4 +1,4 @@
-name: Build check
+name: Build and package
 on:
   push:
     branches: [main]
@@ -17,3 +17,10 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm run build
+      - name: Package project
+        run: |
+          zip -r pitchside-production.zip .             -x ".git/*" ".next/*" "node_modules/*" "*.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pitchside-production
+          path: pitchside-production.zip
