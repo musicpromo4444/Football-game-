@@ -7,7 +7,7 @@ import { ScreenHeader, Card, Pill, StatBar } from "@/components/game/ui-bits"
 import { squad, wallet, type Player } from "@/components/game/data"
 import { formatAuctionTime, readAuctionPlayers, saveAuctionPlayers, type AuctionPlayer } from "@/lib/auction"
 import { cn } from "@/lib/utils"
-import { MAX_SQUAD_SIZE, addAuctionPlayer, loadClubSquad, saveClubSquad } from "@/lib/club-squad"
+import { MAX_SQUAD_SIZE, SQUAD_CAPACITIES, SQUAD_UPGRADE_GEMS, addAuctionPlayer, getSquadCapacity, loadClubSquad, saveClubSquad, upgradeSquadCapacity } from "@/lib/club-squad"
 
 type View = "squad" | "styles" | "training" | "market"
 type Formation = "4-3-3" | "4-4-2" | "3-5-2" | "4-2-3-1" | "4-1-4-1"
@@ -136,6 +136,7 @@ export function SquadManager() {
   const activePreset = tacticalPresets.find((p) => p.id === presetId) || tacticalPresets[0]
   const [instruction, setInstruction] = useState(activePreset.instruction)
   const [teamPlayers, setTeamPlayers] = useState<Player[]>(() => loadClubSquad(squad))
+  const [squadCapacity, setSquadCapacity] = useState(24)
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null)
   const [lineup, setLineup] = useState<string[]>(() => {
     const defaults = loadClubSquad(squad).map((p) => p.id)
@@ -185,7 +186,7 @@ export function SquadManager() {
     }
   }, [trainingNow, trainingLedger.lockedUntil])
 
-  useEffect(() => { saveClubSquad(teamPlayers) }, [teamPlayers])
+  useEffect(() => { setSquadCapacity(getSquadCapacity()); saveClubSquad(teamPlayers) }, [teamPlayers])
 
   useEffect(() => {
     const ended = auctionPlayers.filter((lot) => lot.enabled && lot.endsAt <= auctionNow)
@@ -370,7 +371,7 @@ export function SquadManager() {
                   <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Starting XI</p>
                   <p className="text-[10px] text-muted-foreground">Your full squad · starting XI is selected for matches</p>
                 </div>
-                <Pill accent="cyan">{teamPlayers.length}/{MAX_SQUAD_SIZE}</Pill>
+                <Pill accent="cyan">{teamPlayers.length}/{squadCapacity}</Pill>
               </div>
 
               <div className="relative mx-auto aspect-[4/5] max-w-[290px] overflow-hidden rounded-2xl border border-primary/20 bg-emerald-950/60">
@@ -559,7 +560,20 @@ export function SquadManager() {
             <Card className="flex items-center justify-between p-4">
               <div>
                 <p className="font-display text-sm font-bold">Transfer Auction</p>
-                <p className="text-xs text-muted-foreground">Admin-controlled players · {teamPlayers.length}/{MAX_SQUAD_SIZE} squad spaces used</p>
+                <p className="text-xs text-muted-foreground">Admin-controlled players · {teamPlayers.length}/{squadCapacity} squad spaces used</p>
+                <div className="mt-2 flex items-center justify-between gap-2 rounded-xl border border-border/60 bg-background/30 p-2">
+                  <span className="text-[10px] text-muted-foreground">Squad capacity</span>
+                  {squadCapacity < MAX_SQUAD_SIZE ? (
+                    <Button onClick={() => {
+                      const result = upgradeSquadCapacity()
+                      if (result.success) setSquadCapacity(result.capacity)
+                    }} size="sm" className="h-8 rounded-lg px-3 text-[10px]">
+                      Upgrade to {SQUAD_CAPACITIES[SQUAD_CAPACITIES.indexOf(squadCapacity as 24 | 32 | 50) + 1]} · {SQUAD_UPGRADE_GEMS[SQUAD_CAPACITIES.indexOf(squadCapacity as 24 | 32 | 50) + 1]} Gems
+                    </Button>
+                  ) : (
+                    <span className="text-[10px] font-bold text-accent">MAX 50</span>
+                  )}
+                </div>
               </div>
               <Pill accent="emerald">{auctionPlayers.filter((p) => p.enabled && p.endsAt > auctionNow).length} Live</Pill>
             </Card>
@@ -587,7 +601,7 @@ export function SquadManager() {
                     <p className="font-display text-sm font-bold tabular-nums">{lot.currentBid.toLocaleString()}</p>
                   </div>
                   <Button
-                    disabled={teamPlayers.length >= MAX_SQUAD_SIZE || currency.coins < lot.currentBid + 100}
+                    disabled={teamPlayers.length >= squadCapacity || currency.coins < lot.currentBid + 100}
                     onClick={() => {
                       const nextBid = Number((lot.currentBid + 100).toFixed(1))
                       const next = auctionPlayers.map((p) => p.id === lot.id ? { ...p, currentBid: nextBid } : p)
@@ -602,7 +616,7 @@ export function SquadManager() {
                   <Button
                     disabled={currency.coins < lot.buyNow}
                     onClick={() => {
-                      if (teamPlayers.length >= MAX_SQUAD_SIZE) return
+                      if (teamPlayers.length >= squadCapacity) return
                       if (currency.coins < lot.buyNow) return
                       const result = addAuctionPlayer(teamPlayers, lot)
                       if (!result.added) return
@@ -612,7 +626,7 @@ export function SquadManager() {
                       saveAuctionPlayers(next)
                       setCurrency((current) => ({ ...current, coins: current.coins - lot.buyNow }))
                     }}
-                    disabled={teamPlayers.length >= MAX_SQUAD_SIZE || currency.coins < lot.buyNow}
+                    disabled={teamPlayers.length >= squadCapacity || currency.coins < lot.buyNow}
                     variant="outline"
                     className="h-11 rounded-xl border-accent/40 bg-accent/10 px-4 text-sm font-semibold text-accent"
                   >
