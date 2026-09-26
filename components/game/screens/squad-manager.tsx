@@ -441,25 +441,6 @@ export function SquadManager() {
               </div>
               <p className="mt-3 text-[10px] text-muted-foreground">Green dots = your team · blue dots = opponents. Tap a preset to preview its movement and make it active in matches.</p>
             </Card>
-            <div className="grid grid-cols-2 gap-2">
-              {playstyles.map((s) => {
-                const active = s === activeStyle
-                return (
-                  <button
-                    key={s}
-                    onClick={() => setActiveStyle(s)}
-                    className={cn(
-                      "rounded-xl border px-3 py-2.5 text-left text-[13px] font-semibold transition active:scale-[0.98]",
-                      active
-                        ? "border-primary/50 bg-primary/15 text-primary glow-cyan"
-                        : "border-border bg-card/70 text-foreground",
-                    )}
-                  >
-                    {s}
-                  </button>
-                )
-              })}
-            </div>
           </div>
         )}
 
