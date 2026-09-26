@@ -131,6 +131,7 @@ export function SquadManager() {
   const [view, setView] = useState<View>("squad")
   const [previewTick, setPreviewTick] = useState(0)
   useEffect(() => { const id = window.setInterval(() => setPreviewTick((v) => v + 1), 500); return () => window.clearInterval(id) }, [])
+  useEffect(() => { if (typeof window === "undefined") return; if (localStorage.getItem("pitchside-open-market") === "1") { setView("market"); localStorage.removeItem("pitchside-open-market") } }, [])
   const [formation, setFormation] = useState<Formation>(() => typeof window === "undefined" ? "4-3-3" : (localStorage.getItem("pitchside-formation") as Formation) || "4-3-3")
   const [presetId, setPresetId] = useState<TacticalPresetId>(() => typeof window === "undefined" ? "possession" : (localStorage.getItem("pitchside-tactical-preset") as TacticalPresetId) || "possession")
   const activePreset = tacticalPresets.find((p) => p.id === presetId) || tacticalPresets[0]
