@@ -90,7 +90,11 @@ export function MatchCanvas() {
   const [message, setMessage] = useState("Swipe from the ball to pass")
   const [tactics] = useState(loadTactics)
   const [positions, setPositions] = useState(() => formationSlots[loadTactics().formation].map((p) => ({ ...p })))
+  const [opponentPositions, setOpponentPositions] = useState(() => opponents.map((p) => ({ ...p })))
+  const [ballOwner, setBallOwner] = useState<number | null>(null)
+  const [turnover, setTurnover] = useState(false)
   const pitchRef = useRef<HTMLDivElement>(null)
+  const lastBallRef = useRef(ball)
 
   useEffect(() => {
     if (!running || time <= 0) return
@@ -106,37 +110,111 @@ export function MatchCanvas() {
     if (!running) return
     const base = formationSlots[tactics.formation]
     const preset = tacticalPresets[tactics.preset] || tacticalPresets.possession
-    const effect = { tempo: preset.tempo, width: preset.width, line: preset.line }
     const id = setInterval(() => {
+      const t = Date.now() / 1000
+      const ballNow = lastBallRef.current
       setPositions((current) => current.map((p, i) => {
         const player = playerArchetypes[i]
         const anchor = base[i] || p
-        const t = Date.now() / 1000
-        let x = anchor.x + Math.sin(t * 0.55 + i) * 3.5 * effect.width
-        let y = anchor.y + Math.cos(t * 0.43 + i * 0.8) * 3.2
-        if (player.role === "Winger" || player.role === "Wingback") x += i % 2 === 0 ? -7 * effect.width : 7 * effect.width
-        if (player.role === "Inside Forward") x += i % 2 === 0 ? 5 : -5
-        if (player.role === "Mezzala") x += i % 2 === 0 ? -4 : 4
-        if (player.role === "Playmaker" || player.role === "Deep-Lying Playmaker") y += 5
-        if (player.role === "Advanced Forward" || player.role === "Poacher" || player.role === "Pressing Forward") y -= 7
-        if (player.role === "Holding Midfielder" || player.role === "Ball-Playing Defender" || player.role === "Stopper") y += effect.line
-        if (tactics.instruction === "Gegenpress") { y -= 5; x += Math.sin(t + i) * 2 }
-        if (tactics.instruction === "Possession") { x = anchor.x + (x - anchor.x) * 0.55; y = anchor.y + (y - anchor.y) * 0.55 }
-        if (tactics.instruction === "Counter Attack" && player.pos === "FWD") y -= 9
-        if (tactics.instruction === "Low Block") y += 8
-        if (tactics.instruction === "Direct Play" && player.pos === "FWD") y -= 10
-        if (tactics.preset === "tiki-taka") { x += Math.sin(t * 1.8 + i) * 2.5; y += Math.cos(t * 1.7 + i) * 2 }
-        if (tactics.preset === "wing-play" && (player.role === "Winger" || player.role === "Wingback")) x += i % 2 === 0 ? -9 : 9
-        if (tactics.preset === "high-press") { y -= 8; x += Math.sin(t * 1.4 + i) * 2 }
-        if (tactics.preset === "low-block") { y += 8; x = 50 + (x - 50) * 0.78 }
-        if (tactics.preset === "long-ball" || tactics.preset === "direct-play") { if (player.pos === "FWD") y -= 12 }
-        if (tactics.preset === "counter-attack" && player.pos === "FWD") { y -= 14; x += Math.sin(t + i) * 2 }
-        if (tactics.preset === "possession" || tactics.preset === "tiki-taka") { x = 50 + (x - 50) * (tactics.preset === "tiki-taka" ? 0.78 : 0.72) }
-        return { x: Math.max(8, Math.min(92, x)), y: Math.max(8, Math.min(90, y)) }
+        const dx = ballNow.x - p.x
+        const dy = ballNow.y - p.y
+        const distanceToBall = Math.hypot(dx, dy)
+        const side = i % 2 === 0 ? -1 : 1
+        let x = anchor.x
+        let y = anchor.y
+
+        // Start from the chosen formation, then add role-specific movement.
+        if (tactics.preset === "possession" || tactics.preset === "tiki-taka") {
+          x += Math.sin(t * (tactics.preset === "tiki-taka" ? 1.5 : 0.7) + i) * 2
+          y += Math.cos(t * 0.7 + i) * 2
+          if (distanceToBall < 32 && i !== ballOwner) {
+            x += dx * 0.18
+            y += dy * 0.12
+          }
+        }
+
+        if (tactics.preset === "gegenpress" || tactics.preset === "high-press") {
+          const chase = i < 3 ? 0.32 : 0.12
+          x += dx * chase
+          y += dy * chase
+          y -= tactics.preset === "high-press" ? 7 : 4
+        }
+
+        if (tactics.preset === "counter-attack") {
+          y -= player.pos === "FWD" ? 15 : i === 1 ? 8 : 2
+          if (i === 0 || i === 1) x += side * 3
+        }
+
+        if (tactics.preset === "wing-play") {
+          if (player.role === "Winger" || player.role === "Wingback") {
+            x = 50 + side * 34
+            y -= 5
+          } else {
+            x = 50 + (x - 50) * 0.78
+          }
+        }
+
+        if (tactics.preset === "low-block") {
+          y += 11
+          x = 50 + (x - 50) * 0.72
+          if (distanceToBall < 35) {
+            x += dx * 0.08
+            y += dy * 0.06
+          }
+        }
+
+        if (tactics.preset === "long-ball") {
+          if (player.pos === "FWD") {
+            y -= 18
+            x += side * 4
+          } else if (i === 1 || i === 4) {
+            y -= 6
+          }
+        }
+
+        if (tactics.preset === "direct-play") {
+          y -= player.pos === "FWD" ? 13 : 4
+        }
+
+        // Role behavior remains visible regardless of team preset.
+        if (player.role === "Winger") x += side * 8
+        if (player.role === "Inside Forward") x += side * -5
+        if (player.role === "Mezzala") x += side * 5
+        if (player.role === "Playmaker" || player.role === "Deep-Lying Playmaker") {
+          y += 4
+          if (distanceToBall < 30) x += dx * 0.1
+        }
+        if (player.role === "Ball Winner" || player.role === "Pressing Forward") {
+          x += dx * 0.2
+          y += dy * 0.2
+        }
+        if (player.role === "Wingback") x += side * 7
+        if (player.role === "Holding Midfielder" || player.role === "Ball-Playing Defender" || player.role === "Stopper") {
+          y += preset.line * 0.45
+        }
+
+        return {
+          x: Math.max(7, Math.min(93, x)),
+          y: Math.max(7, Math.min(92, y)),
+        }
       }))
-    }, Math.max(120, 520 / effect.tempo))
+
+      // Opponents react to the ball: compact when defending, press when it enters their zone.
+      setOpponentPositions((current) => current.map((p, i) => {
+        const dx = ballNow.x - p.x
+        const dy = ballNow.y - p.y
+        const d = Math.hypot(dx, dy)
+        const press = d < 32 ? 0.12 : 0.035
+        const compactX = 50 + (p.x - 50) * 0.985
+        const compactY = p.y + (ballNow.y - p.y) * press
+        return {
+          x: Math.max(8, Math.min(92, compactX + dx * press)),
+          y: Math.max(6, Math.min(88, compactY + dy * 0.04)),
+        }
+      }))
+    }, 180)
     return () => clearInterval(id)
-  }, [running, tactics])
+  }, [running, tactics, ballOwner])
 
   const toPct = useCallback((clientX: number, clientY: number): Point => {
     const rect = pitchRef.current?.getBoundingClientRect()
@@ -172,10 +250,36 @@ export function MatchCanvas() {
     if (!drag) return
     const dist = Math.hypot(drag.current.x - drag.start.x, drag.current.y - drag.start.y)
     if (dist > 6) {
-      setBall(drag.current)
+      const nextBall = { ...drag.current }
+      const action = classifySwipe(drag.start, nextBall)
+      lastBallRef.current = nextBall
+      setBall(nextBall)
       setPasses((n) => n + 1)
-      if (drag.current.y < 22 && Math.abs(drag.current.x - 50) < 22) {
+      setActions((n) => n + 1)
+      setBallOwner(null)
+      setTurnover(false)
+
+      // The selected tactic changes what happens after the gesture.
+      if (tactics.preset === "possession" || tactics.preset === "tiki-taka") {
+        setMessage(action === "through" ? "Threaded pass — teammates rotate into support" : "Short pass — teammates move into passing lanes")
+      } else if (tactics.preset === "gegenpress" || tactics.preset === "high-press") {
+        setMessage("Turnover pressure — nearest players hunt the ball")
+        setTurnover(true)
+      } else if (tactics.preset === "counter-attack") {
+        setMessage("Counter launched — forwards sprint beyond the line")
+      } else if (tactics.preset === "wing-play") {
+        setMessage("Wide overload — winger and wingback attack the flank")
+      } else if (tactics.preset === "low-block") {
+        setMessage("Low block — team stays compact behind the ball")
+      } else if (tactics.preset === "long-ball") {
+        setMessage("Long ball — target forward attacks the space")
+      } else {
+        setMessage("Direct play — runners push forward")
+      }
+
+      if (nextBall.y < 22 && Math.abs(nextBall.x - 50) < 22) {
         setScore((s) => ({ ...s, home: s.home + 1 }))
+        setMessage("GOAL! Tactical move finished.")
       }
     }
     setDrag(null)
@@ -184,8 +288,15 @@ export function MatchCanvas() {
   const reset = () => {
     setTime(120)
     setRunning(false)
-    setBall({ x: 50, y: 55 })
+    const center = { x: 50, y: 55 }
+    lastBallRef.current = center
+    setBall(center)
+    setOpponentPositions(opponents.map((p) => ({ ...p })))
+    setBallOwner(null)
+    setTurnover(false)
     setPasses(0)
+    setActions(0)
+    setMessage("Swipe from the ball to pass")
   }
 
   return (
@@ -264,8 +375,8 @@ export function MatchCanvas() {
           </svg>
         )}
 
-        {/* opponents */}
-        {opponents.map((p, i) => (
+        {/* opponents — move toward the ball instead of staying as static dots */}
+        {opponentPositions.map((p, i) => (
           <span
             key={`o${i}`}
             className="absolute h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/30 bg-destructive/70"
@@ -300,6 +411,13 @@ export function MatchCanvas() {
           </span>
         ))}
 
+        {/* tactical status */}
+        {running && (
+          <div className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2 rounded-full bg-background/70 px-3 py-1 text-[9px] font-bold uppercase tracking-widest text-primary backdrop-blur-sm">
+            {turnover ? "PRESSING TRIGGERED" : tactics.preset.replace("-", " ")}
+          </div>
+        )}
+
         {/* ball */}
         <span
           className="absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"
@@ -315,7 +433,11 @@ export function MatchCanvas() {
         )}
       </div>
 
-      {/* passes counter */}
+      <div className="mt-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-center text-[10px] font-semibold text-muted-foreground">
+        {message}
+      </div>
+
+      {/* passes counter */
       <div className="mt-3 grid grid-cols-2 gap-2">
         {playerArchetypes.slice(0, 4).map((p) => (
           <div key={p.name} className="rounded-xl border border-border bg-card/70 px-3 py-2">
