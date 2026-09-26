@@ -199,6 +199,17 @@ export function MatchCanvas() {
         }
       }))
 
+      // Once a teammate receives the ball, keep it attached to that player.
+      if (ballOwner !== null) {
+        setPositions((current) => {
+          const owner = current[ballOwner]
+          if (!owner) return current
+          lastBallRef.current = owner
+          setBall({ x: owner.x, y: owner.y })
+          return current
+        })
+      }
+
       // Opponents react to the ball: compact when defending, press when it enters their zone.
       setOpponentPositions((current) => current.map((p, i) => {
         const dx = ballNow.x - p.x
@@ -256,7 +267,16 @@ export function MatchCanvas() {
       setBall(nextBall)
       setPasses((n) => n + 1)
       setActions((n) => n + 1)
-      setBallOwner(null)
+      // Find the teammate the swipe is trying to reach.
+      const targetIndex = positions.reduce<number | null>((best, p, i) => {
+        const d = Math.hypot(nextBall.x - p.x, nextBall.y - p.y)
+        if (d > 18) return best
+        if (best === null) return i
+        return d < Math.hypot(nextBall.x - positions[best].x, nextBall.y - positions[best].y) ? i : best
+      }, null)
+
+      // A clean pass gives the receiving player control; a loose pass remains contestable.
+      setBallOwner(targetIndex)
       setTurnover(false)
 
       // The selected tactic changes what happens after the gesture.
