@@ -92,9 +92,11 @@ export function MatchCanvas() {
   const [positions, setPositions] = useState(() => formationSlots[loadTactics().formation].map((p) => ({ ...p })))
   const [opponentPositions, setOpponentPositions] = useState(() => opponents.map((p) => ({ ...p })))
   const [ballOwner, setBallOwner] = useState<number | null>(null)
+  const [selectedDefender, setSelectedDefender] = useState<number | null>(0)
   const [turnover, setTurnover] = useState(false)
   const pitchRef = useRef<HTMLDivElement>(null)
   const lastBallRef = useRef(ball)
+  const selectedDefenderRef = useRef<number | null>(0)
 
   useEffect(() => {
     if (!running || time <= 0) return
@@ -176,6 +178,35 @@ export function MatchCanvas() {
           y -= player.pos === "FWD" ? 13 : 4
         }
 
+        // Defensive AI: every unselected defender keeps working even while the user
+        // controls one defender. The selected defender is the only one that aggressively
+        // closes the opponent with the ball.
+        const opponentCarrier = opponentPositions.reduce((best, op, oi) => {
+          const d = Math.hypot(ballNow.x - op.x, ballNow.y - op.y)
+          return d < best.distance ? { index: oi, distance: d } : best
+        }, { index: 0, distance: Infinity })
+
+        const isSelected = selectedDefenderRef.current === i
+        const defensiveRole = ["Ball Winner", "Stopper", "Ball-Playing Defender", "Inverted Fullback", "Wingback"].includes(player.role)
+        if (ballOwner === null) {
+          if (isSelected) {
+            // Instant user-controlled press: no loading/selection delay.
+            x += (ballNow.x - p.x) * 0.58
+            y += (ballNow.y - p.y) * 0.58
+          } else {
+            // Cover the lane between the opponent carrier and the goal, not the ball blindly.
+            const carrier = opponentPositions[opponentCarrier.index]
+            const coverX = 50 + (carrier.x - 50) * (defensiveRole ? 0.72 : 0.48)
+            const coverY = carrier.y + (defensiveRole ? 10 : 16)
+            x += (coverX - p.x) * 0.16
+            y += (coverY - p.y) * 0.14
+            if (defensiveRole && opponentCarrier.distance < 24) {
+              x += (carrier.x - p.x) * 0.08
+              y += (carrier.y - p.y) * 0.08
+            }
+          }
+        }
+
         // Role behavior remains visible regardless of team preset.
         if (player.role === "Winger") x += side * 8
         if (player.role === "Inside Forward") x += side * -5
@@ -198,6 +229,25 @@ export function MatchCanvas() {
           y: Math.max(7, Math.min(92, y)),
         }
       }))
+
+      // Automatic tackle: the selected defender wins the ball when he closes
+      // the carrier. Other defenders stay available for cover/interception.
+      if (ballOwner === null && selectedDefenderRef.current !== null) {
+        setPositions((current) => {
+          const defender = current[selectedDefenderRef.current!]
+          const carrier = opponentPositions.reduce((best, op, oi) => {
+            const d = Math.hypot(ballNow.x - op.x, ballNow.y - op.y)
+            return d < best.distance ? { index: oi, distance: d } : best
+          }, { index: 0, distance: Infinity })
+          if (defender && carrier.distance < 8) {
+            setBallOwner(selectedDefenderRef.current)
+            setTurnover(true)
+            setMessage("TACKLE WON — defender wins it and starts the transition")
+            lastBallRef.current = defender
+          }
+          return current
+        })
+      }
 
       // Once a teammate receives the ball, keep it attached to that player.
       if (ballOwner !== null) {
@@ -260,6 +310,27 @@ export function MatchCanvas() {
   const onPointerUp = () => {
     if (!drag) return
     const dist = Math.hypot(drag.current.x - drag.start.x, drag.current.y - drag.start.y)
+
+    // A tap on one of our players instantly switches the controlled defender.
+    // No animation or loading delay: the icon appears on the same interaction.
+    if (dist <= 6) {
+      const tapped = positions.reduce<number | null>((best, p, i) => {
+        const d = Math.hypot(drag.current.x - p.x, drag.current.y - p.y)
+        if (d > 8) return best
+        if (best === null) return i
+        return d < Math.hypot(drag.current.x - positions[best].x, drag.current.y - positions[best].y) ? i : best
+      }, null)
+      if (tapped !== null) {
+        selectedDefenderRef.current = tapped
+        setSelectedDefender(tapped)
+        setMessage(ballOwner === null
+          ? `${playerArchetypes[tapped]?.name ?? "Defender"} selected — closing the ball carrier`
+          : `${playerArchetypes[tapped]?.name ?? "Player"} selected`)
+      }
+      setDrag(null)
+      return
+    }
+
     if (dist > 6) {
       const nextBall = { ...drag.current }
       const action = classifySwipe(drag.start, nextBall)
@@ -313,6 +384,8 @@ export function MatchCanvas() {
     setBall(center)
     setOpponentPositions(opponents.map((p) => ({ ...p })))
     setBallOwner(null)
+    selectedDefenderRef.current = 0
+    setSelectedDefender(0)
     setTurnover(false)
     setPasses(0)
     setActions(0)
@@ -404,7 +477,7 @@ export function MatchCanvas() {
           />
         ))}
 
-        {/* player archetypes */}
+        {/* player archetypes — the selected defender gets an instant control ring */}
         {playerArchetypes.map((p, i) => (
           <div
             key={`a${p.name}`}
@@ -420,21 +493,10 @@ export function MatchCanvas() {
           </div>
         ))}
 
-        {/* teammates */}
-        {teammates.map((p, i) => (
-          <span
-            key={`t${i}`}
-            className="absolute flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/40 bg-primary text-[9px] font-bold text-primary-foreground"
-            style={{ left: `${p.x}%`, top: `${p.y}%` }}
-          >
-            {i + 1}
-          </span>
-        ))}
-
         {/* tactical status */}
         {running && (
           <div className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2 rounded-full bg-background/70 px-3 py-1 text-[9px] font-bold uppercase tracking-widest text-primary backdrop-blur-sm">
-            {turnover ? "PRESSING TRIGGERED" : tactics.preset.replace("-", " ")}
+            {turnover ? "TURNOVER — COUNTER" : ballOwner === null ? "DEFEND — TAP A PLAYER" : tactics.preset.replace("-", " ")}
           </div>
         )}
 
@@ -448,13 +510,13 @@ export function MatchCanvas() {
         {!drag && (
           <div className="pointer-events-none absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-background/70 px-3 py-1.5 text-[11px] font-medium text-muted-foreground backdrop-blur-sm">
             <Hand className="h-3.5 w-3.5" />
-            Swipe from the ball to pass
+            {ballOwner === null ? "Tap a defender to switch · close down the ball carrier" : "Swipe from the ball to pass"}
           </div>
         )}
       </div>
 
       <div className="mt-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-center text-[10px] font-semibold text-muted-foreground">
-        {message}
+        {message}<span className="mt-1 block text-[9px] opacity-70">{ballOwner === null ? "AI defenders cover passing lanes while your selected defender presses." : "Tap a teammate to switch control instantly."}</span>
       </div>
 
       {/* passes counter */
