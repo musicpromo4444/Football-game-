@@ -25,8 +25,13 @@ export const COUNTRIES: Country[] = [
 
 export const COUNTRY_KEY = "pitchside-country"
 export const PROFILE_KEY = "pitchside-profile"
-
 export type Profile = { name: string; countryCode: string }
+
+const USD_TO_LOCAL: Record<string, number> = {
+  USD: 1, NGN: 1500, GBP: 0.75, CAD: 1.37, AUD: 1.53, EUR: 0.85,
+  BRL: 5.4, MXN: 18.5, INR: 85, ZAR: 17, GHS: 12, KES: 130,
+  JPY: 150, KRW: 1400, AED: 3.67, SAR: 3.75,
+}
 
 export function getCountry(code?: string): Country {
   return COUNTRIES.find((country) => country.code === code) || COUNTRIES[0]
@@ -48,7 +53,8 @@ export function saveProfile(profile: Profile) {
   }
 }
 
-export function formatRealMoney(amount: number, countryCode?: string) {
+export function formatRealMoney(usdAmount: number, countryCode?: string) {
   const country = getCountry(countryCode)
+  const amount = usdAmount * (USD_TO_LOCAL[country.currency] || 1)
   return new Intl.NumberFormat(undefined, { style: "currency", currency: country.currency, maximumFractionDigits: country.currency === "JPY" || country.currency === "KRW" ? 0 : 2 }).format(amount)
 }
