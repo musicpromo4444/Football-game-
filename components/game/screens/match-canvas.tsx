@@ -21,6 +21,14 @@ const opponents: Point[] = [
   { x: 50, y: 12 },
 ]
 
+const playerArchetypes = [
+  { name: "Farrow", role: "Poacher", x: 50, y: 80, bias: "attack" },
+  { name: "Nakamura", role: "Inside Forward", x: 30, y: 62, bias: "attack" },
+  { name: "Okafor", role: "Playmaker", x: 70, y: 64, bias: "pass" },
+  { name: "Silvana", role: "Box-to-Box", x: 22, y: 45, bias: "support" },
+  { name: "Cruz", role: "Ball Winner", x: 78, y: 45, bias: "defend" },
+]
+
 const teamStamina = [
   { name: "Silvana", value: 55 },
   { name: "Cruz", value: 38 },
@@ -181,6 +189,22 @@ export function MatchCanvas() {
           />
         ))}
 
+        {/* player archetypes */}
+        {playerArchetypes.map((p, i) => (
+          <div
+            key={`a${p.name}`}
+            className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 text-center"
+            style={{ left: `${p.x}%`, top: `${p.y}%` }}
+          >
+            <div className="mx-auto flex h-6 w-6 items-center justify-center rounded-full border border-white/40 bg-primary text-[9px] font-bold text-primary-foreground">
+              {i + 1}
+            </div>
+            <span className="mt-0.5 block whitespace-nowrap rounded bg-background/65 px-1 text-[7px] font-semibold text-foreground">
+              {p.role}
+            </span>
+          </div>
+        ))}
+
         {/* teammates */}
         {teammates.map((p, i) => (
           <span
@@ -208,6 +232,20 @@ export function MatchCanvas() {
       </div>
 
       {/* passes counter */}
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        {playerArchetypes.slice(0, 4).map((p) => (
+          <div key={p.name} className="rounded-xl border border-border bg-card/70 px-3 py-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold">{p.name}</span>
+              <span className="text-[9px] font-bold uppercase tracking-wide text-primary">{p.role}</span>
+            </div>
+            <div className="mt-1 text-[9px] text-muted-foreground">
+              {p.bias === "attack" ? "Runs behind the defence" : p.bias === "pass" ? "Looks for forward passes" : p.bias === "defend" ? "Presses and wins the ball" : "Supports both phases"}
+            </div>
+          </div>
+        ))}
+      </div>
+
       <div className="mt-3 flex items-center justify-between rounded-xl border border-border bg-card/70 px-4 py-2.5">
         <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Gesture passes
