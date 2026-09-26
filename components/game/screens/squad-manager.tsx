@@ -390,13 +390,6 @@ export function SquadManager() {
 
         {view === "styles" && (
           <div>
-            <Card glow="cyan" className="mb-3 p-4">
-              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Active playstyle</p>
-              <p className="font-display text-xl font-bold text-glow-cyan">{activeStyle}</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Tap any of the 25 styles below to set your team&apos;s tactical identity.
-              </p>
-            </Card>
             <Card className="mb-3 p-4">
               <div className="flex items-center justify-between">
                 <div>
