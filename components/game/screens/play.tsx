@@ -30,7 +30,8 @@ import {
 } from "@/components/game/data"
 
 export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
-  const [inMatch, setInMatch] = useState(false)\n  const [showWatch, setShowWatch] = useState(false)
+  const [inMatch, setInMatch] = useState(false)
+  const [showWatch, setShowWatch] = useState(false)
 
   if (inMatch) {
     return (
