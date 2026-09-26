@@ -7,7 +7,6 @@ import {
   ChevronRight,
   Gift,
   Info,
-  Lock,
   ShieldAlert,
   Trophy,
 } from "lucide-react"
@@ -58,30 +57,6 @@ const relegationTeams: Team[] = [
   { pos: 80, club: "Cobalt Rovers", short: "CBR", w: 1, d: 3, l: 10, pts: 0 },
 ]
 
-const middleTeams: Team[] = Array.from({ length: 72 }, (_, index) => {
-  const pos = index + 5
-  const names = [
-    "Pulse City", "Titan Athletic", "Metro United", "Summit FC", "Royal City",
-    "Northstar FC", "Velocity", "Ironbridge", "Blue Harbor", "Capital FC",
-    "Phoenix Town", "Crown Athletic",
-  ]
-  const base = 27 - Math.floor((pos - 5) * 0.31)
-  const w = Math.max(2, Math.min(8, Math.floor(base / 3)))
-  const d = 3 + (pos % 3)
-  const l = Math.max(2, 14 - w - d)
-  return {
-    pos,
-    club: `${names[index % names.length]} ${Math.floor(index / names.length) + 1}`,
-    short: `${String.fromCharCode(65 + (index % 26))}${String((index * 7) % 100).padStart(2, "0")}`,
-    w,
-    d,
-    l,
-    pts: Math.max(12, base),
-  }
-})
-
-const allTeams = [...featuredTeams, ...middleTeams, ...relegationTeams]
-
 export function LeagueHub() {
   const [leagueIndex, setLeagueIndex] = useState(4)
   const currentLeague = leagues[leagueIndex]
@@ -90,7 +65,8 @@ export function LeagueHub() {
   const pointsNeeded = Math.max(0, nextLeague.unlockPoints - currentPoints)
   const progress = Math.min(100, Math.round((currentPoints / nextLeague.unlockPoints) * 100))
 
-  const currentTable = useMemo(() => allTeams, [])
+  // Keep the 80-club league in the data model, but only reveal the first four and last four positions.
+  const currentTable = useMemo(() => [...featuredTeams, ...relegationTeams], [])
 
   const moveLeague = (direction: -1 | 1) => {
     setLeagueIndex((value) => Math.max(0, Math.min(leagues.length - 1, value + direction)))
@@ -163,7 +139,11 @@ export function LeagueHub() {
               >
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">League {league.tier}</span>
-                  {active ? <span className="h-2 w-2 rounded-full bg-primary" /> : <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
+                  {active ? (
+                    <span className="h-2 w-2 rounded-full bg-primary" />
+                  ) : (
+                    <span className="text-xl leading-none" role="img" aria-label="Locked">🔒</span>
+                  )}
                 </div>
                 <p className="mt-2 font-display text-base font-black">{league.name}</p>
                 <p className="mt-1 text-[10px] text-muted-foreground">{league.unlockPoints} pts required</p>
@@ -201,8 +181,8 @@ export function LeagueHub() {
             <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">League rules</p>
           </div>
           <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-            <Rule value="+3" label="Win" tone="text-accent" />
-            <Rule value="+1" label="Draw" tone="text-chart-4" />
+            <Rule value="+3" label="Win" tone="text-white" />
+            <Rule value="+1" label="Draw" tone="text-white" />
             <Rule value="-3" label="Loss" tone="text-destructive" />
           </div>
           <p className="mt-3 text-[10px] leading-relaxed text-muted-foreground">
@@ -227,7 +207,7 @@ export function LeagueHub() {
                 <span>#</span><span>Club</span><span className="text-center">W</span><span className="text-center">D</span><span className="text-center">L</span><span className="text-center">Pts</span>
               </div>
 
-              <div className="max-h-[520px] overflow-y-auto">
+              <div>
                 {currentTable.map((row) => (
                   <div key={row.pos}>
                     {row.pos === 1 && (
