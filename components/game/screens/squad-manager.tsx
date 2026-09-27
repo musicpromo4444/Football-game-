@@ -740,17 +740,23 @@ export function SquadManager() {
                     <div className="rounded-lg bg-secondary/60 px-3 py-2 text-right"><p className="text-[10px] uppercase text-muted-foreground">Your balance</p><p className="font-display text-sm font-bold tabular-nums">{currency.coins.toLocaleString()} Bucks</p><p className="text-[10px] font-bold text-primary">{currency.gems} Gems</p></div>
                   </div>
                   <div className="mt-3 flex gap-2">
-                    <Button disabled={teamPlayers.length >= squadCapacity || currency.coins < extraBucks || currency.gems < extraGems} onClick={() => {
-                      const next = auctionPlayers.map((p) => p.id === lot.id ? { ...p, currentBucks: Math.max(p.currentBucks + 100, p.startingBucks), currentGems: p.startingGems, highestBidder: "you" as const, status: "live" as const, heldBucks: bidBucks, heldGems: bidGems } : p)
+                    <Button disabled={teamPlayers.length >= squadCapacity || currency.coins < Math.max(0, (highest ? bidBucks + 100 : bidBucks) - alreadyHeld) || currency.gems < extraGems} onClick={() => {
+                      const nextBucks = highest ? bidBucks + 100 : bidBucks
+                      const needBucks = Math.max(0, nextBucks - alreadyHeld)
+                      const needGems = Math.max(0, bidGems - alreadyHeldGems)
+                      if (currency.coins < needBucks || currency.gems < needGems) return
+                      const next = auctionPlayers.map((p) => p.id === lot.id ? { ...p, currentBucks: nextBucks, currentGems: bidGems, highestBidder: "you" as const, status: "live" as const, heldBucks: nextBucks, heldGems: bidGems } : p)
                       setAuctionPlayers(next); saveAuctionPlayers(next)
-                      setCurrency((current) => ({ ...current, coins: current.coins - extraBucks, gems: current.gems - extraGems }))
-                    }} className="h-11 flex-1 rounded-xl bg-primary text-sm font-semibold text-primary-foreground">{highest ? "Increase Bid" : "Bid"} · {bidBucks.toLocaleString()} Bucks{bidGems ? " + " + bidGems + " Gems" : ""}</Button>
-                    <Button disabled={teamPlayers.length >= squadCapacity || currency.coins < lot.buyNowBucks || currency.gems < lot.buyNowGems} onClick={() => {
-                      if (teamPlayers.length >= squadCapacity || currency.coins < lot.buyNowBucks || currency.gems < lot.buyNowGems) return
+                      setCurrency((current) => ({ ...current, coins: current.coins - needBucks, gems: current.gems - needGems }))
+                    }} className="h-11 flex-1 rounded-xl bg-primary text-sm font-semibold text-primary-foreground">{highest ? "Increase Bid" : "Bid"} · {(highest ? bidBucks + 100 : bidBucks).toLocaleString()} Bucks{bidGems ? " + " + bidGems + " Gems" : ""}</Button>
+                    <Button disabled={teamPlayers.length >= squadCapacity || currency.coins < Math.max(0, lot.buyNowBucks - alreadyHeld) || currency.gems < Math.max(0, lot.buyNowGems - alreadyHeldGems)} onClick={() => {
+                      const needBucks = Math.max(0, lot.buyNowBucks - alreadyHeld)
+                      const needGems = Math.max(0, lot.buyNowGems - alreadyHeldGems)
+                      if (currency.coins < needBucks || currency.gems < needGems) return
                       const result = addAuctionPlayer(teamPlayers, lot)
                       if (!result.added) return
                       const next = auctionPlayers.map((p) => p.id === lot.id ? { ...p, enabled: false, endsAt: auctionNow, status: "sold" as const, highestBidder: "you" as const, currentBucks: lot.buyNowBucks, currentGems: lot.buyNowGems, heldBucks: 0, heldGems: 0 } : p)
-                      setTeamPlayers(result.squad); setAuctionPlayers(next); saveAuctionPlayers(next); setCurrency((current) => ({ ...current, coins: current.coins - lot.buyNowBucks, gems: current.gems - lot.buyNowGems }))
+                      setTeamPlayers(result.squad); setAuctionPlayers(next); saveAuctionPlayers(next); setCurrency((current) => ({ ...current, coins: current.coins - needBucks, gems: current.gems - needGems }))
                     }} variant="outline" className="h-11 flex-1 rounded-xl border-accent/40 bg-accent/10 text-sm font-semibold text-accent">Buy Now</Button>
                   </div>
                   <p className="mt-2 text-center text-[9px] text-muted-foreground">{highest ? "Your committed Bucks and Gems are already removed from available balance." : "Bidding immediately holds the required Bucks and Gems. If you lose, they are automatically refunded."}</p>
