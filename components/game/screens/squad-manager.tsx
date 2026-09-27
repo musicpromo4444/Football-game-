@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { Users, Layers, Dumbbell, Gavel, ChevronRight, Timer, Shield, Swords, SlidersHorizontal, Star, Coins, Gem, X } from "lucide-react"
+import { Users, Layers, Dumbbell, Timer, Shield, Swords, SlidersHorizontal, Coins, Gem, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ScreenHeader, Card, Pill, StatBar } from "@/components/game/ui-bits"
 import { squad, wallet, type Player } from "@/components/game/data"
