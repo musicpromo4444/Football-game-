@@ -8,7 +8,6 @@ import {
   Gift,
   Info,
   Lock,
-  ShieldAlert,
   Trophy,
 } from "lucide-react"
 import { Card, Pill } from "@/components/game/ui-bits"
@@ -219,9 +218,9 @@ export function LeagueHub() {
         <div className="mb-2 flex items-end justify-between">
           <div>
             <p className="text-sm font-bold">League table</p>
-            <p className="text-[11px] text-muted-foreground">80 clubs · 14 matches</p>
+            <p className="text-[11px] text-muted-foreground">Players currently in this league</p>
           </div>
-          <Pill accent="emerald">Top 4 promote</Pill>
+          <Pill accent="emerald">Current league</Pill>
         </div>
 
         <Card className="overflow-hidden">
@@ -236,13 +235,13 @@ export function LeagueHub() {
                   <div key={row.pos}>
                     {row.pos === 1 && (
                       <div className="flex items-center gap-2 border-b border-primary/15 bg-primary/5 px-3 py-2 text-[9px] font-black uppercase tracking-widest text-primary">
-                        <span className="h-1.5 w-1.5 rounded-full bg-primary" /> Promotion zone · positions 1–4
+                        
                       </div>
                     )}
 
                     {row.pos === 77 && (
                       <div className="flex items-center gap-2 border-y border-destructive/15 bg-destructive/5 px-3 py-2 text-[9px] font-black uppercase tracking-widest text-destructive">
-                        <ShieldAlert className="h-3 w-3" /> Relegation danger · positions 77–80
+                        
                       </div>
                     )}
 
@@ -277,19 +276,10 @@ export function LeagueHub() {
         <div className="mt-3 flex items-start gap-2 rounded-xl border border-border bg-card/50 px-3 py-2.5">
           <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
           <p className="text-[10px] leading-relaxed text-muted-foreground">
-            Your club is marked <span className="font-bold text-primary">YOU</span> only when it appears in the promotion or relegation positions. Other league tiers stay locked until they are reached.
+            Your position changes with your match results. Reach the next point requirement to move immediately into the next league.
           </p>
         </div>
       </section>
-    </div>
-  )
-}
-
-function Reward({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-border bg-secondary/30 p-3">
-      <p className="text-[9px] font-black uppercase tracking-wider text-muted-foreground">{label}</p>
-      <p className="mt-1 truncate font-display text-sm font-black">{value}</p>
     </div>
   )
 }
