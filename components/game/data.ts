@@ -219,6 +219,19 @@ export const squad: Player[] = [
   { id: "p9", name: "E. Mensah", pos: "DEF", rating: 80, stamina: 84, style: "Wingback" },
   { id: "p10", name: "N. Ibrahim", pos: "MID", rating: 84, stamina: 88, style: "Box-to-Box" },
   { id: "p11", name: "R. Silva", pos: "FWD", rating: 82, stamina: 76, style: "Winger" },
+  { id: "p12", name: "T. Bello", pos: "GK", rating: 79, stamina: 90, style: "Sweeper Keeper" },
+  { id: "p13", name: "V. Rossi", pos: "DEF", rating: 83, stamina: 86, style: "Ball-Playing Defender" },
+  { id: "p14", name: "O. Diallo", pos: "DEF", rating: 80, stamina: 79, style: "Stopper" },
+  { id: "p15", name: "M. Chen", pos: "DEF", rating: 78, stamina: 91, style: "Wingback" },
+  { id: "p16", name: "I. Mensah", pos: "MID", rating: 81, stamina: 87, style: "Holding Midfielder" },
+  { id: "p17", name: "S. Haruki", pos: "MID", rating: 85, stamina: 83, style: "Deep-Lying Playmaker" },
+  { id: "p18", name: "A. Okeke", pos: "MID", rating: 82, stamina: 89, style: "Ball Winner" },
+  { id: "p19", name: "T. Bergstrom", pos: "MID", rating: 84, stamina: 77, style: "Box-to-Box" },
+  { id: "p20", name: "Y. Silva", pos: "FWD", rating: 81, stamina: 85, style: "Pressing Forward" },
+  { id: "p21", name: "P. Novak", pos: "FWD", rating: 83, stamina: 72, style: "Advanced Forward" },
+  { id: "p22", name: "J. Adekunle", pos: "FWD", rating: 80, stamina: 88, style: "Poacher" },
+  { id: "p23", name: "C. Mensah", pos: "FWD", rating: 79, stamina: 90, style: "Winger" },
+  { id: "p24", name: "E. Costa", pos: "FWD", rating: 82, stamina: 80, style: "Complete Forward" },
 ]
 
 export type AuctionLot = {
