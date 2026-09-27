@@ -224,8 +224,9 @@ function StandingsTable({ teams }: { teams: Team[] }) {
               {team.self && <span className="shrink-0 rounded-full bg-emerald-500 px-1.5 py-0.5 text-[7px] font-black text-black">YOU</span>}
             </div>
             <span className="text-center text-[10px] font-bold tabular-nums text-white/65">{team.p}</span>
-            <span className="text-center text-[10px] font-bold tabular-nums text-emerald-300">+{team.w}</span>
-            <span className="text-center text-[10px] font-bold tabular-nums text-white/60">+{team.d}</span>
+            <span className="text-center text-[10px] font-bold tabular-nums text-emerald-300">{team.w}</span>
+            <span className="text-center text-[10px] font-bold tabular-nums text-white/60">{team.d}</span>
+            <span className="text-center text-[10px] font-bold tabular-nums text-rose-300">{team.l}</span>
             <span className="text-center text-[10px] font-black tabular-nums text-white">{team.pts}</span>
           </div>
         </div>
