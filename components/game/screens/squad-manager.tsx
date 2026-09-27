@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { Users, Layers, Dumbbell, Timer, Shield, Swords, SlidersHorizontal, Coins, Gem, X } from "lucide-react"
+import { Users, Layers, Dumbbell, Timer, Shield, Swords, SlidersHorizontal, Bucks, Gem, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ScreenHeader, Card, Pill, StatBar } from "@/components/game/ui-bits"
 import { squad, wallet, type Player } from "@/components/game/data"
@@ -36,7 +36,7 @@ const formations: Formation[] = ["4-3-3", "4-4-2", "3-5-2", "4-2-3-1", "4-1-4-1"
 const TRAINING_MS = 24 * 60 * 60 * 1000
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000
 const SUPER_GEMS = 50
-const SUPER_COINS = 10000
+const SUPER_BUCKS = 10000
 const MAX_CONCURRENT_TRAINING = 3
 const TRAINING_CYCLE_LIMIT = 10
 function loadTrainingState(): Record<string, TrainingRecord> {
@@ -228,7 +228,7 @@ export function SquadManager() {
   const [superPlayerId, setSuperPlayerId] = useState<string | null>(null)
   const [auctionNow, setAuctionNow] = useState(() => Date.now())
   const [auctionPlayers, setAuctionPlayers] = useState<AuctionPlayer[]>(() => readAuctionPlayers())
-  const [currency, setCurrency] = useState<{ coins: number; gems: number }>(() => {
+  const [currency, setCurrency] = useState<{ bucks: number; gems: number }>(() => {
     if (typeof window === "undefined") return wallet
     try { return JSON.parse(localStorage.getItem("pitchside-wallet") || "") || wallet } catch { return wallet }
   })
@@ -248,7 +248,7 @@ export function SquadManager() {
     if (!expired.length) return
     let nextPlayers = [...auctionPlayers]
     let nextSquad = teamPlayers
-    let nextBucks = currency.coins
+    let nextBucks = currency.bucks
     let nextGems = currency.gems
     for (const lot of expired) {
       if (lot.highestBidder === "you" && nextSquad.length < squadCapacity) {
@@ -270,9 +270,9 @@ export function SquadManager() {
     }
     setTeamPlayers(nextSquad)
     setAuctionPlayers(nextPlayers)
-    setCurrency((current) => ({ ...current, coins: nextBucks, gems: nextGems }))
+    setCurrency((current) => ({ ...current, bucks: nextBucks, gems: nextGems }))
     saveAuctionPlayers(nextPlayers)
-  }, [auctionNow, auctionPlayers, currency.coins, currency.gems, squadCapacity, teamPlayers])
+  }, [auctionNow, auctionPlayers, currency.bucks, currency.gems, squadCapacity, teamPlayers])
 
 
   useEffect(() => {
@@ -338,10 +338,10 @@ export function SquadManager() {
     if (trainingCycleLocked || activeTrainingCount >= MAX_CONCURRENT_TRAINING) return
     const existing = trainingState[superPlayerId]; if (existing && trainingNow < existing.completesAt) return
     if (existing && trainingNow < existing.weeklyUnlockAt) return
-    const cost = useGems ? SUPER_GEMS : SUPER_COINS; if ((useGems ? currency.gems : currency.coins) < cost) return
+    const cost = useGems ? SUPER_GEMS : SUPER_BUCKS; if ((useGems ? currency.gems : currency.bucks) < cost) return
     const now = Date.now()
     setTrainingState((current) => ({ ...current, [superPlayerId]: { playerId: superPlayerId, tier: "super", boost: 5, startedAt: now, completesAt: now + TRAINING_MS, weeklyUnlockAt: now + WEEK_MS } }))
-    setCurrency((current: { coins: number; gems: number }) => ({ ...current, [useGems ? "gems" : "coins"]: current[useGems ? "gems" : "coins"] - cost }))
+    setCurrency((current: { bucks: number; gems: number }) => ({ ...current, [useGems ? "gems" : "bucks"]: current[useGems ? "gems" : "bucks"] - cost }))
     setSuperPlayerId(null)
   }
   const swapPlayer = (targetId: string) => {
@@ -706,7 +706,7 @@ export function SquadManager() {
               )
             })}
             {adTraining ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-6"><Card glow="cyan" className="relative w-full max-w-sm p-5 text-center"><button onClick={() => setAdTraining(null)} className="absolute right-4 top-4"><X className="h-4 w-4"/></button><p className="text-xs uppercase tracking-widest text-muted-foreground">Sponsored Training</p><p className="mt-2 font-display text-xl font-black">Watch ad to start {adTraining.tier} training</p><p className="mt-2 text-sm text-muted-foreground">Ad finishes in {adTraining.seconds}s. Training then runs for 24 hours.</p></Card></div> : null}
-            {superPlayerId ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-6"><Card glow="cyan" className="w-full max-w-sm p-5"><div className="flex items-center justify-between"><p className="font-display text-lg font-black">Super Training</p><button onClick={() => setSuperPlayerId(null)}><X className="h-4 w-4"/></button></div><p className="mt-2 text-xs text-muted-foreground">Train {teamPlayers.find((p) => p.id === superPlayerId)?.name} for 24 hours and add +5 to every attribute.</p><div className="mt-4 grid grid-cols-2 gap-2"><Button onClick={() => confirmSuperTraining(true)} disabled={currency.gems < SUPER_GEMS} className="h-12 rounded-xl"><Gem className="mr-1 h-4 w-4"/>{SUPER_GEMS} Gems</Button><Button onClick={() => confirmSuperTraining(false)} disabled={currency.coins < SUPER_COINS} variant="outline" className="h-12 rounded-xl"><Coins className="mr-1 h-4 w-4"/>{SUPER_COINS.toLocaleString()} Coins</Button></div></Card></div> : null}
+            {superPlayerId ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-6"><Card glow="cyan" className="w-full max-w-sm p-5"><div className="flex items-center justify-between"><p className="font-display text-lg font-black">Super Training</p><button onClick={() => setSuperPlayerId(null)}><X className="h-4 w-4"/></button></div><p className="mt-2 text-xs text-muted-foreground">Train {teamPlayers.find((p) => p.id === superPlayerId)?.name} for 24 hours and add +5 to every attribute.</p><div className="mt-4 grid grid-cols-2 gap-2"><Button onClick={() => confirmSuperTraining(true)} disabled={currency.gems < SUPER_GEMS} className="h-12 rounded-xl"><Gem className="mr-1 h-4 w-4"/>{SUPER_GEMS} Gems</Button><Button onClick={() => confirmSuperTraining(false)} disabled={currency.bucks < SUPER_BUCKS} variant="outline" className="h-12 rounded-xl"><Bucks className="mr-1 h-4 w-4"/>{SUPER_BUCKS.toLocaleString()} Bucks</Button></div></Card></div> : null}
           </div>
         )}
 
@@ -737,26 +737,26 @@ export function SquadManager() {
                   </div>
                   <div className="mt-3 grid grid-cols-2 gap-2">
                     <div className="rounded-lg bg-secondary/60 px-3 py-2"><p className="text-[10px] uppercase text-muted-foreground">Auction price</p><p className="font-display text-sm font-bold tabular-nums">{bidBucks.toLocaleString()} Bucks</p><p className="text-[10px] font-bold text-primary">{bidGems} Gems</p></div>
-                    <div className="rounded-lg bg-secondary/60 px-3 py-2 text-right"><p className="text-[10px] uppercase text-muted-foreground">Your balance</p><p className="font-display text-sm font-bold tabular-nums">{currency.coins.toLocaleString()} Bucks</p><p className="text-[10px] font-bold text-primary">{currency.gems} Gems</p></div>
+                    <div className="rounded-lg bg-secondary/60 px-3 py-2 text-right"><p className="text-[10px] uppercase text-muted-foreground">Your balance</p><p className="font-display text-sm font-bold tabular-nums">{currency.bucks.toLocaleString()} Bucks</p><p className="text-[10px] font-bold text-primary">{currency.gems} Gems</p></div>
                   </div>
                   <div className="mt-3 flex gap-2">
-                    <Button disabled={teamPlayers.length >= squadCapacity || currency.coins < Math.max(0, (highest ? bidBucks + 100 : bidBucks) - alreadyHeld) || currency.gems < extraGems} onClick={() => {
+                    <Button disabled={teamPlayers.length >= squadCapacity || currency.bucks < Math.max(0, (highest ? bidBucks + 100 : bidBucks) - alreadyHeld) || currency.gems < extraGems} onClick={() => {
                       const nextBucks = highest ? bidBucks + 100 : bidBucks
                       const needBucks = Math.max(0, nextBucks - alreadyHeld)
                       const needGems = Math.max(0, bidGems - alreadyHeldGems)
-                      if (currency.coins < needBucks || currency.gems < needGems) return
+                      if (currency.bucks < needBucks || currency.gems < needGems) return
                       const next = auctionPlayers.map((p) => p.id === lot.id ? { ...p, currentBucks: nextBucks, currentGems: bidGems, highestBidder: "you" as const, status: "live" as const, heldBucks: nextBucks, heldGems: bidGems } : p)
                       setAuctionPlayers(next); saveAuctionPlayers(next)
-                      setCurrency((current) => ({ ...current, coins: current.coins - needBucks, gems: current.gems - needGems }))
+                      setCurrency((current) => ({ ...current, bucks: current.coins - needBucks, gems: current.gems - needGems }))
                     }} className="h-11 flex-1 rounded-xl bg-primary text-sm font-semibold text-primary-foreground">{highest ? "Increase Bid" : "Bid"} · {(highest ? bidBucks + 100 : bidBucks).toLocaleString()} Bucks{bidGems ? " + " + bidGems + " Gems" : ""}</Button>
-                    <Button disabled={teamPlayers.length >= squadCapacity || currency.coins < Math.max(0, lot.buyNowBucks - alreadyHeld) || currency.gems < Math.max(0, lot.buyNowGems - alreadyHeldGems)} onClick={() => {
+                    <Button disabled={teamPlayers.length >= squadCapacity || currency.bucks < Math.max(0, lot.buyNowBucks - alreadyHeld) || currency.gems < Math.max(0, lot.buyNowGems - alreadyHeldGems)} onClick={() => {
                       const needBucks = Math.max(0, lot.buyNowBucks - alreadyHeld)
                       const needGems = Math.max(0, lot.buyNowGems - alreadyHeldGems)
-                      if (currency.coins < needBucks || currency.gems < needGems) return
+                      if (currency.bucks < needBucks || currency.gems < needGems) return
                       const result = addAuctionPlayer(teamPlayers, lot)
                       if (!result.added) return
                       const next = auctionPlayers.map((p) => p.id === lot.id ? { ...p, enabled: false, endsAt: auctionNow, status: "sold" as const, highestBidder: "you" as const, currentBucks: lot.buyNowBucks, currentGems: lot.buyNowGems, heldBucks: 0, heldGems: 0 } : p)
-                      setTeamPlayers(result.squad); setAuctionPlayers(next); saveAuctionPlayers(next); setCurrency((current) => ({ ...current, coins: current.coins - needBucks, gems: current.gems - needGems }))
+                      setTeamPlayers(result.squad); setAuctionPlayers(next); saveAuctionPlayers(next); setCurrency((current) => ({ ...current, bucks: current.coins - needBucks, gems: current.gems - needGems }))
                     }} variant="outline" className="h-11 flex-1 rounded-xl border-accent/40 bg-accent/10 text-sm font-semibold text-accent">Buy Now</Button>
                   </div>
                   <p className="mt-2 text-center text-[9px] text-muted-foreground">{highest ? "Your committed Bucks and Gems are already removed from available balance." : "Bidding immediately holds the required Bucks and Gems. If you lose, they are automatically refunded."}</p>
