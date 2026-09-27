@@ -13,9 +13,17 @@ type League = {
 }
 
 const leagues: League[] = [
+  { id: "academy", name: "Academy", tier: 1 },
+  { id: "league-1", name: "League 1", tier: 2 },
+  { id: "league-2", name: "League 2", tier: 3 },
+  { id: "league-3", name: "League 3", tier: 4 },
   { id: "league-4", name: "League 4", tier: 5 },
   { id: "premier", name: "Premier League", tier: 6 },
   { id: "champions", name: "Champions League", tier: 7, locked: true },
+  { id: "super", name: "Super League", tier: 8, locked: true },
+  { id: "legendary", name: "Legendary League", tier: 9, locked: true },
+  { id: "elite", name: "Elite League", tier: 10, locked: true },
+  { id: "hall-of-fame", name: "Hall of Fame", tier: 11, locked: true },
 ]
 
 type Team = {
@@ -47,10 +55,10 @@ const sideTeams: Team[] = premierTeams.map((team) => ({
 }))
 
 export function LeagueHub() {
-  const [leagueIndex, setLeagueIndex] = useState(1)
+  const [leagueIndex, setLeagueIndex] = useState(5)
   const [packSeed, setPackSeed] = useState(0)
   const currentLeague = leagues[leagueIndex]
-  const promotionLevel = (leagueIndex === 0 ? "academy" : leagues[leagueIndex - 1].id) as MatchWinLevel
+  const promotionLevel = currentLeague.id as MatchWinLevel
   const promotionReward = getPromotionReward(promotionLevel)
 
   const moveLeague = (direction: -1 | 1) => {
@@ -94,7 +102,10 @@ export function LeagueHub() {
         </div>
       </section>
 
+      <LeagueProgression leagues={leagues} currentIndex={leagueIndex} onSelect={setLeagueIndex} />
+
       <PromotionRewardPanel
+        league={currentLeague.name}
         reward={promotionReward}
         seed={packSeed}
         onReroll={() => setPackSeed((value) => value + 1)}
@@ -163,11 +174,50 @@ export function LeagueHub() {
 }
 
 
+function LeagueProgression({ leagues, currentIndex, onSelect }: { leagues: League[]; currentIndex: number; onSelect: (index: number) => void }) {
+  return (
+    <section className="mx-auto mt-5 w-[calc(100%-40px)] max-w-[560px]">
+      <div className="rounded-2xl border border-white/10 bg-[#0b0d0d] p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <div>
+            <p className="text-[9px] font-black uppercase tracking-[0.18em] text-emerald-400">League Progression</p>
+            <p className="mt-1 text-xs font-bold text-white/55">Your journey through the divisions</p>
+          </div>
+          <Trophy className="h-5 w-5 text-amber-300" />
+        </div>
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {leagues.map((league, index) => {
+            const active = index === currentIndex
+            const reached = index <= currentIndex
+            return (
+              <button key={league.id} type="button" onClick={() => onSelect(index)}
+                className={cn("min-w-[96px] rounded-xl border px-2.5 py-3 text-left transition",
+                  active ? "border-emerald-400 bg-emerald-500/15" : "border-white/10 bg-white/[0.03]",
+                  !reached && "opacity-60")}>
+                <div className="flex items-center justify-between">
+                  <span className={cn("text-[8px] font-black uppercase", active ? "text-emerald-300" : "text-white/35")}>DIV {league.tier}</span>
+                  {league.locked && <Lock className="h-3 w-3 text-amber-400" />}
+                </div>
+                <p className="mt-2 truncate text-[10px] font-black">{league.name}</p>
+                <div className="mt-2 h-1 rounded-full bg-white/10">
+                  <div className={cn("h-1 rounded-full", reached ? "w-full bg-emerald-400" : "w-0")} />
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    </section>
+  )
+}
+
 function PromotionRewardPanel({
+  league,
   reward,
   seed,
   onReroll,
 }: {
+  league: string
   reward: { bux: number; gems: number }
   seed: number
   onReroll: () => void
@@ -191,7 +241,7 @@ function PromotionRewardPanel({
       <div className="rounded-2xl border border-emerald-500/25 bg-[#0b0d0d] p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-[9px] font-black uppercase tracking-widest text-emerald-400">Promotion Bonus</p>
+            <p className="text-[9px] font-black uppercase tracking-widest text-emerald-400">{league} • Promotion Rewards</p>
             <div className="mt-1 flex items-center gap-2">
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-1 text-xs font-black text-emerald-300"><Coins className="h-3 w-3" />{reward.bux.toLocaleString()}</span>
               <span className="inline-flex items-center gap-1 rounded-full bg-cyan-500/10 px-2 py-1 text-xs font-black text-cyan-300"><Gem className="h-3 w-3" />{reward.gems}</span>
