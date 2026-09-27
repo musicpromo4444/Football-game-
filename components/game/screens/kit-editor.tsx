@@ -45,7 +45,7 @@ const PRO_DESIGNS = [
   ["Tonal Blocks","linear-gradient(135deg,var(--b) 0 25%,var(--a) 25% 50%,var(--b) 50% 75%,var(--a) 75%)"],
   ["Retro Grid","repeating-linear-gradient(90deg,var(--a) 0 20px,var(--b) 20px 24px),repeating-linear-gradient(0deg,transparent 0 20px,var(--b) 20px 24px)"],
   ["Modern Grid","linear-gradient(90deg,transparent 47%,var(--b) 48% 52%,transparent 53%),linear-gradient(0deg,transparent 47%,var(--b) 48% 52%,transparent 53%),var(--a)"],
-  ["Angular","polygon","linear-gradient(155deg,var(--b) 0 18%,transparent 18% 38%,var(--b) 38% 48%,transparent 48%)"],
+  ["Angular","linear-gradient(155deg,var(--b) 0 18%,transparent 18% 38%,var(--b) 38% 48%,transparent 48%)"],
   ["Split Chevron","linear-gradient(45deg,var(--b) 0 18%,transparent 18% 35%,var(--b) 35% 48%,transparent 48%),var(--a)"],
   ["Double Tone","linear-gradient(115deg,var(--a) 0 48%,var(--b) 48% 52%,var(--a) 52%)"],
   ["Energy Lines","repeating-linear-gradient(155deg,var(--a) 0 26px,var(--b) 26px 30px)"],
