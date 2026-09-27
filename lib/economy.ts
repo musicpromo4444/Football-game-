@@ -1,7 +1,7 @@
 export type Wallet = { coins: number; gems: number }
 
 export const WALLET_KEY = "pitchside-wallet"
-export const DEFAULT_WALLET: Wallet = { coins: 10000, gems: 100 }
+export const DEFAULT_WALLET: Wallet = { coins: 5000, gems: 100 }
 
 export type MatchWinLevel =
   | "academy"
