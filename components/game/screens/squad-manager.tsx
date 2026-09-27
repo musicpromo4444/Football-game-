@@ -9,6 +9,7 @@ import { formatAuctionTime, readAuctionPlayers, saveAuctionPlayers, type Auction
 import { cn } from "@/lib/utils"
 import { readWallet, saveWallet } from "@/lib/economy"
 import { MAX_SQUAD_SIZE, SQUAD_CAPACITIES, SQUAD_UPGRADE_GEMS, addAuctionPlayer, getSquadCapacity, loadClubSquad, saveClubSquad, upgradeSquadCapacity } from "@/lib/club-squad"
+import { readPlayerTrainingBoost, type TrainingStatKey } from "@/lib/training-boosts"
 
 type View = "squad" | "styles" | "training" | "market"
 type Formation = "4-3-3" | "4-4-2" | "3-5-2" | "4-2-3-1" | "4-1-4-1"
@@ -104,7 +105,7 @@ function PlayerFace({ player }: { player: Player }) {
   )
 }
 
-function getPlayerCardStats(player: Player, trainingBoost = 0) {
+function getPlayerCardStats(player: Player, trainingBoost = 0, shopStats: Partial<Record<TrainingStatKey, number>> = {}) {
   const r = player.rating
   const role = player.style
   const base = {
@@ -138,12 +139,12 @@ function getPlayerCardStats(player: Player, trainingBoost = 0) {
     "Complete Forward": { SPE: r + 2, ACC: r + 2, STR: r + 1, CON: r + 3, PAS: r + 3, SHO: r + 5, TAC: r - 12 },
   }
   const values = { ...base, ...(bonus[role] || {}) }
-  const boosted = Object.fromEntries(Object.entries(values).map(([key, value]) => [key, Number(value) + trainingBoost])) as typeof values
+  const boosted = Object.fromEntries(Object.entries(values).map(([key, value]) => [key, Number(value) + trainingBoost + Number(shopStats[key as TrainingStatKey] || 0)])) as typeof values
   return Object.fromEntries(Object.entries(boosted).map(([key, value]) => [key, Math.max(1, Math.min(99, Math.round(value)))])) as Record<keyof typeof base, number>
 }
 
-function PlayerCard({ player, compact = false }: { player: Player; compact?: boolean }) {
-  const stats = getPlayerCardStats(player)
+function PlayerCard({ player, compact = false, trainingBoost = 0, shopStats = {}, shopOvr = 0 }: { player: Player; compact?: boolean; trainingBoost?: number; shopStats?: Partial<Record<TrainingStatKey, number>>; shopOvr?: number }) {
+  const stats = getPlayerCardStats(player, trainingBoost, shopStats)
   const statItems: [keyof typeof stats, string][] = [
     ["SPE", "SPE"], ["ACC", "ACC"], ["STA", "STA"], ["STR", "STR"],
     ["CON", "CON"], ["PAS", "PAS"], ["SHO", "SHO"], ["TAC", "TAC"],
@@ -157,7 +158,7 @@ function PlayerCard({ player, compact = false }: { player: Player; compact?: boo
       <div className="absolute inset-x-0 top-0 h-1 bg-primary/70" />
       <div className="absolute right-2 top-3 z-10 flex flex-col items-center rounded-xl border border-primary/30 bg-background/85 px-2 py-1.5 backdrop-blur">
         <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">OVR</span>
-        <span className="font-display text-xl font-black leading-none text-primary">{player.rating}</span>
+        <span className="font-display text-xl font-black leading-none text-primary">{player.rating + shopOvr}</span>
       </div>
 
       <div className="relative mt-1 overflow-hidden rounded-xl border border-white/10 bg-gradient-to-b from-primary/10 to-background">
@@ -510,7 +511,7 @@ export function SquadManager() {
                 {selectedPlayer ? <button type="button" onClick={() => setSelectedPlayerId(null)} className="rounded-lg border border-border px-2 py-1 text-[9px] font-bold">Cancel</button> : null}
               </div>
             <div className="grid grid-cols-1 gap-2">
-              {lineup.map((id) => { const p = teamPlayers.find((player) => player.id === id); return p ? <button type="button" key={p.id} onClick={() => setSelectedPlayerId(p.id)} className="text-left">{<PlayerCard player={p} trainingBoost={(() => { const record = trainingState[p.id]; return record && trainingNow >= record.completesAt ? record.boost : 0 })()} />}</button> : null })}
+              {lineup.map((id) => { const p = teamPlayers.find((player) => player.id === id); return p ? <button type="button" key={p.id} onClick={() => setSelectedPlayerId(p.id)} className="text-left">{<PlayerCard player={p} trainingBoost={(() => { const record = trainingState[p.id]; return record && trainingNow >= record.completesAt ? record.boost : 0 })()} shopStats={readPlayerTrainingBoost(p.id).stats} shopOvr={readPlayerTrainingBoost(p.id).ovr} />}</button> : null })}
             </div>
             </Card>
 
