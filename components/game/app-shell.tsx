@@ -15,6 +15,7 @@ import { Shop } from "@/components/game/screens/shop"
 import { DailyLoginModal } from "@/components/game/daily-login-modal"
 import { getCountry, readProfile } from "@/lib/locale"
 import { squad } from "@/components/game/data"
+import { StoreItemSpotlight } from "@/components/game/store-item-spotlight"
 
 export function AppShell() {
   const [tab, setTab] = useState<TabId>("play")
@@ -24,12 +25,16 @@ export function AppShell() {
   const [captainName, setCaptainName] = useState(squad[5]?.name || "Captain")
   const captain = squad[5]
   const [auctionDisplay, setAuctionDisplay] = useState(readAuctionDisplay())
+  const [promoReason, setPromoReason] = useState<"daily"|"match"|null>("daily")
   const profile = readProfile()
   const country = getCountry(profile?.countryCode)
   useEffect(() => { const refresh = () => setAuctionDisplay(readAuctionDisplay()); window.addEventListener("storage", refresh); return () => window.removeEventListener("storage", refresh) }, [])
 
+  useEffect(() => { const handler = () => setPromoReason("match"); window.addEventListener("pitchside-show-store-promo", handler); return () => window.removeEventListener("pitchside-show-store-promo", handler) }, [])
+
   return (
     <div className="app-bg min-h-screen">
+      {promoReason && <StoreItemSpotlight key={promoReason + Date.now()} reason={promoReason} onOpenKitEditor={() => { setPromoReason(null); setTab("shop"); window.setTimeout(() => window.dispatchEvent(new Event("pitchside-open-kit-editor")), 50) }} /> }
       <DailyLoginModal />
       {auctionDisplay.enabled && <div className="fixed bottom-20 right-4 z-50"><button type="button" onClick={() => setAuctionOpen(v => !v)} className="flex h-14 w-14 items-center justify-center rounded-full border border-primary/40 bg-card/95 text-2xl shadow-xl">{auctionDisplay.icon || <Gavel className="h-6 w-6" />}</button>{auctionOpen && <div className="absolute bottom-16 right-0 w-72 rounded-2xl border border-primary/30 bg-card/98 p-4 shadow-2xl"><div className="flex items-center justify-between"><div><p className="font-display text-lg font-black text-primary">{auctionDisplay.title}</p><p className="text-[10px] text-muted-foreground">{auctionDisplay.writeUp}</p></div><button type="button" onClick={() => setAuctionOpen(false)}><X className="h-4 w-4" /></button></div><Button className="mt-3 w-full rounded-xl" onClick={() => { setAuctionOpen(false); setTab("squad"); window.localStorage.setItem("pitchside-open-market", "1") }}>Open Auction</Button></div>}</div>}
       <div className="mx-auto flex min-h-screen max-w-md flex-col">
