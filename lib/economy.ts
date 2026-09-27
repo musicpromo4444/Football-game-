@@ -1,7 +1,46 @@
 export type Wallet = { coins: number; gems: number }
 
 export const WALLET_KEY = "pitchside-wallet"
-export const DEFAULT_WALLET: Wallet = { coins: 18420, gems: 340 }
+export const DEFAULT_WALLET: Wallet = { coins: 10000, gems: 100 }
+
+export type MatchWinLevel =
+  | "academy"
+  | "league-1"
+  | "league-2"
+  | "league-3"
+  | "league-4"
+  | "premier"
+  | "champions"
+  | "super"
+  | "legendary"
+  | "elite"
+  | "hall-of-fame"
+
+const MATCH_WIN_REWARDS: Record<MatchWinLevel, number> = {
+  academy: 500,
+  "league-1": 600,
+  "league-2": 700,
+  "league-3": 800,
+  "league-4": 900,
+  premier: 1000,
+  champions: 1100,
+  super: 1200,
+  legendary: 1300,
+  elite: 1400,
+  "hall-of-fame": 1500,
+}
+
+export function getMatchWinReward(level: MatchWinLevel = "academy") {
+  return MATCH_WIN_REWARDS[level]
+}
+
+export function awardMatchWin(level: MatchWinLevel = "academy"): { reward: number; wallet: Wallet } {
+  const reward = getMatchWinReward(level)
+  const wallet = readWallet()
+  const next = { ...wallet, coins: wallet.coins + reward }
+  saveWallet(next)
+  return { reward, wallet: next }
+}
 
 export type ShopItem = {
   id: string
