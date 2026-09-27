@@ -68,7 +68,7 @@ export function DailyLoginModal() {
               <span className="absolute inset-0 animate-ping rounded-full bg-white/25 [animation-duration:2.4s]" />
               <span className="absolute inset-2 rounded-full bg-white/15" />
               <div className="relative flex h-24 w-24 flex-col items-center justify-center rounded-full border-2 border-white/50 bg-white/20 backdrop-blur">
-                <Bucks className="h-9 w-9 text-yellow-200 drop-shadow" />
+                <Banknote className="h-9 w-9 text-yellow-200 drop-shadow" />
               </div>
               {doubled ? (
                 <span className="absolute -right-1 top-0 rotate-12 rounded-full bg-emerald-400 px-2 py-0.5 text-[11px] font-black text-emerald-950 shadow-lg">
