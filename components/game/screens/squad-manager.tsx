@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { Users, Layers, Dumbbell, Timer, Shield, Swords, SlidersHorizontal, Bucks, Gem, X } from "lucide-react"
+import { Users, Layers, Dumbbell, Timer, Shield, Swords, SlidersHorizontal, Banknote, Gem, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ScreenHeader, Card, Pill, StatBar } from "@/components/game/ui-bits"
 import { squad, wallet, type Player } from "@/components/game/data"
@@ -248,7 +248,7 @@ export function SquadManager() {
     if (!expired.length) return
     let nextPlayers = [...auctionPlayers]
     let nextSquad = teamPlayers
-    let nextBanknote = currency.bucks
+    let nextBucks = currency.bucks
     let nextGems = currency.gems
     for (const lot of expired) {
       if (lot.highestBidder === "you" && nextSquad.length < squadCapacity) {
@@ -256,21 +256,21 @@ export function SquadManager() {
         if (added.added) {
           nextSquad = added.squad
           // Held Bucks/Gems become the final spent price.
-          nextPlayers = nextPlayers.map((p) => p.id === lot.id ? { ...p, enabled: false, status: "sold" as const, heldBanknote: 0, heldGems: 0 } : p)
+          nextPlayers = nextPlayers.map((p) => p.id === lot.id ? { ...p, enabled: false, status: "sold" as const, heldBucks: 0, heldGems: 0 } : p)
         } else {
-          nextBanknote += lot.heldBanknote || 0
+          nextBucks += lot.heldBucks || 0
           nextGems += lot.heldGems || 0
-          nextPlayers = nextPlayers.map((p) => p.id === lot.id ? { ...p, enabled: false, status: "unsold" as const, highestBidder: null, heldBanknote: 0, heldGems: 0 } : p)
+          nextPlayers = nextPlayers.map((p) => p.id === lot.id ? { ...p, enabled: false, status: "unsold" as const, highestBidder: null, heldBucks: 0, heldGems: 0 } : p)
         }
       } else {
-        nextBanknote += lot.heldBanknote || 0
+        nextBucks += lot.heldBucks || 0
         nextGems += lot.heldGems || 0
-        nextPlayers = nextPlayers.map((p) => p.id === lot.id ? { ...p, enabled: false, status: "unsold" as const, highestBidder: null, heldBanknote: 0, heldGems: 0 } : p)
+        nextPlayers = nextPlayers.map((p) => p.id === lot.id ? { ...p, enabled: false, status: "unsold" as const, highestBidder: null, heldBucks: 0, heldGems: 0 } : p)
       }
     }
     setTeamPlayers(nextSquad)
     setAuctionPlayers(nextPlayers)
-    setCurrency((current) => ({ ...current, bucks: nextBanknote, gems: nextGems }))
+    setCurrency((current) => ({ ...current, bucks: nextBucks, gems: nextGems }))
     saveAuctionPlayers(nextPlayers)
   }, [auctionNow, auctionPlayers, currency.bucks, currency.gems, squadCapacity, teamPlayers])
 
@@ -718,11 +718,11 @@ export function SquadManager() {
             </Card>
             {auctionPlayers.filter((p) => p.enabled && p.endsAt > auctionNow).map((lot) => {
               const highest = lot.highestBidder === "you"
-              const bidBanknote = lot.currentBanknote
+              const bidBucks = lot.currentBucks
               const bidGems = lot.currentGems
-              const alreadyHeld = lot.heldBanknote || 0
+              const alreadyHeld = lot.heldBucks || 0
               const alreadyHeldGems = lot.heldGems || 0
-              const extraBanknote = Math.max(0, bidBanknote - alreadyHeld)
+              const extraBucks = Math.max(0, bidBucks - alreadyHeld)
               const extraGems = Math.max(0, bidGems - alreadyHeldGems)
               return (
                 <Card key={lot.id} className="p-4">
@@ -736,27 +736,27 @@ export function SquadManager() {
                     <div className="text-right"><div className="flex items-center gap-1 text-xs font-semibold text-chart-4"><Timer className="h-3.5 w-3.5" /><span className="font-mono tabular-nums">{formatAuctionTime(lot.endsAt, auctionNow)}</span></div><p className={cn("mt-1 text-[9px] font-black", highest ? "text-primary" : "text-muted-foreground")}>{highest ? "YOUR FUNDS HELD" : "OPEN BIDDING"}</p></div>
                   </div>
                   <div className="mt-3 grid grid-cols-2 gap-2">
-                    <div className="rounded-lg bg-secondary/60 px-3 py-2"><p className="text-[10px] uppercase text-muted-foreground">Auction price</p><p className="font-display text-sm font-bold tabular-nums">{bidBanknote.toLocaleString()} Bucks</p><p className="text-[10px] font-bold text-primary">{bidGems} Gems</p></div>
+                    <div className="rounded-lg bg-secondary/60 px-3 py-2"><p className="text-[10px] uppercase text-muted-foreground">Auction price</p><p className="font-display text-sm font-bold tabular-nums">{bidBucks.toLocaleString()} Bucks</p><p className="text-[10px] font-bold text-primary">{bidGems} Gems</p></div>
                     <div className="rounded-lg bg-secondary/60 px-3 py-2 text-right"><p className="text-[10px] uppercase text-muted-foreground">Your balance</p><p className="font-display text-sm font-bold tabular-nums">{currency.bucks.toLocaleString()} Bucks</p><p className="text-[10px] font-bold text-primary">{currency.gems} Gems</p></div>
                   </div>
                   <div className="mt-3 flex gap-2">
-                    <Button disabled={teamPlayers.length >= squadCapacity || currency.bucks < Math.max(0, (highest ? bidBanknote + 100 : bidBanknote) - alreadyHeld) || currency.gems < extraGems} onClick={() => {
-                      const nextBanknote = highest ? bidBanknote + 100 : bidBanknote
-                      const needBanknote = Math.max(0, nextBanknote - alreadyHeld)
+                    <Button disabled={teamPlayers.length >= squadCapacity || currency.bucks < Math.max(0, (highest ? bidBucks + 100 : bidBucks) - alreadyHeld) || currency.gems < extraGems} onClick={() => {
+                      const nextBucks = highest ? bidBucks + 100 : bidBucks
+                      const needBucks = Math.max(0, nextBucks - alreadyHeld)
                       const needGems = Math.max(0, bidGems - alreadyHeldGems)
-                      if (currency.bucks < needBanknote || currency.gems < needGems) return
-                      const next = auctionPlayers.map((p) => p.id === lot.id ? { ...p, currentBanknote: nextBanknote, currentGems: bidGems, highestBidder: "you" as const, status: "live" as const, heldBanknote: nextBanknote, heldGems: bidGems } : p)
+                      if (currency.bucks < needBucks || currency.gems < needGems) return
+                      const next = auctionPlayers.map((p) => p.id === lot.id ? { ...p, currentBucks: nextBucks, currentGems: bidGems, highestBidder: "you" as const, status: "live" as const, heldBucks: nextBucks, heldGems: bidGems } : p)
                       setAuctionPlayers(next); saveAuctionPlayers(next)
-                      setCurrency((current) => ({ ...current, bucks: current.coins - needBanknote, gems: current.gems - needGems }))
-                    }} className="h-11 flex-1 rounded-xl bg-primary text-sm font-semibold text-primary-foreground">{highest ? "Increase Bid" : "Bid"} · {(highest ? bidBanknote + 100 : bidBanknote).toLocaleString()} Bucks{bidGems ? " + " + bidGems + " Gems" : ""}</Button>
-                    <Button disabled={teamPlayers.length >= squadCapacity || currency.bucks < Math.max(0, lot.buyNowBanknote - alreadyHeld) || currency.gems < Math.max(0, lot.buyNowGems - alreadyHeldGems)} onClick={() => {
-                      const needBanknote = Math.max(0, lot.buyNowBanknote - alreadyHeld)
+                      setCurrency((current) => ({ ...current, bucks: current.coins - needBucks, gems: current.gems - needGems }))
+                    }} className="h-11 flex-1 rounded-xl bg-primary text-sm font-semibold text-primary-foreground">{highest ? "Increase Bid" : "Bid"} · {(highest ? bidBucks + 100 : bidBucks).toLocaleString()} Bucks{bidGems ? " + " + bidGems + " Gems" : ""}</Button>
+                    <Button disabled={teamPlayers.length >= squadCapacity || currency.bucks < Math.max(0, lot.buyNowBucks - alreadyHeld) || currency.gems < Math.max(0, lot.buyNowGems - alreadyHeldGems)} onClick={() => {
+                      const needBucks = Math.max(0, lot.buyNowBucks - alreadyHeld)
                       const needGems = Math.max(0, lot.buyNowGems - alreadyHeldGems)
-                      if (currency.bucks < needBanknote || currency.gems < needGems) return
+                      if (currency.bucks < needBucks || currency.gems < needGems) return
                       const result = addAuctionPlayer(teamPlayers, lot)
                       if (!result.added) return
-                      const next = auctionPlayers.map((p) => p.id === lot.id ? { ...p, enabled: false, endsAt: auctionNow, status: "sold" as const, highestBidder: "you" as const, currentBanknote: lot.buyNowBanknote, currentGems: lot.buyNowGems, heldBanknote: 0, heldGems: 0 } : p)
-                      setTeamPlayers(result.squad); setAuctionPlayers(next); saveAuctionPlayers(next); setCurrency((current) => ({ ...current, bucks: current.coins - needBanknote, gems: current.gems - needGems }))
+                      const next = auctionPlayers.map((p) => p.id === lot.id ? { ...p, enabled: false, endsAt: auctionNow, status: "sold" as const, highestBidder: "you" as const, currentBucks: lot.buyNowBucks, currentGems: lot.buyNowGems, heldBucks: 0, heldGems: 0 } : p)
+                      setTeamPlayers(result.squad); setAuctionPlayers(next); saveAuctionPlayers(next); setCurrency((current) => ({ ...current, bucks: current.coins - needBucks, gems: current.gems - needGems }))
                     }} variant="outline" className="h-11 flex-1 rounded-xl border-accent/40 bg-accent/10 text-sm font-semibold text-accent">Buy Now</Button>
                   </div>
                   <p className="mt-2 text-center text-[9px] text-muted-foreground">{highest ? "Your committed Bucks and Gems are already removed from available balance." : "Bidding immediately holds the required Bucks and Gems. If you lose, they are automatically refunded."}</p>
