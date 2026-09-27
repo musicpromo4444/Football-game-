@@ -127,8 +127,21 @@ export function Shop() {
 
   useEffect(() => {
     setClaims(readClaims())
+    const openKit = () => setKitEditorOpen(true)
+    window.addEventListener("pitchside-open-kit-editor", openKit)
     const timer = window.setInterval(() => setTick((v) => v + 1), 1000)
-    return () => window.clearInterval(timer)
+    return () => { window.removeEventListener("pitchside-open-kit-editor", openKit); window.clearInterval(timer) }
+  }, [])
+
+  useEffect(() => {
+    const open = localStorage.getItem("pitchside-open-kit-editor")
+    if (open === "1") { localStorage.removeItem("pitchside-open-kit-editor"); setKitEditorOpen(true) }
+  }, [])
+
+  /* removed duplicate timer effect */
+  useEffect(() => {
+    setClaims(readClaims())
+    
   }, [])
 
   const flash = (text: string) => {
