@@ -5,7 +5,7 @@ import { Users, Layers, Dumbbell, Timer, Shield, Swords, SlidersHorizontal, Coin
 import { Button } from "@/components/ui/button"
 import { ScreenHeader, Card, Pill, StatBar } from "@/components/game/ui-bits"
 import { squad, wallet, type Player } from "@/components/game/data"
-import { formatAuctionTime, getNextBid, readAuctionPlayers, saveAuctionPlayers, settleAuction, type AuctionPlayer } from "@/lib/auction"
+import { formatAuctionTime, readAuctionPlayers, saveAuctionPlayers, renameAuctionPlayer, type AuctionPlayer } from "@/lib/auction"
 import { cn } from "@/lib/utils"
 import { readWallet, saveWallet } from "@/lib/economy"
 import { MAX_SQUAD_SIZE, SQUAD_CAPACITIES, SQUAD_UPGRADE_GEMS, addAuctionPlayer, getSquadCapacity, loadClubSquad, saveClubSquad, upgradeSquadCapacity } from "@/lib/club-squad"
@@ -248,28 +248,31 @@ export function SquadManager() {
     if (!expired.length) return
     let nextPlayers = [...auctionPlayers]
     let nextSquad = teamPlayers
-    let nextCoins = currency.coins
-    let changed = false
+    let nextBucks = currency.coins
+    let nextGems = currency.gems
     for (const lot of expired) {
-      const result = settleAuction(lot, nextCoins)
-      if (result.won && nextSquad.length < squadCapacity) {
+      if (lot.highestBidder === "you" && nextSquad.length < squadCapacity) {
         const added = addAuctionPlayer(nextSquad, lot)
         if (added.added) {
           nextSquad = added.squad
-          nextCoins = result.coins
+          // Held Bucks/Gems become the final spent price.
+          nextPlayers = nextPlayers.map((p) => p.id === lot.id ? { ...p, enabled: false, status: "sold" as const, heldBucks: 0, heldGems: 0 } : p)
+        } else {
+          nextBucks += lot.heldBucks || 0
+          nextGems += lot.heldGems || 0
+          nextPlayers = nextPlayers.map((p) => p.id === lot.id ? { ...p, enabled: false, status: "unsold" as const, highestBidder: null, heldBucks: 0, heldGems: 0 } : p)
         }
+      } else {
+        nextBucks += lot.heldBucks || 0
+        nextGems += lot.heldGems || 0
+        nextPlayers = nextPlayers.map((p) => p.id === lot.id ? { ...p, enabled: false, status: "unsold" as const, highestBidder: null, heldBucks: 0, heldGems: 0 } : p)
       }
-      const status = result.won && nextSquad.some((p) => p.id === "auction-" + lot.id) ? "sold" : "unsold"
-      nextPlayers = nextPlayers.map((p) => p.id === lot.id ? { ...p, enabled: false, status } : p)
-      changed = true
     }
-    if (changed) {
-      setTeamPlayers(nextSquad)
-      setAuctionPlayers(nextPlayers)
-      setCurrency((current) => ({ ...current, coins: nextCoins }))
-      saveAuctionPlayers(nextPlayers)
-    }
-  }, [auctionNow, auctionPlayers, currency.coins, squadCapacity, teamPlayers])
+    setTeamPlayers(nextSquad)
+    setAuctionPlayers(nextPlayers)
+    setCurrency((current) => ({ ...current, coins: nextBucks, gems: nextGems }))
+    saveAuctionPlayers(nextPlayers)
+  }, [auctionNow, auctionPlayers, currency.coins, currency.gems, squadCapacity, teamPlayers])
 
 
   useEffect(() => {
@@ -710,51 +713,66 @@ export function SquadManager() {
         {view === "market" && (
           <div className="space-y-3">
             <Card className="flex items-center justify-between p-4">
-              <div>
-                <p className="font-display text-sm font-bold">Transfer Auction</p>
-                <p className="text-xs text-muted-foreground">Admin-controlled players · bids are charged only if you win</p>
-              </div>
+              <div><p className="font-display text-sm font-bold">Transfer Auction</p><p className="text-xs text-muted-foreground">Fictional players · Bucks + Gems are held immediately when you bid.</p></div>
               <Pill accent="emerald">{auctionPlayers.filter((p) => p.enabled && p.endsAt > auctionNow).length} Live</Pill>
             </Card>
             {auctionPlayers.filter((p) => p.enabled && p.endsAt > auctionNow).map((lot) => {
-              const nextBid = getNextBid(lot.currentBid)
               const highest = lot.highestBidder === "you"
+              const bidBucks = lot.currentBucks
+              const bidGems = lot.currentGems
+              const alreadyHeld = lot.heldBucks || 0
+              const alreadyHeldGems = lot.heldGems || 0
+              const extraBucks = Math.max(0, bidBucks - alreadyHeld)
+              const extraGems = Math.max(0, bidGems - alreadyHeldGems)
               return (
                 <Card key={lot.id} className="p-4">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-primary/30 bg-primary/10 font-black text-primary">{lot.face}</div>
+                    <div className="flex h-14 w-14 flex-col items-center justify-center rounded-full border-2 border-primary/30 bg-primary/10 font-black text-primary"><span>{lot.face}</span><span className="text-[8px]">{lot.number}</span></div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2"><p className="truncate font-semibold">{lot.name}</p><span className="rounded bg-secondary px-1.5 py-0.5 text-[9px] font-black">{lot.position}</span><span className="font-display text-sm font-black text-primary">{lot.rating}</span></div>
-                      <p className="truncate text-xs text-muted-foreground">{lot.style}</p>
-                      <p className="mt-1 text-[9px] text-muted-foreground">PAC {lot.attributes.pace} · PAS {lot.attributes.passing} · SHO {lot.attributes.shooting} · DEF {lot.attributes.defending} · STA {lot.attributes.stamina}</p>
+                      <p className="truncate text-xs text-muted-foreground">{lot.style} · {lot.height} cm · {lot.look}</p>
+                      <p className="mt-1 text-[9px] text-muted-foreground">PAC {lot.attributes.pace} · PAS {lot.attributes.passing} · SHO {lot.attributes.shooting} · HDG {lot.attributes.heading} · STR {lot.attributes.strength}</p>
                     </div>
-                    <div className="text-right"><div className="flex items-center gap-1 text-xs font-semibold text-chart-4"><Timer className="h-3.5 w-3.5" /><span className="font-mono tabular-nums">{formatAuctionTime(lot.endsAt, auctionNow)}</span></div><p className={cn("mt-1 text-[9px] font-black", highest ? "text-primary" : "text-muted-foreground")}>{highest ? "YOU ARE HIGHEST" : "OPEN BIDDING"}</p></div>
+                    <div className="text-right"><div className="flex items-center gap-1 text-xs font-semibold text-chart-4"><Timer className="h-3.5 w-3.5" /><span className="font-mono tabular-nums">{formatAuctionTime(lot.endsAt, auctionNow)}</span></div><p className={cn("mt-1 text-[9px] font-black", highest ? "text-primary" : "text-muted-foreground")}>{highest ? "YOUR FUNDS HELD" : "OPEN BIDDING"}</p></div>
                   </div>
                   <div className="mt-3 grid grid-cols-2 gap-2">
-                    <div className="rounded-lg bg-secondary/60 px-3 py-2"><p className="text-[10px] uppercase text-muted-foreground">Current bid</p><p className="font-display text-sm font-bold tabular-nums">{lot.currentBid.toLocaleString()}</p></div>
-                    <div className="rounded-lg bg-secondary/60 px-3 py-2 text-right"><p className="text-[10px] uppercase text-muted-foreground">If you win</p><p className="font-display text-sm font-bold tabular-nums">{lot.currentBid.toLocaleString()} coins</p></div>
+                    <div className="rounded-lg bg-secondary/60 px-3 py-2"><p className="text-[10px] uppercase text-muted-foreground">Auction price</p><p className="font-display text-sm font-bold tabular-nums">{bidBucks.toLocaleString()} Bucks</p><p className="text-[10px] font-bold text-primary">{bidGems} Gems</p></div>
+                    <div className="rounded-lg bg-secondary/60 px-3 py-2 text-right"><p className="text-[10px] uppercase text-muted-foreground">Your balance</p><p className="font-display text-sm font-bold tabular-nums">{currency.coins.toLocaleString()} Bucks</p><p className="text-[10px] font-bold text-primary">{currency.gems} Gems</p></div>
                   </div>
                   <div className="mt-3 flex gap-2">
-                    <Button disabled={teamPlayers.length >= squadCapacity || currency.coins < nextBid} onClick={() => {
-                      const next = auctionPlayers.map((p) => p.id === lot.id ? { ...p, currentBid: nextBid, highestBidder: "you" as const, status: "live" as const } : p)
+                    <Button disabled={teamPlayers.length >= squadCapacity || currency.coins < extraBucks || currency.gems < extraGems} onClick={() => {
+                      const next = auctionPlayers.map((p) => p.id === lot.id ? { ...p, currentBucks: Math.max(p.currentBucks + 100, p.startingBucks), currentGems: p.startingGems, highestBidder: "you" as const, status: "live" as const, heldBucks: bidBucks, heldGems: bidGems } : p)
                       setAuctionPlayers(next); saveAuctionPlayers(next)
-                    }} className="h-11 flex-1 rounded-xl bg-primary text-sm font-semibold text-primary-foreground">Bid {nextBid.toLocaleString()}</Button>
-                    <Button disabled={teamPlayers.length >= squadCapacity || currency.coins < lot.buyNow} onClick={() => {
-                      if (teamPlayers.length >= squadCapacity || currency.coins < lot.buyNow) return
+                      setCurrency((current) => ({ ...current, coins: current.coins - extraBucks, gems: current.gems - extraGems }))
+                    }} className="h-11 flex-1 rounded-xl bg-primary text-sm font-semibold text-primary-foreground">{highest ? "Increase Bid" : "Bid"} · {bidBucks.toLocaleString()} Bucks{bidGems ? " + " + bidGems + " Gems" : ""}</Button>
+                    <Button disabled={teamPlayers.length >= squadCapacity || currency.coins < lot.buyNowBucks || currency.gems < lot.buyNowGems} onClick={() => {
+                      if (teamPlayers.length >= squadCapacity || currency.coins < lot.buyNowBucks || currency.gems < lot.buyNowGems) return
                       const result = addAuctionPlayer(teamPlayers, lot)
                       if (!result.added) return
-                      const next = auctionPlayers.map((p) => p.id === lot.id ? { ...p, enabled: false, endsAt: auctionNow, status: "sold" as const, highestBidder: "you" as const, currentBid: lot.buyNow } : p)
-                      setTeamPlayers(result.squad); setAuctionPlayers(next); saveAuctionPlayers(next); setCurrency((current) => ({ ...current, coins: current.coins - lot.buyNow }))
-                    }} variant="outline" className="h-11 flex-1 rounded-xl border-accent/40 bg-accent/10 text-sm font-semibold text-accent">Buy {lot.buyNow.toLocaleString()}</Button>
+                      const next = auctionPlayers.map((p) => p.id === lot.id ? { ...p, enabled: false, endsAt: auctionNow, status: "sold" as const, highestBidder: "you" as const, currentBucks: lot.buyNowBucks, currentGems: lot.buyNowGems, heldBucks: 0, heldGems: 0 } : p)
+                      setTeamPlayers(result.squad); setAuctionPlayers(next); saveAuctionPlayers(next); setCurrency((current) => ({ ...current, coins: current.coins - lot.buyNowBucks, gems: current.gems - lot.buyNowGems }))
+                    }} variant="outline" className="h-11 flex-1 rounded-xl border-accent/40 bg-accent/10 text-sm font-semibold text-accent">Buy Now</Button>
                   </div>
-                  <p className="mt-2 text-center text-[9px] text-muted-foreground">Coins stay in your wallet while you bid. The final price is deducted only when the timer ends and you win.</p>
+                  <p className="mt-2 text-center text-[9px] text-muted-foreground">{highest ? "Your committed Bucks and Gems are already removed from available balance." : "Bidding immediately holds the required Bucks and Gems. If you lose, they are automatically refunded."}</p>
                 </Card>
               )
             })}
             {auctionPlayers.some((p) => p.status === "sold") ? (
               <Card className="p-4">
-                <p className="text-[10px] font-black uppercase tracking-widest text-primary">Recent Auction Results</p>
-                <div className="mt-2 space-y-2">{auctionPlayers.filter((p) => p.status === "sold").slice(-3).map((p) => <div key={p.id} className="flex items-center justify-between rounded-xl bg-primary/10 px-3 py-2"><span className="text-xs font-bold">{p.name}</span><span className="text-[10px] font-black text-primary">SOLD · {p.currentBid.toLocaleString()}</span></div>)}</div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-primary">Your Players</p>
+                <div className="mt-2 space-y-2">{auctionPlayers.filter((p) => p.status === "sold").slice(-5).map((p) => (
+                  <div key={p.id} className="flex items-center justify-between rounded-xl bg-primary/10 px-3 py-2">
+                    <span className="text-xs font-bold">{p.name}</span>
+                    <Button size="sm" variant="outline" disabled={currency.gems < 1} onClick={() => {
+                      const nextName = renameAuctionPlayer(window.prompt("Rename player", p.name) || "")
+                      if (nextName === "Panda Player" && !window.confirm("Use Panda Player as the new name?")) return
+                      setCurrency((current) => ({ ...current, gems: current.gems - 1 }))
+                      const nextPlayers = auctionPlayers.map((x) => x.id === p.id ? { ...x, name: nextName } : x)
+                      const nextSquad = teamPlayers.map((x) => x.id === "auction-" + p.id ? { ...x, name: nextName } : x)
+                      setAuctionPlayers(nextPlayers); setTeamPlayers(nextSquad); saveAuctionPlayers(nextPlayers); saveClubSquad(nextSquad)
+                    }}>Rename · 1 Gem</Button>
+                  </div>
+                ))}</div>
               </Card>
             ) : null}
             {!auctionPlayers.some((p) => p.enabled && p.endsAt > auctionNow) ? <Card className="p-5 text-center"><p className="font-bold">No active auction players</p><p className="mt-1 text-xs text-muted-foreground">The admin controls the next auction.</p></Card> : null}
