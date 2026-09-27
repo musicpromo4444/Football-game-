@@ -10,7 +10,6 @@ const items: { id: TabId; label: string; icon: typeof User }[] = [
   { id: "play", label: "Play", icon: Gamepad2 },
   { id: "squad", label: "Tactics", icon: Shield },
   { id: "shop", label: "Shop", icon: ShoppingBag },
-  { id: "settings", label: "Settings", icon: SlidersHorizontal },
 ]
 
 export function BottomNav({
