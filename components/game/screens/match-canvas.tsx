@@ -809,20 +809,20 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
 
         {/* opponents — the ball carrier reacts to pressure instead of waiting for a tap */}
         {opponentPositions.map((p, i) => (
-          <span
+          <div
             key={`o${i}`}
-            className={cn(
-              "absolute flex h-5 w-5 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/30 bg-destructive/70 transition-none",
-              opponentCarrierRef.current === i && "ring-2 ring-destructive/40",
-              injuredOpponent === i && "opacity-50",
-              opponentInjuries[i] === "light" && "ring-2 ring-chart-4",
-              opponentInjuries[i] === "heavy" && "ring-2 ring-destructive"
-            )}
+            className={cn("absolute -translate-x-1/2 -translate-y-1/2 text-center", injuredOpponent === i && "opacity-50")}
             style={{ left: `${p.x}%`, top: `${p.y}%` }}
           >
-            {opponentInjuries[i] ? <span className="absolute -top-4 whitespace-nowrap text-[7px] font-black text-destructive">{opponentInjuries[i] === "heavy" ? "⚠ HEAVY" : "⚠ LIGHT"}</span> : null}
-            {opponentCarrierRef.current === i ? <span className="h-1.5 w-1.5 rounded-full bg-white" /> : null}
-          </span>
+            {opponentInjuries[i] ? <span className="absolute -top-4 left-1/2 -translate-x-1/2 whitespace-nowrap text-[7px] font-black text-destructive">{opponentInjuries[i] === "heavy" ? "⚠ HEAVY" : "⚠ LIGHT"}</span> : null}
+            <div className={cn("relative mx-auto h-7 w-5", running && "animate-[bounce_0.55s_ease-in-out_infinite]", opponentCarrierRef.current === i && "scale-110")}>
+              <span className="absolute left-1/2 top-0 h-2.5 w-2.5 -translate-x-1/2 rounded-full border border-white/60 bg-amber-200" />
+              <span className="absolute left-1/2 top-2 h-3.5 w-4 -translate-x-1/2 rounded-t-md bg-destructive border border-white/30" />
+              <span className="absolute left-1/2 top-5 h-2.5 w-1 -translate-x-1.5 -rotate-6 bg-slate-900" />
+              <span className="absolute left-1/2 top-5 h-2.5 w-1 translate-x-0.5 rotate-6 bg-slate-900" />
+            </div>
+            <span className="block whitespace-nowrap rounded bg-background/70 px-1 text-[6px] font-bold text-foreground">{opponentStyles[i].role}</span>
+          </div>
         ))}
 
         {/* player archetypes — the selected defender gets an instant control ring */}
