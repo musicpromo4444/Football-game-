@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import {
-  Bucks,
+  Banknote,
   Gem,
   Swords,
   Wifi,
