@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Coins, Gem, ShoppingBag, Check, Play, Lock, Timer } from "lucide-react"
+import { Coins, Gem, ShoppingBag, Check, Play, Lock, Timer, Sparkles, Crown, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, Pill, ScreenHeader } from "@/components/game/ui-bits"
 import { readWallet, purchaseShopItem, readShopItems, saveWallet, type Wallet } from "@/lib/economy"
@@ -38,6 +38,7 @@ export function Shop() {
   const [claims, setClaims] = useState<Record<string, number>>({})
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>(() => loadClubSquad(squad)[0]?.id || "")
   const [boostAd, setBoostAd] = useState<{ tier: TrainingBoostTier; seconds: number } | null>(null)
+  const [tab, setTab] = useState<"featured" | "training" | "currency">("featured")
   const [, setTick] = useState(0)
   const profile = readProfile()
   const country = getCountry(profile?.countryCode)
@@ -102,14 +103,17 @@ export function Shop() {
   return (
     <div className="px-4 pb-8 pt-4">
       <ScreenHeader title="Store" subtitle={country.flag + " " + country.name + " · " + country.currency} />
-      <div className="mb-4 grid grid-cols-2 gap-2">
-        <Card className="p-3"><div className="flex items-center gap-2"><Coins className="h-4 w-4 text-amber-300" /><div><p className="text-[9px] text-muted-foreground">Coins</p><p className="font-black">{wallet.coins.toLocaleString()}</p></div></div></Card>
-        <Card className="p-3"><div className="flex items-center gap-2"><Gem className="h-4 w-4 text-primary" /><div><p className="text-[9px] text-muted-foreground">Gems</p><p className="font-black">{wallet.gems.toLocaleString()}</p></div></div></Card>
+      <div className="mb-4 rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/15 via-card to-card p-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/15"><Sparkles className="h-6 w-6 text-primary" /></div>
+          <div className="min-w-0 flex-1"><p className="font-display text-lg font-black">PitchSide Store</p><p className="text-[10px] text-muted-foreground">Upgrade your squad instantly. Boosts work in the very next match.</p></div>
+          <Pill accent="cyan">LIVE</Pill>
+        </div>
       </div>
-      {message && <div className="mb-3 rounded-xl border border-primary/30 bg-primary/10 p-3 text-center text-xs font-bold text-primary"><Check className="mr-1 inline h-3 w-3" />{message}</div>}
-
-      <div className="mb-3 flex items-center gap-2"><ShoppingBag className="h-4 w-4 text-primary" /><p className="font-black">Free Rewards</p><Pill accent="cyan">Watch Ad</Pill></div>
-      <p className="mb-3 text-[10px] text-muted-foreground">Four different free items. Each card unlocks again 30 minutes after its own ad reward.</p>
+      <div className="mb-4 grid grid-cols-3 g
+      {(tab === "featured" || tab === "currency") && <>
+      <div className="mb-3 flex items-center gap-2"><ShoppingBag className="h-4 w-4 text-primary" /><p className="font-black">Daily Free Rewards</p><Pill accent="cyan">Watch Ad</Pill></div>
+      <p className="mb-3 text-[10px] text-muted-foreground">Each reward has its own 30-minute cooldown.</p>
       <div className="grid grid-cols-2 gap-3">
         {FREE_REWARDS.map((reward) => {
           const remaining = Math.max(0, FREE_COOLDOWN - (Date.now() - Number(claims[reward.id] || 0)))
@@ -117,49 +121,48 @@ export function Shop() {
           return (
             <Card key={reward.id} className="relative overflow-hidden p-3">
               <div className="absolute right-2 top-2 rounded-full bg-primary/10 px-2 py-1 text-[8px] font-black text-primary">FREE</div>
-              <div className="flex h-16 items-center justify-center text-5xl">{reward.icon}</div>
-              <p className="mt-2 font-black">{reward.name}</p>
-              <p className="mt-1 text-[10px] text-muted-foreground">{reward.text}</p>
-              <Button disabled={locked} onClick={() => claimFree(reward)} size="sm" className="mt-3 w-full rounded-xl">
-                {locked ? <><Lock className="mr-1 inline h-3 w-3" />{formatCooldown(remaining)}</> : <><Play className="mr-1 inline h-3 w-3" />Watch Ad</>}
-              </Button>
-              {locked && <p className="mt-1 flex items-center justify-center gap-1 text-[8px] text-muted-foreground"><Timer className="h-3 w-3" />30 min cooldown</p>}
+              <div className="flex h-14 items-center justify-center text-4xl">{reward.icon}</div>
+              <p className="mt-2 font-black">{reward.name}</p><p className="mt-1 text-[10px] text-muted-foreground">{reward.text}</p>
+              <Button disabled={locked} onClick={() => claimFree(reward)} size="sm" className="mt-3 w-full rounded-xl">{locked ? <><Lock className="mr-1 inline h-3 w-3" />{formatCooldown(remaining)}</> : <><Play className="mr-1 inline h-3 w-3" />Watch Ad</>}</Button>
+              {locked && <p className="mt-1 text-center text-[8px] text-muted-foreground">30 min cooldown</p>}
             </Card>
           )
         })}
-      </div>
-
-      <div className="mb-3 mt-7 flex items-center gap-2"><ShoppingBag className="h-4 w-4 text-primary" /><p className="font-black">Training Boosts</p><Pill accent="cyan">Instant</Pill></div>
-      <Card className="mb-3 p-3">
-        <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Choose player</p>
-        <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
+      </div></>}
+      {(tab === "featured" || tab === "training") && <>
+      <div className="mb-3 mt-7 flex items-center gap-2"><Zap className="h-4 w-4 text-primary" /><p className="font-black">Training Boosts</p><Pill accent="cyan">Instant</Pill></div>
+      <Card className="mb-3 border-primary/20 bg-primary/5 p-3">
+        <p className="text-[9px] font-black uppercase tracking-wider text-muted-foreground">Selected player</p>
+        <div className="mt-2 flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary font-black">{loadClubSquad(squad).find(p => p.id === selectedPlayerId)?.rating ?? "--"}</div>
+          <div className="min-w-0 flex-1"><p className="truncate font-black">{loadClubSquad(squad).find(p => p.id === selectedPlayerId)?.name ?? "Select a player"}</p><p className="text-[9px] text-muted-foreground">Boost is permanent and usable immediately.</p></div>
+          <Crown className="h-5 w-5 text-amber-300" />
+        </div>
+        <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
           {loadClubSquad(squad).map((player) => {
             const active = player.id === selectedPlayerId
             const boost = readPlayerTrainingBoost(player.id)
-            return <button key={player.id} type="button" onClick={() => setSelectedPlayerId(player.id)} className={`min-w-[92px] rounded-xl border px-2 py-2 text-left ${active ? "border-primary bg-primary/15" : "border-border bg-card/60"}`}>
-              <p className="truncate text-[10px] font-black">{player.name}</p>
-              <p className="text-[9px] text-muted-foreground">{player.pos} · OVR {player.rating + boost.ovr}</p>
+            return <button key={player.id} type="button" onClick={() => setSelectedPlayerId(player.id)} className={`min-w-[96px] rounded-xl border px-2 py-2 text-left ${active ? "border-primary bg-primary/15" : "border-border bg-card/60"}`}>
+              <p className="truncate text-[10px] font-black">{player.name}</p><p className="text-[9px] text-muted-foreground">{player.pos} · OVR {player.rating + boost.ovr}</p>
             </button>
           })}
         </div>
       </Card>
-      <div className="grid grid-cols-1 gap-3">
-        <Card className="p-4">
-          <div className="flex items-center gap-3"><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-2xl">⚡</div><div className="flex-1"><p className="font-black">Starter Boost</p><p className="text-[10px] text-muted-foreground">+1 OVR · +1 to 3 random stats · immediate</p></div><Button size="sm" onClick={() => buyTrainingBoost("starter")} className="rounded-xl">Watch Ad</Button></div>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center gap-3"><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-2xl">💎</div><div className="flex-1"><p className="font-black">Power Boost</p><p className="text-[10px] text-muted-foreground">+2 OVR · +3 to 3 random stats · immediate</p></div><Button size="sm" onClick={() => buyTrainingBoost("power")} className="rounded-xl">30 Gems</Button></div>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center gap-3"><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-2xl">👑</div><div className="flex-1"><p className="font-black">Elite Boost</p><p className="text-[10px] text-muted-foreground">+4 OVR · +5 to 4 random stats · immediate</p></div><Button size="sm" onClick={() => buyTrainingBoost("elite")} className="rounded-xl">$1.25</Button></div>
-        </Card>
-      </div>
-
-      <div className="mb-3 mt-7 flex items-center gap-2"><ShoppingBag className="h-4 w-4 text-primary" /><p className="font-black">Club Store</p><Pill accent="cyan">Admin controlled</Pill></div>
       <div className="space-y-3">
-        {items.map((item) => (
-          <Card key={item.id} className="p-4">
-            <div className="flex items-center gap-3">
+        <Card className="p-4"><div className="flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-xl">⚡</div><div className="flex-1"><p className="font-black">Starter Boost</p><p className="text-[10px] text-muted-foreground">+1 OVR · +1 to 3 random stats · permanent</p></div><Button size="sm" onClick={() => buyTrainingBoost("starter")} className="rounded-xl">Watch Ad</Button></div></Card>
+        <Card className="p-4"><div className="flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-xl">💎</div><div className="flex-1"><p className="font-black">Power Boost</p><p className="text-[10px] text-muted-foreground">+2 OVR · +3 to 3 random stats · permanent</p></div><Button size="sm" onClick={() => buyTrainingBoost("power")} className="rounded-xl">30 Gems</Button></div></Card>
+        <Card className="p-4"><div className="flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-400/10 text-xl">👑</div><div className="flex-1"><p className="font-black">Elite Boost</p><p className="text-[10px] text-muted-foreground">+4 OVR · +5 to 4 random stats · permanent</p></div><Button size="sm" onClick={() => buyTrainingBoost("elite")} className="rounded-xl">$1.25</Button></div></Card>
+      </div></>}
+      {(tab === "featured" || tab === "currency") && <>
+      <div className="mb-3 mt-7 flex items-center gap-2"><Coins className="h-4 w-4 text-amber-300" /><p className="font-black">Club Currency</p></div>
+      <div className="space-y-3">
+        {items.map((item) => <Card key={item.id} className="p-4"><div className="flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-secondary text-xl">{item.icon}</div><div className="min-w-0 flex-1"><p className="font-black">{item.name}</p><p className="text-[10px] text-muted-foreground">{item.description}</p></div><Button size="sm" onClick={() => buy(item.id)} className="shrink-0 rounded-xl px-3">{item.price.toLocaleString()} {item.currency === "gems" ? "Gems" : "Coins"}</Button></div></Card>)}
+      </div>
+      <div className="mb-3 mt-7"><p className="font-black">Premium Bundles</p><p className="text-[10px] text-muted-foreground">Prices are shown in your selected currency.</p></div>
+      <div className="grid grid-cols-2 gap-3">
+        {realMoneyPacks.map((pack) => <Card key={pack.id} className="p-4"><div className="mb-2 flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-xl">{pack.icon}</div><p className="font-black">{pack.name}</p><p className="mt-1 text-[10px] text-muted-foreground">{pack.description}</p><p className="mt-3 font-display text-lg font-black">{formatRealMoney(pack.usd, profile?.countryCode)}</p><Button size="sm" className="mt-2 w-full rounded-xl" onClick={() => setMessage("Payment will open when store billing is connected.")}>Purchase</Button></Card>)}
+      </div></>}
+ssName="flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-secondary text-2xl">{item.icon}</div>
               <div className="min-w-0 flex-1"><p className="font-black">{item.name}</p><p className="text-[10px] text-muted-foreground">{item.description}</p></div>
               <Button size="sm" onClick={() => buy(item.id)} className="shrink-0 rounded-xl px-3">{item.price.toLocaleString()} {item.currency === "gems" ? "Gems" : "Coins"}</Button>
