@@ -15,6 +15,7 @@ import { loadClubSquad } from "@/lib/club-squad"
 import { grantTrainingBoost, readPlayerTrainingBoost, TRAINING_BOOST_PACKAGES, type TrainingBoostTier } from "@/lib/training-boosts"
 import { activateTeamBoost, TEAM_BOOSTS, type TeamBoostDuration, type TeamBoostType } from "@/lib/team-boosts"
 import { squad } from "@/components/game/data"
+import { KitEditor } from "@/components/game/screens/kit-editor"
 
 const FREE_CLAIMS_KEY = "pitchside-free-store-claims"
 const FREE_COOLDOWN = 30 * 60 * 1000
@@ -108,6 +109,7 @@ export function Shop() {
   const [claims, setClaims] = useState<Record<string, number>>({})
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>(() => loadClubSquad(squad)[0]?.id || "")
   const [boostAd, setBoostAd] = useState<{ tier: TrainingBoostTier; seconds: number } | null>(null)
+  const [kitEditorOpen, setKitEditorOpen] = useState(false)
   const [selectedDuration, setSelectedDuration] = useState<Record<TeamBoostType, TeamBoostDuration>>({
     "ghost-formation": "1-match",
     "team-boost": "1-match",
@@ -287,7 +289,7 @@ export function Shop() {
         <div className="grid grid-cols-3 gap-2.5">
           <ProductCard kind="item" icon={<Crown className="h-8 w-8 text-amber-200" />} title="Captain Boost" subtitle="Boosts your captain" price={<><Play className="mr-1 inline h-3 w-3" />WATCH AD</>} onBuy={() => claimFreeTeamBoost("captain-boost")} accent="gold" badge="FREE" />
           <ProductCard kind="item" icon={<Zap className="h-8 w-8 text-cyan-200" />} title="3-5-2 Tactic" subtitle="Wing play formation" price="UNLOCKED" onBuy={() => flash("3-5-2 Tactic is already unlocked.")} accent="cyan" />
-          <ProductCard kind="item" icon={<Shirt className="h-8 w-8 text-emerald-200" />} title="Emerald Kit" subtitle="Home customization" price="EQUIPPED" onBuy={() => flash("Emerald Kit is equipped.")} accent="green" />
+          <ProductCard kind="item" icon={<Shirt className="h-8 w-8 text-emerald-200" />} title="Kit Editor" subtitle="Normal · Pro · Legendary · Special Event" price="OPEN" onBuy={() => setKitEditorOpen(true)} accent="green" badge="CUSTOMIZE" />
           <ProductCard kind="item" icon={<Footprints className="h-8 w-8 text-orange-200" />} title="Speed Boots" subtitle="+2% speed per match" price="40 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 40, {}, "Speed Boots activated.")} accent="pink" />
           <ProductCard kind="item" icon={<HeartPulse className="h-8 w-8 text-rose-200" />} title="Injury Shield" subtitle="20 matches guard" price="8,000 Bux" priceIcon={<Coins className="mr-1 inline h-3 w-3" />} onBuy={() => spend("coins", 8000, {}, "Injury Shield activated.")} accent="gold" />
           <ProductCard kind="item" icon={<Crown className="h-8 w-8 text-yellow-200" />} title="Extra Sub Slot" subtitle="+1 squad slot" price="80 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 80, {}, "Extra Sub Slot unlocked.")} accent="pink" />
