@@ -43,7 +43,7 @@ export function AdminShop() {
               </div>
               <div className="mt-2 grid grid-cols-2 gap-2">
                 <input value={item.description} onChange={(e) => setItems(items.map((x) => x.id === item.id ? { ...x, description: e.target.value } : x))} className="rounded-lg border border-border bg-background px-2 py-1.5 text-[10px]" />
-                <select value={item.currency} onChange={(e) => setItems(items.map((x) => x.id === item.id ? { ...x, currency: e.target.value as ShopItem["currency"] } : x))} className="rounded-lg border border-border bg-background px-2 py-1.5 text-[10px]"><option value="gems">Gems</option><option value="coins">Coins</option></select>
+                <select value={item.currency} onChange={(e) => setItems(items.map((x) => x.id === item.id ? { ...x, currency: e.target.value as ShopItem["currency"] } : x))} className="rounded-lg border border-border bg-background px-2 py-1.5 text-[10px]"><option value="gems">Gems</option><option value="bucks">Bucks</option></select>
               </div>
             </div>
           ))}
@@ -62,7 +62,7 @@ export function AdminShop() {
                 <input type="number" min={0.01} step={0.01} value={pack.usd} onChange={(e) => setPacks(packs.map((x) => x.id === pack.id ? { ...x, usd: Math.max(0.01, Number(e.target.value)) } : x))} className="w-24 rounded-lg border border-border bg-background px-2 py-1.5 text-right text-xs font-bold" />
                 <span className="text-xs">$</span>
               </div>
-              <p className="mt-1 text-[10px] text-muted-foreground">{pack.gems ? pack.gems.toLocaleString() + " Gems" : pack.coins.toLocaleString() + " Coins"}</p>
+              <p className="mt-1 text-[10px] text-muted-foreground">{pack.gems ? pack.gems.toLocaleString() + " Gems" : pack.coins.toLocaleString() + " Bucks"}</p>
             </div>
           ))}
         </div>
