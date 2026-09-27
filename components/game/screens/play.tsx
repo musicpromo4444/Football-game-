@@ -35,6 +35,7 @@ import {
   weeklyResetGrid,
   type TabId,
 } from "@/components/game/data"
+import { awardMatchWin, type MatchWinLevel } from "@/lib/economy"
 
 export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
   const [inMatch, setInMatch] = useState(false)
@@ -42,8 +43,10 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
   const [queueing, setQueueing] = useState(false)
   const [onlineError, setOnlineError] = useState<string | null>(null)
   const [matchId, setMatchId] = useState<string | null>(null)
+  const [matchLevel, setMatchLevel] = useState<MatchWinLevel>("academy")
   const [rematchOffer, setRematchOffer] = useState<any>(null)
   const [matchDone, setMatchDone] = useState(false)
+  const [matchReward, setMatchReward] = useState<number | null>(null)
 
   useEffect(() => {
     if (!supabase) return
@@ -60,9 +63,11 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
           const row = payload.new as any
           if (row.player_a === userId || row.player_b === userId) {
             setMatchId(row.id)
+            setMatchLevel((row.league_id as MatchWinLevel) || "academy")
             setInMatch(true)
             setQueueing(false)
             setMatchDone(false)
+            setMatchReward(null)
           }
         })
         .on("postgres_changes", { event: "INSERT", schema: "public", table: "rematch_offers" }, (payload) => {
@@ -87,7 +92,9 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
       const result = await queueForOnlineMatch()
       if (result.match) {
         setMatchId(result.match.match_id)
+        setMatchLevel(result.match.league_id || "academy")
         setInMatch(true)
+        setMatchReward(null)
       }
     } catch (error) {
       setOnlineError(error instanceof Error ? error.message : "Online matchmaking failed.")
@@ -100,6 +107,10 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
     setMatchDone(true)
     try {
       const result = await completeOnlineMatch(matchId, outcome.home, outcome.away)
+      if (outcome.home > outcome.away) {
+        const reward = awardMatchWin(matchLevel)
+        setMatchReward(reward.reward)
+      }
       if (result?.rematch_offer_id) {
         setRematchOffer({ id: result.rematch_offer_id, status: "open" })
       }
@@ -115,7 +126,9 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
       setRematchOffer(null)
       if (result?.next_match_id) {
         setMatchId(result.next_match_id)
+        setMatchLevel((result.league_id as MatchWinLevel) || matchLevel)
         setMatchDone(false)
+        setMatchReward(null)
         setInMatch(true)
       }
     } catch (error) {
@@ -140,6 +153,12 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
           </div>
         </div>
         <MatchCanvas onMatchComplete={finishOnlineMatch} />
+        {matchReward !== null ? (
+          <div className="mx-5 mt-3 rounded-2xl border border-emerald-500/35 bg-emerald-500/10 px-4 py-3 text-center">
+            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-300">Match Win Reward</p>
+            <p className="mt-1 text-xl font-black text-emerald-200">+{matchReward.toLocaleString()} Bux</p>
+          </div>
+        ) : null}
         {rematchOffer ? (
           <div className="mx-5 mt-3 rounded-2xl border border-primary/40 bg-card p-4 shadow-xl">
             <p className="font-display text-base font-black">Rematch?</p>
