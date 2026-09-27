@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, type ReactNode } from "react"
-import { ChevronLeft, ChevronRight, Gift, Lock, Trophy, RefreshCw, Coins, Gem } from "lucide-react"
+import { ChevronLeft, ChevronRight, Gift, Lock, Trophy, RefreshCw, Bucks, Gem } from "lucide-react"
 import { getPromotionReward, type MatchWinLevel } from "@/lib/economy"
 import { cn } from "@/lib/utils"
 
@@ -95,7 +95,7 @@ export function LeagueHub() {
           </div>
 
           <div className="mt-4 grid grid-cols-3 gap-2">
-            <RewardCard icon="▰" title={<>CLUB<br />CURRENCY</>} value="1,000" suffix="Box / Coins" tone="emerald" />
+            <RewardCard icon="▰" title={<>CLUB<br />CURRENCY</>} value="1,000" suffix="Box / Bucks" tone="emerald" />
             <RewardCard icon="◆" title={<>PREMIUM<br />GEMS</>} value="50" suffix="Gems 💎" tone="cyan" />
             <RewardCard icon="★" title={<>#9 CB</>} value="89" suffix="SANDBERG (TITA..." tone="amber" />
           </div>
@@ -243,7 +243,7 @@ function PromotionRewardPanel({
           <div>
             <p className="text-[9px] font-black uppercase tracking-widest text-emerald-400">{league} • Promotion Rewards</p>
             <div className="mt-1 flex items-center gap-2">
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-1 text-xs font-black text-emerald-300"><Coins className="h-3 w-3" />{reward.bux.toLocaleString()}</span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-1 text-xs font-black text-emerald-300"><Bucks className="h-3 w-3" />{reward.bux.toLocaleString()}</span>
               <span className="inline-flex items-center gap-1 rounded-full bg-cyan-500/10 px-2 py-1 text-xs font-black text-cyan-300"><Gem className="h-3 w-3" />{reward.gems}</span>
             </div>
           </div>
