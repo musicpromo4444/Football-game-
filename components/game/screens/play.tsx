@@ -36,6 +36,7 @@ import {
   type TabId,
 } from "@/components/game/data"
 import { awardMatchWin, awardMatchDraw, type MatchWinLevel } from "@/lib/economy"
+import { recordLeagueResult } from "@/lib/league-progression"
 
 export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
   const [inMatch, setInMatch] = useState(false)
@@ -108,6 +109,10 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
   const finishOnlineMatch = async (outcome: { home: number; away: number }) => {
     if (!matchId || matchDone) return
     setMatchDone(true)
+    const leagueResult = recordLeagueResult(outcome.home, outcome.away)
+    if (leagueResult.seasonResult === "promoted") setLeagueOutcome(`PROMOTED · +${leagueResult.reward.toLocaleString()} Bux`)
+    else if (leagueResult.seasonResult === "relegated") setLeagueOutcome("RELEGATED · New season started")
+    else if (leagueResult.seasonResult === "held") setLeagueOutcome("SEASON COMPLETE · League held")
     window.dispatchEvent(new Event("pitchside-show-store-promo"))
     try {
       const result = await completeOnlineMatch(matchId, outcome.home, outcome.away)
@@ -162,6 +167,7 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
           </div>
         </div>
         <MatchCanvas onMatchComplete={finishOnlineMatch} />
+        {leagueOutcome ? <div className="mx-5 mt-3 rounded-2xl border border-cyan-500/35 bg-cyan-500/10 px-4 py-3 text-center"><p className="text-[10px] font-black uppercase tracking-widest text-cyan-300">League Update</p><p className="mt-1 text-sm font-black text-cyan-100">{leagueOutcome}</p></div> : null}
         {matchReward !== null ? (
           <div className="mx-5 mt-3 rounded-2xl border border-emerald-500/35 bg-emerald-500/10 px-4 py-3 text-center">
             <p className="text-[10px] font-black uppercase tracking-widest text-emerald-300">{matchRewardLabel === "DRAW" ? "Draw Reward" : "Match Win Reward"}</p>
