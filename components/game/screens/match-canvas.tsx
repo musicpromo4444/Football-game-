@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Play, Pause, RotateCcw, Hand, Star } from "lucide-react"
 import { squad, type PlayerRole } from "@/components/game/data"
 import { readPlayerTrainingBoost } from "@/lib/training-boosts"
+import { consumeTeamBoostsAfterMatch, getTeamBoostModifiers } from "@/lib/team-boosts"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -103,6 +104,7 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
   const [drag, setDrag] = useState<{ start: Point; current: Point } | null>(null)
   const pointerModeRef = useRef<"ball" | "player">("ball")
   const [score, setScore] = useState({ home: 2, away: 1 })
+  const teamBoosts = useMemo(() => getTeamBoostModifiers(), [])
   const [passes, setPasses] = useState(0)
   const [actions, setActions] = useState(0)
   const [message, setMessage] = useState("Swipe from the ball to pass")
@@ -151,6 +153,7 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
   useEffect(() => {
     if (time === 0 && !completionSentRef.current) {
       completionSentRef.current = true
+      consumeTeamBoostsAfterMatch()
       onMatchComplete?.(score)
     }
   }, [time, score, onMatchComplete])
@@ -178,7 +181,7 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
         const player = playerArchetypes[i]
         const injuryFactor = injuries[i] === "heavy" ? 0.4 : injuries[i] === "light" ? 0.7 : 1
         const trainingFactor = 1 + (player?.trainingBoost || 0) * 0.01
-        const speedBoost = 1 + ((player?.shopBoost?.stats.SPE || 0) + (player?.shopBoost?.stats.ACC || 0)) * 0.004
+        const speedBoost = (1 + ((player?.shopBoost?.stats.SPE || 0) + (player?.shopBoost?.stats.ACC || 0)) * 0.004) * (teamBoosts.team ? 1.05 : 1) * (teamBoosts.ghostFormation ? 1.08 : 1)
         const anchor = base[i] || p
         if (injuries[i] === "heavy") return { ...anchor }
         const dx = ballNow.x - p.x
@@ -321,7 +324,7 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
           const tackleSkill =
             (defenderPlayer?.specialStyle === "Wall" ? 0.96 : 0.76) +
             (defenderPlayer?.role === "Ball Winner" ? 0.08 : 0) +
-            (defenderPlayer?.role === "Stopper" ? 0.06 : 0) + ((defenderPlayer?.shopBoost?.stats.TAC || 0) * 0.008) + ((defenderPlayer?.shopBoost?.stats.STR || 0) * 0.003)
+            (defenderPlayer?.role === "Stopper" ? 0.06 : 0) + ((defenderPlayer?.shopBoost?.stats.TAC || 0) * 0.008) + ((defenderPlayer?.shopBoost?.stats.STR || 0) * 0.003) + (teamBoosts.defense ? 0.10 : 0) + (teamBoosts.team ? 0.04 : 0)
           if ((distance < 6.5 && frontAngle) || slide) {
             const hardContact = slide && tackleSkill < 0.9
             const clean = tackleSkill >= 0.86 || Math.random() > (hardContact ? 0.34 : 0.16)
@@ -553,9 +556,11 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
         }
 
         // Guardian reads the shot with elite positioning/reactions.
-        accuracy = Math.min(0.99, accuracy + (shooter?.trainingBoost || 0) * 0.015 + (shooter?.shopBoost?.stats.SHO || 0) * 0.008 + (shooter?.shopBoost?.stats.CON || 0) * 0.003)
-        power = Math.min(0.99, power + (shooter?.trainingBoost || 0) * 0.015 + (shooter?.shopBoost?.stats.SHO || 0) * 0.006 + (shooter?.shopBoost?.stats.STR || 0) * 0.003)
-        const guardianSave = 0.22 + (special === "Long-Range Sniper" ? 0.03 : 0)
+        const captainId = typeof window !== "undefined" ? localStorage.getItem("pitchside-captain-id") || playerArchetypes[0]?.id : playerArchetypes[0]?.id
+        const shooterCaptainBoost = teamBoosts.captain && shooter?.id === captainId ? 0.10 : 0
+        accuracy = Math.min(0.99, accuracy + (shooter?.trainingBoost || 0) * 0.015 + (shooter?.shopBoost?.stats.SHO || 0) * 0.008 + (shooter?.shopBoost?.stats.CON || 0) * 0.003 + shooterCaptainBoost + (teamBoosts.team ? 0.05 : 0))
+        power = Math.min(0.99, power + (shooter?.trainingBoost || 0) * 0.015 + (shooter?.shopBoost?.stats.SHO || 0) * 0.006 + (shooter?.shopBoost?.stats.STR || 0) * 0.003 + shooterCaptainBoost + (teamBoosts.team ? 0.05 : 0))
+        const guardianSave = 0.22 + (special === "Long-Range Sniper" ? 0.03 : 0) + (teamBoosts.goalkeeper ? 0.10 : 0) + (teamBoosts.team ? 0.03 : 0)
         const saved = Math.random() > accuracy || Math.random() < guardianSave
         const rebound = saved && Math.random() < (power > 0.88 ? 0.46 : 0.28)
 
@@ -616,7 +621,9 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
       else if (passer?.specialStyle === "Mezzala") passQuality = 0.90
       else if (passer?.role === "Playmaker" || passer?.role === "Deep-Lying Playmaker") passQuality = 0.84
       else if (passer?.role === "Ball-Playing Defender") passQuality = 0.80
-      passQuality = Math.min(0.99, passQuality + (passer?.trainingBoost || 0) * 0.015 + (passer?.shopBoost?.stats.PAS || 0) * 0.009 + (passer?.shopBoost?.stats.CON || 0) * 0.002)
+      const captainId = typeof window !== "undefined" ? localStorage.getItem("pitchside-captain-id") || playerArchetypes[0]?.id : playerArchetypes[0]?.id
+      const passerCaptainBoost = teamBoosts.captain && passer?.id === captainId ? 0.10 : 0
+      passQuality = Math.min(0.99, passQuality + (passer?.trainingBoost || 0) * 0.015 + (passer?.shopBoost?.stats.PAS || 0) * 0.009 + (passer?.shopBoost?.stats.CON || 0) * 0.002 + passerCaptainBoost + (teamBoosts.team ? 0.05 : 0))
 
       let intercepted = false
       if (passerPos && targetPos && targetIndex !== null) {
