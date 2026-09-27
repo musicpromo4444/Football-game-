@@ -243,7 +243,7 @@ function PromotionRewardPanel({
           <div>
             <p className="text-[9px] font-black uppercase tracking-widest text-emerald-400">{league} • Promotion Rewards</p>
             <div className="mt-1 flex items-center gap-2">
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-1 text-xs font-black text-emerald-300"><Bucks className="h-3 w-3" />{reward.bux.toLocaleString()}</span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-1 text-xs font-black text-emerald-300"><Banknote className="h-3 w-3" />{reward.bux.toLocaleString()}</span>
               <span className="inline-flex items-center gap-1 rounded-full bg-cyan-500/10 px-2 py-1 text-xs font-black text-cyan-300"><Gem className="h-3 w-3" />{reward.gems}</span>
             </div>
           </div>
