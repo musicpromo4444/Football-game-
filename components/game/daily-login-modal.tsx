@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Bucks, Gift, X, Play, Sparkles, RefreshCw } from "lucide-react"
+import { Banknote, Gift, X, Play, Sparkles, RefreshCw } from "lucide-react"
 import { dailyLoginBonus } from "@/components/game/data"
 
 export function DailyLoginModal() {
