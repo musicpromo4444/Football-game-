@@ -108,6 +108,7 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
   const finishOnlineMatch = async (outcome: { home: number; away: number }) => {
     if (!matchId || matchDone) return
     setMatchDone(true)
+    window.dispatchEvent(new Event("pitchside-show-store-promo"))
     try {
       const result = await completeOnlineMatch(matchId, outcome.home, outcome.away)
       if (outcome.home > outcome.away) {
