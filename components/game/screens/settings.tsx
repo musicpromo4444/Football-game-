@@ -6,7 +6,7 @@ import {
   Mic,
   Vibrate,
   Bell,
-  Bucks,
+  Banknote,
   Gem,
   Wallet,
   ChevronRight,
@@ -161,7 +161,7 @@ export function Settings() {
                     {p.amount.toLocaleString()}
                   </span>
                   <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    {isGems ? "Gems" : "Banknote"}
+                    {isGems ? "Gems" : "Bucks"}
                   </span>
                   <span className="mt-1 inline-flex w-full items-center justify-center gap-1 rounded-lg bg-primary py-2 font-display text-sm font-bold text-primary-foreground">
                     {p.price}
