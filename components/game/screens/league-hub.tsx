@@ -1,9 +1,10 @@
 "use client"
 
-import { useState, type ReactNode } from "react"
+import { useEffect, useState, type ReactNode } from "react"
 import { ChevronLeft, ChevronRight, Gift, Lock, Trophy, RefreshCw, Banknote, Gem } from "lucide-react"
 import { getPromotionReward, type MatchWinLevel } from "@/lib/economy"
 import { cn } from "@/lib/utils"
+import { readLeagueProgress, LEAGUE_SEASON_MATCHES, LEAGUE_PROMOTION_POINTS, LEAGUE_RELEGATION_POINTS, type LeagueProgress } from "@/lib/league-progression"
 
 type League = {
   id: string
@@ -56,7 +57,9 @@ const sideTeams: Team[] = premierTeams.map((team) => ({
 
 export function LeagueHub() {
   const [leagueIndex, setLeagueIndex] = useState(5)
+  const [progress, setProgress] = useState<LeagueProgress>({ leagueIndex: 5, played: 0, points: 0, wins: 0, draws: 0, losses: 0 })
   const [packSeed, setPackSeed] = useState(0)
+  useEffect(() => { const next = readLeagueProgress(); setProgress(next); setLeagueIndex(next.leagueIndex) }, [])
   const currentLeague = leagues[leagueIndex]
   const promotionLevel = currentLeague.id as MatchWinLevel
   const promotionReward = getPromotionReward(promotionLevel)
@@ -94,7 +97,7 @@ export function LeagueHub() {
             </div>
           </div>
 
-          <div className="mt-4 grid grid-cols-3 gap-2">
+          <div className="mb-3 rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3"><div className="flex items-center justify-between"><span className="text-[10px] font-black uppercase tracking-widest text-cyan-300">Live Season</span><span className="text-[10px] font-bold text-white/60">{progress.played}/{LEAGUE_SEASON_MATCHES} matches</span></div><div className="mt-2 flex items-end justify-between"><div><p className="text-2xl font-black">{progress.points} <span className="text-xs text-white/40">PTS</span></p><p className="text-[9px] text-white/45">W {progress.wins} · D {progress.draws} · L {progress.losses}</p></div><div className="text-right text-[9px] text-white/50"><p>Promotion: {LEAGUE_PROMOTION_POINTS} pts</p><p>Relegation: {LEAGUE_RELEGATION_POINTS} pts</p></div></div></div>\n\n          <div className="mt-4 grid grid-cols-3 gap-2">
             <RewardCard icon="▰" title={<>CLUB<br />CURRENCY</>} value="1,000" suffix="Box / Bucks" tone="emerald" />
             <RewardCard icon="◆" title={<>PREMIUM<br />GEMS</>} value="50" suffix="Gems 💎" tone="cyan" />
             <RewardCard icon="★" title={<>#9 CB</>} value="89" suffix="SANDBERG (TITA..." tone="amber" />
