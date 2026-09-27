@@ -22,7 +22,7 @@ export const TEAM_BOOSTS: Record<TeamBoostType, {
     icon: "👻",
     description: "Hides your tactical shape and makes your formation harder to read.",
     effect: "Formation movement +8% · tactical unpredictability",
-    prices: { "1-match": { gems: 50 }, "2-matches": { gems: 50 }, "10-matches": { usd: 1.00 }, "20-matches": { usd: 1.80 } },
+    prices: { "1-match": { gems: 50 }, "2-matches": { gems: 75 }, "10-matches": { usd: 1.00 }, "20-matches": { usd: 1.80 } },
   },
   "team-boost": {
     name: "Team Boost",
@@ -86,7 +86,7 @@ export function activateTeamBoost(type: TeamBoostType, duration: TeamBoostDurati
     type,
     duration,
     activatedAt: now,
-    expiresAt: duration === "24-hours" ? now + 24 * 60 * 60 * 1000 : null,
+    expiresAt: null,
     matchesRemaining: matches,
   }
   const current = readActiveTeamBoosts().filter((entry) => entry.type !== type)
