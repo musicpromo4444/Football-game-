@@ -147,35 +147,52 @@ function PlayerCard({ player, compact = false }: { player: Player; compact?: boo
     ["SPE", "SPE"], ["ACC", "ACC"], ["STA", "STA"], ["STR", "STR"],
     ["CON", "CON"], ["PAS", "PAS"], ["SHO", "SHO"], ["TAC", "TAC"],
   ]
+  const face = playerFaceImages[player.id]
   return (
     <div className={cn(
-      "relative overflow-hidden rounded-2xl border border-primary/25 bg-gradient-to-br from-card via-card to-primary/5 shadow-lg",
+      "relative overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-b from-slate-950 via-card to-primary/5 shadow-xl",
       compact ? "p-2" : "p-3",
     )}>
-      <div className="absolute right-2 top-2 rounded-full bg-primary/15 px-2 py-1 text-[9px] font-black text-primary">
-        {player.rating} OVR
+      <div className="absolute inset-x-0 top-0 h-1 bg-primary/70" />
+      <div className="absolute right-2 top-3 z-10 flex flex-col items-center rounded-xl border border-primary/30 bg-background/85 px-2 py-1.5 backdrop-blur">
+        <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">OVR</span>
+        <span className="font-display text-xl font-black leading-none text-primary">{player.rating}</span>
       </div>
-      <div className="flex items-center gap-2">
-        <PlayerFace player={player} />
-        <div className="min-w-0 flex-1 pr-14">
-          <p className="truncate text-sm font-black">{player.name}</p>
-          <p className="truncate text-[9px] font-semibold text-primary">{player.specialName || player.style}</p>
-          <p className="mt-0.5 truncate text-[9px] text-muted-foreground">{player.style} · {player.pos}</p>
+
+      <div className="relative mt-1 overflow-hidden rounded-xl border border-white/10 bg-gradient-to-b from-primary/10 to-background">
+        <div className={cn("absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent", compact ? "h-16" : "h-24")} />
+        {face ? (
+          <img
+            src={face}
+            alt={player.name}
+            className={cn("mx-auto block w-full object-cover object-top", compact ? "h-28" : "h-40")}
+            loading="lazy"
+            referrerPolicy="no-referrer"
+          />
+        ) : (
+          <div className={cn("flex w-full items-center justify-center bg-slate-800 text-3xl font-black", compact ? "h-28" : "h-40")}>
+            {player.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+          </div>
+        )}
+        <div className="absolute bottom-2 left-3 right-14">
+          <p className="truncate font-display text-base font-black text-white drop-shadow">{player.name}</p>
+          <p className="truncate text-[9px] font-bold uppercase tracking-wide text-primary-foreground/80">{player.pos} · {player.specialName || player.style}</p>
         </div>
       </div>
+
       {!compact && (
         <>
           <div className="mt-3 grid grid-cols-4 gap-1.5">
             {statItems.map(([key, label]) => (
-              <div key={key} className="rounded-lg border border-border/60 bg-secondary/60 px-1 py-1.5 text-center">
-                <p className="text-[7px] font-bold text-muted-foreground">{label}</p>
-                <p className="text-[11px] font-black">{stats[key]}</p>
+              <div key={key} className="rounded-lg border border-white/10 bg-background/60 px-1 py-1.5 text-center">
+                <p className="text-[7px] font-black tracking-wide text-muted-foreground">{label}</p>
+                <p className="font-display text-sm font-black leading-tight">{stats[key]}</p>
               </div>
             ))}
           </div>
-          <div className="mt-2 flex items-center gap-1 text-[8px] font-bold text-amber-300">
-            <Star className="h-3 w-3 fill-current" />
-            Special: {player.specialStyle || "Standard"}
+          <div className="mt-2 flex items-center justify-between rounded-lg border border-amber-400/20 bg-amber-400/5 px-2 py-1.5">
+            <span className="text-[8px] font-black uppercase tracking-wide text-amber-300">Special Ability</span>
+            <span className="truncate pl-2 text-[8px] font-black text-amber-200">{player.specialStyle || "Standard"}</span>
           </div>
         </>
       )}
