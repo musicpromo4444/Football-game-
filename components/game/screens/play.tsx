@@ -215,7 +215,7 @@ function TopHeaderBar() {
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <CurrencyChip icon={<Bucks className="h-3.5 w-3.5 text-chart-4" />} value={wallet.bucks} />
+          <CurrencyChip icon={<Banknote className="h-3.5 w-3.5 text-chart-4" />} value={wallet.bucks} />
           <CurrencyChip icon={<Gem className="h-3.5 w-3.5 text-primary" />} value={wallet.gems} plus />
         </div>
       </div>
