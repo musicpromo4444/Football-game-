@@ -6,7 +6,7 @@ import {
   Mic,
   Vibrate,
   Bell,
-  Coins,
+  Bucks,
   Gem,
   Wallet,
   ChevronRight,
@@ -30,11 +30,11 @@ const toggleMeta: { id: keyof Toggles; label: string; hint: string; icon: typeof
   { id: "notifications", label: "Match Alerts", hint: "Push alerts for queues and results", icon: Bell },
 ]
 
-const topUps: { id: string; kind: "coins" | "gems"; amount: number; price: string; best?: boolean }[] = [
+const topUps: { id: string; kind: "bucks" | "gems"; amount: number; price: string; best?: boolean }[] = [
   { id: "g1", kind: "gems", amount: 100, price: "$0.99" },
   { id: "g2", kind: "gems", amount: 550, price: "$4.99", best: true },
-  { id: "c1", kind: "coins", amount: 25000, price: "$2.99" },
-  { id: "c2", kind: "coins", amount: 120000, price: "$9.99" },
+  { id: "c1", kind: "bucks", amount: 25000, price: "$2.99" },
+  { id: "c2", kind: "bucks", amount: 120000, price: "$9.99" },
 ]
 
 export function Settings() {
@@ -123,8 +123,8 @@ export function Settings() {
             </div>
             <div className="flex items-center gap-3">
               <span className="flex items-center gap-1 text-sm font-bold tabular-nums">
-                <Coins className="h-4 w-4 text-chart-4" />
-                {wallet.coins.toLocaleString()}
+                <Bucks className="h-4 w-4 text-chart-4" />
+                {wallet.bucks.toLocaleString()}
               </span>
               <span className="flex items-center gap-1 text-sm font-bold tabular-nums">
                 <Gem className="h-4 w-4 text-primary" />
@@ -155,13 +155,13 @@ export function Settings() {
                       isGems ? "bg-primary/15 text-primary" : "bg-chart-4/15 text-chart-4",
                     )}
                   >
-                    {isGems ? <Gem className="h-5 w-5" /> : <Coins className="h-5 w-5" />}
+                    {isGems ? <Gem className="h-5 w-5" /> : <Bucks className="h-5 w-5" />}
                   </span>
                   <span className="font-display text-lg font-black tabular-nums">
                     {p.amount.toLocaleString()}
                   </span>
                   <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    {isGems ? "Gems" : "Coins"}
+                    {isGems ? "Gems" : "Bucks"}
                   </span>
                   <span className="mt-1 inline-flex w-full items-center justify-center gap-1 rounded-lg bg-primary py-2 font-display text-sm font-bold text-primary-foreground">
                     {p.price}
