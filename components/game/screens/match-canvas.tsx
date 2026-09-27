@@ -236,7 +236,7 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
         decisionTimerRef.current = null
       }
     }
-  }, [running, ballOwner, positions, playerArchetypes, tactics.preset, substitutionPending])
+  }, [running, ballOwner, tactics.preset, substitutionPending])
 
   useEffect(() => {
     if (time === 0 && !completionSentRef.current) {
@@ -522,7 +522,7 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
       }
     }, 180)
     return () => clearInterval(id)
-  }, [running, tactics, ballOwner])
+  }, [running, tactics, ballOwner, passDecisionOpen])
 
   const toPct = useCallback((clientX: number, clientY: number): Point => {
     const rect = pitchRef.current?.getBoundingClientRect()
@@ -595,6 +595,10 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
     if (dist > 6) {
       const nextBall = { ...drag.current }
       const action = classifySwipe(drag.start, nextBall)
+      const swipeTargetIndex = passDecisionTargets
+        .filter((i) => i !== ballOwner && positions[i])
+        .map((i) => ({ i, d: Math.hypot(positions[i].x - nextBall.x, positions[i].y - nextBall.y) }))
+        .sort((a, b) => a.d - b.d)[0]?.i ?? null
 
       // Shooting is role-based: the player decides how to finish based on his
       // role/special style, while the Guardian goalkeeper reacts to the shot.
