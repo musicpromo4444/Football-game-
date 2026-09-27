@@ -5,7 +5,7 @@ import { Users, Layers, Dumbbell, Timer, Shield, Swords, SlidersHorizontal, Coin
 import { Button } from "@/components/ui/button"
 import { ScreenHeader, Card, Pill, StatBar } from "@/components/game/ui-bits"
 import { squad, wallet, type Player } from "@/components/game/data"
-import { formatAuctionTime, readAuctionPlayers, saveAuctionPlayers, type AuctionPlayer } from "@/lib/auction"
+import { formatAuctionTime, getNextBid, readAuctionPlayers, saveAuctionPlayers, settleAuction, type AuctionPlayer } from "@/lib/auction"
 import { cn } from "@/lib/utils"
 import { readWallet, saveWallet } from "@/lib/economy"
 import { MAX_SQUAD_SIZE, SQUAD_CAPACITIES, SQUAD_UPGRADE_GEMS, addAuctionPlayer, getSquadCapacity, loadClubSquad, saveClubSquad, upgradeSquadCapacity } from "@/lib/club-squad"
@@ -243,6 +243,34 @@ export function SquadManager() {
   useEffect(() => { localStorage.setItem("pitchside-training", JSON.stringify(trainingState)) }, [trainingState])
   useEffect(() => { localStorage.setItem("pitchside-training-ledger", JSON.stringify(trainingLedger)) }, [trainingLedger])
   useEffect(() => { saveWallet(currency) }, [currency])
+  useEffect(() => {
+    const expired = auctionPlayers.filter((lot) => lot.enabled && lot.endsAt <= auctionNow)
+    if (!expired.length) return
+    let nextPlayers = [...auctionPlayers]
+    let nextSquad = teamPlayers
+    let nextCoins = currency.coins
+    let changed = false
+    for (const lot of expired) {
+      const result = settleAuction(lot, nextCoins)
+      if (result.won && nextSquad.length < squadCapacity) {
+        const added = addAuctionPlayer(nextSquad, lot)
+        if (added.added) {
+          nextSquad = added.squad
+          nextCoins = result.coins
+        }
+      }
+      const status = result.won && nextSquad.some((p) => p.id === "auction-" + lot.id) ? "sold" : "unsold"
+      nextPlayers = nextPlayers.map((p) => p.id === lot.id ? { ...p, enabled: false, status } : p)
+      changed = true
+    }
+    if (changed) {
+      setTeamPlayers(nextSquad)
+      setAuctionPlayers(nextPlayers)
+      setCurrency((current) => ({ ...current, coins: nextCoins }))
+      saveAuctionPlayers(nextPlayers)
+    }
+  }, [auctionNow, auctionPlayers, currency.coins, squadCapacity, teamPlayers])
+
 
   useEffect(() => {
     const completedNow = Object.values(trainingState).filter((record) => trainingNow >= record.completesAt)
@@ -684,28 +712,51 @@ export function SquadManager() {
             <Card className="flex items-center justify-between p-4">
               <div>
                 <p className="font-display text-sm font-bold">Transfer Auction</p>
-                <p className="text-xs text-muted-foreground">Admin-controlled players · {teamPlayers.length}/{squadCapacity} squad spaces used</p>
+                <p className="text-xs text-muted-foreground">Admin-controlled players · bids are charged only if you win</p>
               </div>
               <Pill accent="emerald">{auctionPlayers.filter((p) => p.enabled && p.endsAt > auctionNow).length} Live</Pill>
             </Card>
-            {auctionPlayers.filter((p) => p.enabled && p.endsAt > auctionNow).map((lot) => (
-              <Card key={lot.id} className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-primary/30 bg-primary/10 font-black text-primary">{lot.face}</div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2"><p className="truncate font-semibold">{lot.name}</p><span className="rounded bg-secondary px-1.5 py-0.5 text-[9px] font-black">{lot.position}</span><span className="font-display text-sm font-black text-primary">{lot.rating}</span></div>
-                    <p className="truncate text-xs text-muted-foreground">{lot.style}</p>
-                    <p className="mt-1 text-[9px] text-muted-foreground">PAC {lot.attributes.pace} · PAS {lot.attributes.passing} · SHO {lot.attributes.shooting} · DEF {lot.attributes.defending} · STA {lot.attributes.stamina}</p>
+            {auctionPlayers.filter((p) => p.enabled && p.endsAt > auctionNow).map((lot) => {
+              const nextBid = getNextBid(lot.currentBid)
+              const highest = lot.highestBidder === "you"
+              return (
+                <Card key={lot.id} className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-primary/30 bg-primary/10 font-black text-primary">{lot.face}</div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2"><p className="truncate font-semibold">{lot.name}</p><span className="rounded bg-secondary px-1.5 py-0.5 text-[9px] font-black">{lot.position}</span><span className="font-display text-sm font-black text-primary">{lot.rating}</span></div>
+                      <p className="truncate text-xs text-muted-foreground">{lot.style}</p>
+                      <p className="mt-1 text-[9px] text-muted-foreground">PAC {lot.attributes.pace} · PAS {lot.attributes.passing} · SHO {lot.attributes.shooting} · DEF {lot.attributes.defending} · STA {lot.attributes.stamina}</p>
+                    </div>
+                    <div className="text-right"><div className="flex items-center gap-1 text-xs font-semibold text-chart-4"><Timer className="h-3.5 w-3.5" /><span className="font-mono tabular-nums">{formatAuctionTime(lot.endsAt, auctionNow)}</span></div><p className={cn("mt-1 text-[9px] font-black", highest ? "text-primary" : "text-muted-foreground")}>{highest ? "YOU ARE HIGHEST" : "OPEN BIDDING"}</p></div>
                   </div>
-                  <div className="flex items-center gap-1 text-xs font-semibold text-chart-4"><Timer className="h-3.5 w-3.5" /><span className="font-mono tabular-nums">{formatAuctionTime(lot.endsAt, auctionNow)}</span></div>
-                </div>
-                <div className="mt-3 flex items-center gap-2">
-                  <div className="flex-1 rounded-lg bg-secondary/60 px-3 py-2"><p className="text-[10px] uppercase text-muted-foreground">Current bid</p><p className="font-display text-sm font-bold tabular-nums">{lot.currentBid.toLocaleString()}</p></div>
-                  <Button disabled={teamPlayers.length >= squadCapacity || currency.coins < lot.currentBid + 100} onClick={() => { const nextBid = Number((lot.currentBid + 100).toFixed(1)); const next = auctionPlayers.map((p) => p.id === lot.id ? { ...p, currentBid: nextBid } : p); setAuctionPlayers(next); saveAuctionPlayers(next); setCurrency((current) => ({ ...current, coins: current.coins - nextBid })) }} className="h-11 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground">Bid +100</Button>
-                  <Button disabled={teamPlayers.length >= squadCapacity || currency.coins < lot.buyNow} onClick={() => { if (teamPlayers.length >= squadCapacity || currency.coins < lot.buyNow) return; const result = addAuctionPlayer(teamPlayers, lot); if (!result.added) return; const next = auctionPlayers.map((p) => p.id === lot.id ? { ...p, enabled: false, endsAt: auctionNow } : p); setTeamPlayers(result.squad); setAuctionPlayers(next); saveAuctionPlayers(next); setCurrency((current) => ({ ...current, coins: current.coins - lot.buyNow })) }} variant="outline" className="h-11 rounded-xl border-accent/40 bg-accent/10 px-4 text-sm font-semibold text-accent">Buy {lot.buyNow.toLocaleString()}</Button>
-                </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <div className="rounded-lg bg-secondary/60 px-3 py-2"><p className="text-[10px] uppercase text-muted-foreground">Current bid</p><p className="font-display text-sm font-bold tabular-nums">{lot.currentBid.toLocaleString()}</p></div>
+                    <div className="rounded-lg bg-secondary/60 px-3 py-2 text-right"><p className="text-[10px] uppercase text-muted-foreground">If you win</p><p className="font-display text-sm font-bold tabular-nums">{lot.currentBid.toLocaleString()} coins</p></div>
+                  </div>
+                  <div className="mt-3 flex gap-2">
+                    <Button disabled={teamPlayers.length >= squadCapacity || currency.coins < nextBid} onClick={() => {
+                      const next = auctionPlayers.map((p) => p.id === lot.id ? { ...p, currentBid: nextBid, highestBidder: "you" as const, status: "live" as const } : p)
+                      setAuctionPlayers(next); saveAuctionPlayers(next)
+                    }} className="h-11 flex-1 rounded-xl bg-primary text-sm font-semibold text-primary-foreground">Bid {nextBid.toLocaleString()}</Button>
+                    <Button disabled={teamPlayers.length >= squadCapacity || currency.coins < lot.buyNow} onClick={() => {
+                      if (teamPlayers.length >= squadCapacity || currency.coins < lot.buyNow) return
+                      const result = addAuctionPlayer(teamPlayers, lot)
+                      if (!result.added) return
+                      const next = auctionPlayers.map((p) => p.id === lot.id ? { ...p, enabled: false, endsAt: auctionNow, status: "sold" as const, highestBidder: "you" as const, currentBid: lot.buyNow } : p)
+                      setTeamPlayers(result.squad); setAuctionPlayers(next); saveAuctionPlayers(next); setCurrency((current) => ({ ...current, coins: current.coins - lot.buyNow }))
+                    }} variant="outline" className="h-11 flex-1 rounded-xl border-accent/40 bg-accent/10 text-sm font-semibold text-accent">Buy {lot.buyNow.toLocaleString()}</Button>
+                  </div>
+                  <p className="mt-2 text-center text-[9px] text-muted-foreground">Coins stay in your wallet while you bid. The final price is deducted only when the timer ends and you win.</p>
+                </Card>
+              )
+            })}
+            {auctionPlayers.some((p) => p.status === "sold") ? (
+              <Card className="p-4">
+                <p className="text-[10px] font-black uppercase tracking-widest text-primary">Recent Auction Results</p>
+                <div className="mt-2 space-y-2">{auctionPlayers.filter((p) => p.status === "sold").slice(-3).map((p) => <div key={p.id} className="flex items-center justify-between rounded-xl bg-primary/10 px-3 py-2"><span className="text-xs font-bold">{p.name}</span><span className="text-[10px] font-black text-primary">SOLD · {p.currentBid.toLocaleString()}</span></div>)}</div>
               </Card>
-            ))}
+            ) : null}
             {!auctionPlayers.some((p) => p.enabled && p.endsAt > auctionNow) ? <Card className="p-5 text-center"><p className="font-bold">No active auction players</p><p className="mt-1 text-xs text-muted-foreground">The admin controls the next auction.</p></Card> : null}
           </div>
         )}
