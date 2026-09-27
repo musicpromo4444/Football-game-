@@ -123,7 +123,7 @@ export function Settings() {
             </div>
             <div className="flex items-center gap-3">
               <span className="flex items-center gap-1 text-sm font-bold tabular-nums">
-                <Bucks className="h-4 w-4 text-chart-4" />
+                <Banknote className="h-4 w-4 text-chart-4" />
                 {wallet.bucks.toLocaleString()}
               </span>
               <span className="flex items-center gap-1 text-sm font-bold tabular-nums">
@@ -155,13 +155,13 @@ export function Settings() {
                       isGems ? "bg-primary/15 text-primary" : "bg-chart-4/15 text-chart-4",
                     )}
                   >
-                    {isGems ? <Gem className="h-5 w-5" /> : <Bucks className="h-5 w-5" />}
+                    {isGems ? <Gem className="h-5 w-5" /> : <Banknote className="h-5 w-5" />}
                   </span>
                   <span className="font-display text-lg font-black tabular-nums">
                     {p.amount.toLocaleString()}
                   </span>
                   <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    {isGems ? "Gems" : "Bucks"}
+                    {isGems ? "Gems" : "Banknote"}
                   </span>
                   <span className="mt-1 inline-flex w-full items-center justify-center gap-1 rounded-lg bg-primary py-2 font-display text-sm font-bold text-primary-foreground">
                     {p.price}
