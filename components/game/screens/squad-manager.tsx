@@ -770,8 +770,9 @@ export function SquadManager() {
                   <div key={p.id} className="flex items-center justify-between rounded-xl bg-primary/10 px-3 py-2">
                     <span className="text-xs font-bold">{p.name}</span>
                     <Button size="sm" variant="outline" disabled={currency.gems < 1} onClick={() => {
-                      const nextName = renameAuctionPlayer(window.prompt("Rename player", p.name) || "")
-                      if (nextName === "Panda Player" && !window.confirm("Use Panda Player as the new name?")) return
+                      const entered = window.prompt("Rename player — 1 Gem", p.name)
+                      if (entered === null || !entered.trim()) return
+                      const nextName = renameAuctionPlayer(entered)
                       setCurrency((current) => ({ ...current, gems: current.gems - 1 }))
                       const nextPlayers = auctionPlayers.map((x) => x.id === p.id ? { ...x, name: nextName } : x)
                       const nextSquad = teamPlayers.map((x) => x.id === "auction-" + p.id ? { ...x, name: nextName } : x)
