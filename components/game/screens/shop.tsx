@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react"
 import {
-  Bucks, Gem, ShoppingBag, Lock, Play, Sparkles, Crown, Zap, Shield,
+  Banknote, Gem, ShoppingBag, Lock, Play, Sparkles, Crown, Zap, Shield,
   Timer, Package, Trophy, Shirt, Footprints, HeartPulse, Crosshair,
   Gift, Star, Swords, CircleDollarSign
 } from "lucide-react"
@@ -228,7 +228,7 @@ export function Shop() {
   }
 
   const spend = (currency: "bucks" | "gems", amount: number, reward: { bucks?: number; gems?: number }, label: string) => {
-    if (wallet[currency] < amount) return flash(`Not enough ${currency === "bucks" ? "Banknote" : "Gems"}.`)
+    if (wallet[currency] < amount) return flash(`Not enough ${currency === "bucks" ? "Bucks" : "Gems"}.`)
     const next = { bucks: wallet.bucks, gems: wallet.gems, ...reward }
     next[currency] -= amount
     saveWallet(next)
