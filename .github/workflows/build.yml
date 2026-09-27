@@ -3,23 +3,21 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 12.3.4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm run build
+          cache: npm
+      - run: npm install
+      - run: npm run build
       - name: Package project
         run: |
-          zip -r pitchside-production.zip .             -x ".git/*" ".next/*" "node_modules/*" "*.zip"
+          zip -r pitchside-production.zip . -x ".git/*" ".next/*" "node_modules/*" "*.zip"
       - uses: actions/upload-artifact@v4
         with:
           name: pitchside-production
