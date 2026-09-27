@@ -72,15 +72,34 @@ function staminaAccent(v: number): "cyan" | "emerald" | "amber" | "red" {
   return "emerald"
 }
 
+const playerFaceImages: Record<string, string> = {
+  p1: "https://i.pravatar.cc/240?img=12", p2: "https://i.pravatar.cc/240?img=11", p3: "https://i.pravatar.cc/240?img=13",
+  p4: "https://i.pravatar.cc/240?img=14", p5: "https://i.pravatar.cc/240?img=15", p6: "https://i.pravatar.cc/240?img=16",
+  p7: "https://i.pravatar.cc/240?img=17", p8: "https://i.pravatar.cc/240?img=18", p9: "https://i.pravatar.cc/240?img=19",
+  p10: "https://i.pravatar.cc/240?img=20", p11: "https://i.pravatar.cc/240?img=21", p12: "https://i.pravatar.cc/240?img=22",
+  p13: "https://i.pravatar.cc/240?img=23", p14: "https://i.pravatar.cc/240?img=24", p15: "https://i.pravatar.cc/240?img=25",
+  p16: "https://i.pravatar.cc/240?img=26", p17: "https://i.pravatar.cc/240?img=27", p18: "https://i.pravatar.cc/240?img=28",
+  p19: "https://i.pravatar.cc/240?img=29", p20: "https://i.pravatar.cc/240?img=30", p21: "https://i.pravatar.cc/240?img=31",
+  p22: "https://i.pravatar.cc/240?img=32", p23: "https://i.pravatar.cc/240?img=33", p24: "https://i.pravatar.cc/240?img=34",
+}
+
 function PlayerFace({ player }: { player: Player }) {
   const initials = player.name.replace(/[^A-Za-z ]/g, "").split(" ").map((n) => n[0]).join("").slice(0, 2)
+  const face = playerFaceImages[player.id]
   return (
-    <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white/30 bg-gradient-to-b from-amber-200/90 via-orange-300/80 to-amber-700/90 shadow-inner">
-      <div className="absolute -top-1 h-5 w-12 rounded-full bg-slate-900/90" />
-      <span className="relative mt-2 text-sm font-black text-slate-950">{initials}</span>
-      <span className="absolute left-3 top-7 h-1 w-1 rounded-full bg-slate-950" />
-      <span className="absolute right-3 top-7 h-1 w-1 rounded-full bg-slate-950" />
-      <span className="absolute bottom-2 h-1 w-3 rounded-full bg-slate-950/70" />
+    <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full border-2 border-white/30 bg-slate-800 shadow-inner">
+      {face ? (
+        <img
+          src={face}
+          alt={player.name}
+          className="h-full w-full object-cover object-top"
+          loading="lazy"
+          referrerPolicy="no-referrer"
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center bg-slate-700 text-sm font-black">{initials}</div>
+      )}
+      <div className="pointer-events-none absolute inset-0 rounded-full ring-1 ring-inset ring-white/20" />
     </div>
   )
 }
