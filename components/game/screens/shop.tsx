@@ -27,7 +27,7 @@ const FREE_REWARDS = [
 ]
 
 const BOOST_TYPES: TeamBoostType[] = ["ghost-formation", "team-boost", "captain-boost", "defense-shield", "goalkeeper-boost"]
-const BOOST_DURATIONS: TeamBoostDuration[] = ["1-match", "3-matches", "24-hours"]
+const BOOST_DURATIONS: TeamBoostDuration[] = ["1-match", "2-matches", "10-matches", "20-matches"]
 
 type ArtKind = "card" | "gems" | "bux" | "item" | "package"
 
@@ -99,7 +99,7 @@ function formatCooldown(ms: number) {
 }
 
 function durationLabel(duration: TeamBoostDuration) {
-  return duration === "1-match" ? "1 Match" : duration === "3-matches" ? "3 Matches" : "24 Hours"
+  return duration === "1-match" ? "1 Match" : duration === "2-matches" ? "2 Matches" : duration === "10-matches" ? "10 Matches" : "20 Matches"
 }
 
 export function Shop() {
@@ -110,10 +110,10 @@ export function Shop() {
   const [boostAd, setBoostAd] = useState<{ tier: TrainingBoostTier; seconds: number } | null>(null)
   const [selectedDuration, setSelectedDuration] = useState<Record<TeamBoostType, TeamBoostDuration>>({
     "ghost-formation": "1-match",
-    "team-boost": "3-matches",
+    "team-boost": "1-match",
     "captain-boost": "1-match",
-    "defense-shield": "3-matches",
-    "goalkeeper-boost": "24-hours",
+    "defense-shield": "1-match",
+    "goalkeeper-boost": "1-match",
   })
   const [, setTick] = useState(0)
   const profile = readProfile()
@@ -202,8 +202,10 @@ export function Shop() {
   const buyTeamBoost = (type: TeamBoostType) => {
     const duration = selectedDuration[type]
     const price = TEAM_BOOSTS[type].prices[duration]
-    if (wallet.gems < price) return flash("Not enough Gems.")
-    const next = { ...wallet, gems: wallet.gems - price }
+    if (price.usd) return flash("Dollar purchase will open when store billing is connected.")
+    const gems = price.gems || 0
+    if (wallet.gems < gems) return flash("Not enough Gems.")
+    const next = { ...wallet, gems: wallet.gems - gems }
     saveWallet(next); setWallet(next)
     activateTeamBoost(type, duration)
     flash(`${TEAM_BOOSTS[type].name} activated for ${durationLabel(duration)}.`)
@@ -318,11 +320,11 @@ export function Shop() {
                     <div className="mt-2 flex gap-1.5 overflow-x-auto pb-1">
                       {BOOST_DURATIONS.map((d) => (
                         <button key={d} type="button" onClick={() => setSelectedDuration((v) => ({ ...v, [type]: d }))} className={`min-w-[70px] rounded-lg border px-2 py-1.5 text-center text-[8px] font-black ${duration === d ? "border-emerald-300 bg-emerald-300/10 text-emerald-200" : "border-white/10 text-muted-foreground"}`}>
-                          <Timer className="mx-auto mb-0.5 h-3 w-3" />{durationLabel(d)}<br/><span className="text-emerald-300">{item.prices[d]} Gems</span>
+                          <Timer className="mx-auto mb-0.5 h-3 w-3" />{durationLabel(d)}<br/><span className="text-emerald-300">{item.prices[d].gems ? `${"${"}item.prices[d].gems} Gems` : `${"${"}item.prices[d].usd?.toFixed(2)}`}</span>
                         </button>
                       ))}
                     </div>
-                    <PriceButton onClick={() => buyTeamBoost(type)} accent="green"><Gem className="mr-1 inline h-3 w-3" />ACTIVATE · {item.prices[duration]} GEMS</PriceButton>
+                    <PriceButton onClick={() => buyTeamBoost(type)} accent="green">{item.prices[duration].gems ? <><Gem className="mr-1 inline h-3 w-3" />ACTIVATE · {item.prices[duration].gems} GEMS</> : <>ACTIVATE · ${item.prices[duration].usd?.toFixed(2)}</>}</PriceButton>
                   </div>
                 </div>
               </Card>
