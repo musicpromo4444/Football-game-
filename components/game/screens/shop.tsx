@@ -7,6 +7,9 @@ import { Card, Pill, ScreenHeader } from "@/components/game/ui-bits"
 import { readWallet, purchaseShopItem, readShopItems, saveWallet, type Wallet } from "@/lib/economy"
 import { formatRealMoney, getCountry, readProfile } from "@/lib/locale"
 import { readRealMoneyPacks } from "@/lib/shop-pricing"
+import { loadClubSquad } from "@/lib/club-squad"
+import { grantTrainingBoost, readPlayerTrainingBoost, TRAINING_BOOST_PACKAGES, type TrainingBoostTier } from "@/lib/training-boosts"
+import { squad } from "@/components/game/data"
 
 const FREE_CLAIMS_KEY = "pitchside-free-store-claims"
 const FREE_COOLDOWN = 30 * 60 * 1000
@@ -33,6 +36,8 @@ export function Shop() {
   const [wallet, setWallet] = useState<Wallet>(() => readWallet())
   const [message, setMessage] = useState("")
   const [claims, setClaims] = useState<Record<string, number>>({})
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string>(() => loadClubSquad(squad)[0]?.id || "")
+  const [boostAd, setBoostAd] = useState<{ tier: TrainingBoostTier; seconds: number } | null>(null)
   const [, setTick] = useState(0)
   const profile = readProfile()
   const country = getCountry(profile?.countryCode)
@@ -61,6 +66,31 @@ export function Shop() {
     setMessage(reward.name + " claimed free.")
     window.setTimeout(() => setMessage(""), 1800)
   }
+
+  const applyBoost = (tier: TrainingBoostTier) => {
+    if (!selectedPlayerId) { setMessage("Select a player first."); return }
+    const result = grantTrainingBoost(selectedPlayerId, tier)
+    setMessage(`${TRAINING_BOOST_PACKAGES[tier].label} applied instantly. ${result.purchases} shop boosts on this player.`)
+    window.setTimeout(() => setMessage(""), 2200)
+  }
+
+  const buyTrainingBoost = (tier: TrainingBoostTier) => {
+    if (!selectedPlayerId) { setMessage("Select a player first."); return }
+    if (tier === "starter") { setBoostAd({ tier, seconds: 5 }); return }
+    if (tier === "power") {
+      if (wallet.gems < 30) { setMessage("Not enough Gems."); return }
+      const next = { ...wallet, gems: wallet.gems - 30 }
+      saveWallet(next); setWallet(next); applyBoost(tier); return
+    }
+    setMessage("Payment will open when store billing is connected.")
+  }
+
+  useEffect(() => {
+    if (!boostAd) return
+    if (boostAd.seconds <= 0) { applyBoost(boostAd.tier); setBoostAd(null); return }
+    const id = window.setTimeout(() => setBoostAd((v) => v ? { ...v, seconds: v.seconds - 1 } : null), 1000)
+    return () => window.clearTimeout(id)
+  }, [boostAd])
 
   const buy = (id: string) => {
     const result = purchaseShopItem(id)
@@ -99,6 +129,32 @@ export function Shop() {
         })}
       </div>
 
+      <div className="mb-3 mt-7 flex items-center gap-2"><ShoppingBag className="h-4 w-4 text-primary" /><p className="font-black">Training Boosts</p><Pill accent="cyan">Instant</Pill></div>
+      <Card className="mb-3 p-3">
+        <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Choose player</p>
+        <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
+          {loadClubSquad(squad).map((player) => {
+            const active = player.id === selectedPlayerId
+            const boost = readPlayerTrainingBoost(player.id)
+            return <button key={player.id} type="button" onClick={() => setSelectedPlayerId(player.id)} className={`min-w-[92px] rounded-xl border px-2 py-2 text-left ${active ? "border-primary bg-primary/15" : "border-border bg-card/60"}`}>
+              <p className="truncate text-[10px] font-black">{player.name}</p>
+              <p className="text-[9px] text-muted-foreground">{player.pos} · OVR {player.rating + boost.ovr}</p>
+            </button>
+          })}
+        </div>
+      </Card>
+      <div className="grid grid-cols-1 gap-3">
+        <Card className="p-4">
+          <div className="flex items-center gap-3"><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-2xl">⚡</div><div className="flex-1"><p className="font-black">Starter Boost</p><p className="text-[10px] text-muted-foreground">+1 OVR · +1 to 3 random stats · immediate</p></div><Button size="sm" onClick={() => buyTrainingBoost("starter")} className="rounded-xl">Watch Ad</Button></div>
+        </Card>
+        <Card className="p-4">
+          <div className="flex items-center gap-3"><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-2xl">💎</div><div className="flex-1"><p className="font-black">Power Boost</p><p className="text-[10px] text-muted-foreground">+2 OVR · +3 to 3 random stats · immediate</p></div><Button size="sm" onClick={() => buyTrainingBoost("power")} className="rounded-xl">30 Gems</Button></div>
+        </Card>
+        <Card className="p-4">
+          <div className="flex items-center gap-3"><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-2xl">👑</div><div className="flex-1"><p className="font-black">Elite Boost</p><p className="text-[10px] text-muted-foreground">+4 OVR · +5 to 4 random stats · immediate</p></div><Button size="sm" onClick={() => buyTrainingBoost("elite")} className="rounded-xl">$1.25</Button></div>
+        </Card>
+      </div>
+
       <div className="mb-3 mt-7 flex items-center gap-2"><ShoppingBag className="h-4 w-4 text-primary" /><p className="font-black">Club Store</p><Pill accent="cyan">Admin controlled</Pill></div>
       <div className="space-y-3">
         {items.map((item) => (
@@ -124,6 +180,7 @@ export function Shop() {
           </Card>
         ))}
       </div>
+      {boostAd ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-6"><Card glow="cyan" className="w-full max-w-sm p-5 text-center"><p className="text-[10px] uppercase tracking-widest text-muted-foreground">Sponsored Boost</p><p className="mt-2 font-display text-xl font-black">Training Boost Ad</p><p className="mt-2 text-sm text-muted-foreground">Boost applies immediately after the ad. {boostAd.seconds}s</p></Card></div> : null}
     </div>
   )
 }
