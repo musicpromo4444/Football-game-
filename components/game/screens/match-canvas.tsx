@@ -600,13 +600,45 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
       setBall(nextBall)
       setPasses((n) => n + 1)
       setActions((n) => n + 1)
-      // Find the teammate the swipe is trying to reach.
-      const targetIndex = positions.reduce<number | null>((best, p, i) => {
+      // Find the teammate the swipe is trying to reach. The selected tactic
+      // now changes the preferred passing lane, so the same gesture produces
+      // different football: possession favors close support, counters/direct play
+      // favor forward runners, wing play favors wide players, and long ball favors
+      // the highest forward option.
+      const passerIndex = ballOwner
+      const tacticalTargetScore = (p: Point, i: number) => {
         const d = Math.hypot(nextBall.x - p.x, nextBall.y - p.y)
-        if (d > 18) return best
-        if (best === null) return i
-        return d < Math.hypot(nextBall.x - positions[best].x, nextBall.y - positions[best].y) ? i : best
-      }, null)
+        if (d > 22) return -Infinity
+        const player = playerArchetypes[i]
+        if (!player || i === passerIndex) return -Infinity
+        const forward = Math.max(0, 55 - p.y)
+        const wide = Math.abs(p.x - 50)
+        const roleBonus =
+          tactics.preset === "wing-play" && (player.role === "Winger" || player.role === "Wingback") ? 18 :
+          (tactics.preset === "long-ball" || tactics.preset === "direct-play" || tactics.preset === "counter-attack") &&
+            ["Advanced Forward", "Complete Forward", "Poacher", "Target Forward", "Inside Forward"].includes(player.role) ? 16 :
+          (tactics.preset === "possession" || tactics.preset === "tiki-taka") &&
+            ["Playmaker", "Deep-Lying Playmaker", "Mezzala", "Box-to-Box"].includes(player.role) ? 10 : 0
+        const widthBonus = tactics.preset === "wing-play" ? wide * 0.22 : 0
+        const distanceWeight =
+          tactics.preset === "possession" || tactics.preset === "tiki-taka" ? -d * 0.9 :
+          tactics.preset === "long-ball" ? -d * 0.15 : -d * 0.45
+        const forwardWeight =
+          tactics.preset === "possession" || tactics.preset === "tiki-taka" ? forward * 0.12 :
+          tactics.preset === "counter-attack" || tactics.preset === "direct-play" || tactics.preset === "long-ball" ? forward * 0.55 :
+          forward * 0.22
+        return roleBonus + widthBonus + distanceWeight + forwardWeight
+      }
+
+      let targetIndex: number | null = null
+      let bestTargetScore = -Infinity
+      positions.forEach((p, i) => {
+        const score = tacticalTargetScore(p, i)
+        if (score > bestTargetScore) {
+          bestTargetScore = score
+          targetIndex = i
+        }
+      })
 
       // Passing quality: ordinary passes can be intercepted; elite special passers
       // make the ball much harder to read, with only rare subtle errors.
@@ -614,6 +646,14 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
       const passerPos = ballOwner !== null ? positions[ballOwner] : null
       const targetPos = targetIndex !== null ? positions[targetIndex] : null
       let passQuality = 0.68
+      // Tactical identity affects execution as well as movement.
+      if (tactics.preset === "possession" || tactics.preset === "tiki-taka") passQuality += 0.06
+      if (tactics.preset === "counter-attack") passQuality += 0.02
+      if (tactics.preset === "long-ball") passQuality -= 0.05
+      if (tactics.preset === "wing-play" && targetIndex !== null) {
+        const target = playerArchetypes[targetIndex]
+        if (target?.role === "Winger" || target?.role === "Wingback") passQuality += 0.10
+      }
       const passerInjury = ballOwner !== null ? injuries[ballOwner] : undefined
       if (passerInjury === "light") passQuality *= 0.70
       if (passerInjury === "heavy") passQuality *= 0.40
@@ -623,7 +663,7 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
       else if (passer?.role === "Ball-Playing Defender") passQuality = 0.80
       const captainId = typeof window !== "undefined" ? localStorage.getItem("pitchside-captain-id") || playerArchetypes[0]?.id : playerArchetypes[0]?.id
       const passerCaptainBoost = teamBoosts.captain && passer?.id === captainId ? 0.10 : 0
-      passQuality = Math.min(0.99, passQuality + (passer?.trainingBoost || 0) * 0.015 + (passer?.shopBoost?.stats.PAS || 0) * 0.009 + (passer?.shopBoost?.stats.CON || 0) * 0.002 + passerCaptainBoost + (teamBoosts.team ? 0.05 : 0))
+      passQuality = Math.max(0.25, Math.min(0.99, passQuality + (passer?.trainingBoost || 0) * 0.015 + (passer?.shopBoost?.stats.PAS || 0) * 0.009 + (passer?.shopBoost?.stats.CON || 0) * 0.002 + passerCaptainBoost + (teamBoosts.team ? 0.05 : 0)))
 
       let intercepted = false
       if (passerPos && targetPos && targetIndex !== null) {
