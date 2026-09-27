@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { X, ShoppingBag, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
-const KEY="pitchside-item-promo-last"
+const KEY="pitchside-item-promo-cycle"
 const ITEMS=[
  {title:"LEGENDARY KITS",sub:"Luxury gold designs. Customize your colors.",tag:"NEW",price:"Premium",kind:"kit"},
  {title:"SPECIAL EVENT KITS",sub:"Zebra • Cheetah • Dragon • Lion • Galaxy",tag:"LIMITED",price:"Limited",kind:"kit"},
