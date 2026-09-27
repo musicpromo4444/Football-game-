@@ -187,6 +187,18 @@ export function Shop() {
     return () => window.clearTimeout(id)
   }, [boostAd])
 
+  const claimFreeTeamBoost = (type: TeamBoostType) => {
+    const now = Date.now()
+    const id = `free-team-${type}`
+    const last = Number(claims[id] || 0)
+    if (last && now - last < FREE_COOLDOWN) return flash("This free boost is still locked.")
+    const nextClaims = { ...claims, [id]: now }
+    localStorage.setItem(FREE_CLAIMS_KEY, JSON.stringify(nextClaims))
+    setClaims(nextClaims)
+    activateTeamBoost(type, "1-match")
+    flash(`${TEAM_BOOSTS[type].name} activated free for 1 match.`)
+  }
+
   const buyTeamBoost = (type: TeamBoostType) => {
     const duration = selectedDuration[type]
     const price = TEAM_BOOSTS[type].prices[duration]
@@ -248,11 +260,11 @@ export function Shop() {
         <SectionTitle icon={<Gem className="h-3.5 w-3.5 fill-current" />} title="GEMS STORE" meta="Instant Delivery" />
         <div className="grid grid-cols-3 gap-2.5">
           <ProductCard kind="gems" icon={<Gem className="h-8 w-8 fill-pink-300 text-pink-100" />} title="Free Gems" subtitle="Grants 5–10 free gems" price={<><Play className="mr-1 inline h-3 w-3" />WATCH AD</>} onBuy={() => claimTimed("free-gems", 0, 10, "10 Gems claimed.")} accent="pink" badge="AD" />
-          <ProductCard kind="gems" icon={<Gem className="h-8 w-8 fill-pink-300 text-pink-100" />} title="80 Gems" subtitle="Handful of Gems" price="₦650" onBuy={() => spend("coins", 650, { gems: wallet.gems + 80 }, "80 Gems added.")} accent="pink" />
-          <ProductCard kind="gems" icon={<Gem className="h-9 w-9 fill-pink-300 text-pink-100" />} title="500 Gems" subtitle="+10% Bonus" price="₦2,900" onBuy={() => spend("coins", 2900, { gems: wallet.gems + 500 }, "500 Gems added.")} accent="pink" />
-          <ProductCard kind="gems" icon={<Gem className="h-9 w-9 fill-pink-300 text-pink-100" />} title="1,200 Gems" subtitle="Best Value" price="₦6,500" onBuy={() => spend("coins", 6500, { gems: wallet.gems + 1200 }, "1,200 Gems added.")} accent="pink" />
-          <ProductCard kind="gems" icon={<Gem className="h-9 w-9 fill-pink-300 text-pink-100" />} title="2,500 Gems" subtitle="+35% Bonus" price="₦12,500" onBuy={() => spend("coins", 12500, { gems: wallet.gems + 2500 }, "2,500 Gems added.")} accent="pink" />
-          <ProductCard kind="gems" icon={<Gem className="h-9 w-9 fill-pink-300 text-pink-100" />} title="6,500 Gems" subtitle="+50% Value" price="₦29,000" onBuy={() => spend("coins", 29000, { gems: wallet.gems + 6500 }, "6,500 Gems added.")} accent="pink" />
+          <ProductCard kind="gems" icon={<Gem className="h-8 w-8 fill-pink-300 text-pink-100" />} title="80 Gems" subtitle="Handful of Gems" price="₦650" onBuy={() => flash("Payment will open when store billing is connected.")} accent="pink" />
+          <ProductCard kind="gems" icon={<Gem className="h-9 w-9 fill-pink-300 text-pink-100" />} title="500 Gems" subtitle="+10% Bonus" price="₦2,900" onBuy={() => flash("Payment will open when store billing is connected.")} accent="pink" />
+          <ProductCard kind="gems" icon={<Gem className="h-9 w-9 fill-pink-300 text-pink-100" />} title="1,200 Gems" subtitle="Best Value" price="₦6,500" onBuy={() => flash("Payment will open when store billing is connected.")} accent="pink" />
+          <ProductCard kind="gems" icon={<Gem className="h-9 w-9 fill-pink-300 text-pink-100" />} title="2,500 Gems" subtitle="+35% Bonus" price="₦12,500" onBuy={() => flash("Payment will open when store billing is connected.")} accent="pink" />
+          <ProductCard kind="gems" icon={<Gem className="h-9 w-9 fill-pink-300 text-pink-100" />} title="6,500 Gems" subtitle="+50% Value" price="₦29,000" onBuy={() => flash("Payment will open when store billing is connected.")} accent="pink" />
         </div>
       </section>
 
@@ -264,14 +276,14 @@ export function Shop() {
           <ProductCard kind="bux" icon={<Coins className="h-8 w-8 text-emerald-200" />} title="3,500 Bux" subtitle="+15% Bonus" price="60 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 60, { coins: wallet.coins + 3500 }, "3,500 Bux added.")} accent="green" />
           <ProductCard kind="bux" icon={<Coins className="h-8 w-8 text-emerald-200" />} title="8,000 Bux" subtitle="+30% Best Deal" price="130 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 130, { coins: wallet.coins + 8000 }, "8,000 Bux added.")} accent="green" />
           <ProductCard kind="bux" icon={<Coins className="h-8 w-8 text-emerald-200" />} title="20,000 Bux" subtitle="+50% Value" price="300 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 300, { coins: wallet.coins + 20000 }, "20,000 Bux added.")} accent="green" />
-          <ProductCard kind="bux" icon={<Coins className="h-8 w-8 text-emerald-200" />} title="50,000 Bux" subtitle="Treasury Pallet" price="₦6,500" onBuy={() => spend("coins", 6500, { coins: wallet.coins + 50000 }, "50,000 Bux added.")} accent="green" />
+          <ProductCard kind="bux" icon={<Coins className="h-8 w-8 text-emerald-200" />} title="50,000 Bux" subtitle="Treasury Pallet" price="₦6,500" onBuy={() => flash("Payment will open when store billing is connected.")} accent="green" />
         </div>
       </section>
 
       <section className="mt-6">
         <SectionTitle icon={<Crown className="h-3.5 w-3.5" />} title="ITEM STORE" meta="Team Boosts & Gear" />
         <div className="grid grid-cols-3 gap-2.5">
-          <ProductCard kind="item" icon={<Crown className="h-8 w-8 text-amber-200" />} title="Captain Boost" subtitle="Boosts your captain" price={<><Play className="mr-1 inline h-3 w-3" />WATCH AD</>} onBuy={() => buyTeamBoost("captain-boost")} accent="gold" badge="FREE" />
+          <ProductCard kind="item" icon={<Crown className="h-8 w-8 text-amber-200" />} title="Captain Boost" subtitle="Boosts your captain" price={<><Play className="mr-1 inline h-3 w-3" />WATCH AD</>} onBuy={() => claimFreeTeamBoost("captain-boost")} accent="gold" badge="FREE" />
           <ProductCard kind="item" icon={<Zap className="h-8 w-8 text-cyan-200" />} title="3-5-2 Tactic" subtitle="Wing play formation" price="UNLOCKED" onBuy={() => flash("3-5-2 Tactic is already unlocked.")} accent="cyan" />
           <ProductCard kind="item" icon={<Shirt className="h-8 w-8 text-emerald-200" />} title="Emerald Kit" subtitle="Home customization" price="EQUIPPED" onBuy={() => flash("Emerald Kit is equipped.")} accent="green" />
           <ProductCard kind="item" icon={<Footprints className="h-8 w-8 text-orange-200" />} title="Speed Boots" subtitle="+2% speed per match" price="40 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 40, {}, "Speed Boots activated.")} accent="pink" />
@@ -283,9 +295,9 @@ export function Shop() {
       <section className="mt-6">
         <SectionTitle icon={<Package className="h-3.5 w-3.5" />} title="PACKAGE STORE" meta="Limited Bundles" />
         <div className="grid grid-cols-3 gap-2.5">
-          <ProductCard kind="package" icon={<Package className="h-8 w-8 text-amber-200" />} title="Starter Box" subtitle="20 Cards · 500 Bux · 3 Boosts" price="₦1,250" onBuy={() => spend("coins", 1250, { coins: wallet.coins + 500 }, "Starter Box claimed.")} accent="gold" />
-          <ProductCard kind="package" icon={<Trophy className="h-8 w-8 text-orange-200" />} title="Arena Special" subtitle="45 Cards · 2,000 Bux" price="₦2,800" onBuy={() => spend("coins", 2800, { coins: wallet.coins + 2000 }, "Arena Special claimed.")} accent="gold" />
-          <ProductCard kind="package" icon={<Package className="h-8 w-8 text-cyan-200" />} title="Mega Bundle" subtitle="100 Cards · 60,000 Bux" price="₦12,500" onBuy={() => spend("coins", 12500, { coins: wallet.coins + 60000 }, "Mega Bundle claimed.")} accent="cyan" badge="BEST VALUE" />
+          <ProductCard kind="package" icon={<Package className="h-8 w-8 text-amber-200" />} title="Starter Box" subtitle="20 Cards · 500 Bux · 3 Boosts" price="₦1,250" onBuy={() => flash("Payment will open when store billing is connected.")} accent="gold" />
+          <ProductCard kind="package" icon={<Trophy className="h-8 w-8 text-orange-200" />} title="Arena Special" subtitle="45 Cards · 2,000 Bux" price="₦2,800" onBuy={() => flash("Payment will open when store billing is connected.")} accent="gold" />
+          <ProductCard kind="package" icon={<Package className="h-8 w-8 text-cyan-200" />} title="Mega Bundle" subtitle="100 Cards · 60,000 Bux" price="₦12,500" onBuy={() => flash("Payment will open when store billing is connected.")} accent="cyan" badge="BEST VALUE" />
         </div>
       </section>
 
