@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, type ReactNode } from "react"
 import {
   Coins, Gem, ShoppingBag, Lock, Play, Sparkles, Crown, Zap, Shield,
   Timer, Package, Trophy, Shirt, Footprints, HeartPulse, Crosshair,
@@ -31,7 +31,7 @@ const BOOST_DURATIONS: TeamBoostDuration[] = ["1-match", "3-matches", "24-hours"
 
 type ArtKind = "card" | "gems" | "bux" | "item" | "package"
 
-function ProductArt({ kind, icon, label }: { kind: ArtKind; icon?: React.ReactNode; label?: string }) {
+function ProductArt({ kind, icon, label }: { kind: ArtKind; icon?: ReactNode; label?: string }) {
   const styles: Record<ArtKind, string> = {
     card: "from-violet-500/40 via-indigo-500/15 to-cyan-400/20 border-violet-300/30",
     gems: "from-pink-500/45 via-rose-500/15 to-purple-500/20 border-pink-300/30",
@@ -51,7 +51,7 @@ function ProductArt({ kind, icon, label }: { kind: ArtKind; icon?: React.ReactNo
   )
 }
 
-function PriceButton({ children, onClick, accent = "cyan" }: { children: React.ReactNode; onClick: () => void; accent?: "cyan" | "pink" | "green" | "gold" }) {
+function PriceButton({ children, onClick, accent = "cyan" }: { children: ReactNode; onClick: () => void; accent?: "cyan" | "pink" | "green" | "gold" }) {
   const colors = {
     cyan: "bg-cyan-400 text-slate-950 hover:bg-cyan-300",
     pink: "bg-pink-500 text-white hover:bg-pink-400",
@@ -65,11 +65,11 @@ function ProductCard({
   kind, icon, title, subtitle, price, priceIcon, onBuy, accent = "cyan", badge
 }: {
   kind: ArtKind
-  icon: React.ReactNode
+  icon: ReactNode
   title: string
   subtitle: string
-  price: React.ReactNode
-  priceIcon?: React.ReactNode
+  price: ReactNode
+  priceIcon?: ReactNode
   onBuy: () => void
   accent?: "cyan" | "pink" | "green" | "gold"
   badge?: string
@@ -373,7 +373,7 @@ export function Shop() {
   )
 }
 
-function SectionTitle({ icon, title, meta }: { icon: React.ReactNode; title: string; meta?: string }) {
+function SectionTitle({ icon, title, meta }: { icon: ReactNode; title: string; meta?: string }) {
   return (
     <div className="mb-2.5 flex items-center gap-1.5">
       <span className="text-amber-300">{icon}</span>
