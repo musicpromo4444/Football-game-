@@ -50,7 +50,7 @@ export function LeagueHub() {
   const [leagueIndex, setLeagueIndex] = useState(1)
   const [packSeed, setPackSeed] = useState(0)
   const currentLeague = leagues[leagueIndex]
-  const promotionLevel = (currentLeague.id as MatchWinLevel)
+  const promotionLevel = (leagueIndex === 0 ? "academy" : leagues[leagueIndex - 1].id) as MatchWinLevel
   const promotionReward = getPromotionReward(promotionLevel)
 
   const moveLeague = (direction: -1 | 1) => {
