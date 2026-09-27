@@ -16,6 +16,26 @@ export type MatchWinLevel =
   | "elite"
   | "hall-of-fame"
 
+export type PromotionReward = { bux: number; gems: number }
+
+export const PROMOTION_REWARDS: Record<MatchWinLevel, PromotionReward> = {
+  academy: { bux: 500, gems: 10 },
+  "league-1": { bux: 600, gems: 15 },
+  "league-2": { bux: 800, gems: 20 },
+  "league-3": { bux: 1000, gems: 20 },
+  "league-4": { bux: 1300, gems: 30 },
+  premier: { bux: 1500, gems: 30 },
+  champions: { bux: 1800, gems: 50 },
+  super: { bux: 2000, gems: 60 },
+  legendary: { bux: 2500, gems: 80 },
+  elite: { bux: 2500, gems: 80 },
+  "hall-of-fame": { bux: 2500, gems: 80 },
+}
+
+export function getPromotionReward(level: MatchWinLevel = "academy") {
+  return PROMOTION_REWARDS[level]
+}
+
 const MATCH_WIN_REWARDS: Record<MatchWinLevel, number> = {
   academy: 500,
   "league-1": 600,
@@ -38,6 +58,22 @@ export function awardMatchWin(level: MatchWinLevel = "academy"): { reward: numbe
   const reward = getMatchWinReward(level)
   const wallet = readWallet()
   const next = { ...wallet, coins: wallet.coins + reward }
+  saveWallet(next)
+  return { reward, wallet: next }
+}
+
+export function awardMatchDraw(): { reward: number; wallet: Wallet } {
+  const reward = 150
+  const wallet = readWallet()
+  const next = { ...wallet, coins: wallet.coins + reward }
+  saveWallet(next)
+  return { reward, wallet: next }
+}
+
+export function awardPromotion(level: MatchWinLevel): { reward: PromotionReward; wallet: Wallet } {
+  const reward = getPromotionReward(level)
+  const wallet = readWallet()
+  const next = { coins: wallet.coins + reward.bux, gems: wallet.gems + reward.gems }
   saveWallet(next)
   return { reward, wallet: next }
 }
