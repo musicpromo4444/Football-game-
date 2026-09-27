@@ -328,8 +328,8 @@ export const weeklyChallenge = {
 }
 
 export const wallet = {
-  coins: 18420,
-  gems: 340,
+  coins: 10000,
+  gems: 100,
 }
 
 export type SeasonPassReward = {
