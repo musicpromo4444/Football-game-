@@ -395,50 +395,136 @@ export function SquadManager() {
 
                 {(() => {
                   const shapes: Record<Formation, { x: number; y: number }[]> = {
-                    "4-3-3": [
-                      {x:50,y:91},{x:14,y:72},{x:37,y:75},{x:63,y:75},{x:86,y:72},
-                      {x:28,y:55},{x:50,y:51},{x:72,y:55},{x:18,y:31},{x:50,y:25},{x:82,y:31},
-                    ],
-                    "4-4-2": [
-                      {x:50,y:91},{x:14,y:72},{x:37,y:75},{x:63,y:75},{x:86,y:72},
-                      {x:15,y:54},{x:38,y:56},{x:62,y:56},{x:85,y:54},{x:35,y:29},{x:65,y:29},
-                    ],
-                    "3-5-2": [
-                      {x:50,y:91},{x:25,y:74},{x:50,y:77},{x:75,y:74},
-                      {x:10,y:52},{x:30,y:55},{x:50,y:57},{x:70,y:55},{x:90,y:52},{x:38,y:29},{x:62,y:29},
-                    ],
-                    "4-2-3-1": [
-                      {x:50,y:91},{x:14,y:72},{x:37,y:75},{x:63,y:75},{x:86,y:72},
-                      {x:37,y:58},{x:63,y:58},{x:20,y:40},{x:50,y:36},{x:80,y:40},{x:50,y:21},
-                    ],
-                    "4-1-4-1": [
-                      {x:50,y:91},{x:14,y:72},{x:37,y:75},{x:63,y:75},{x:86,y:72},
-                      {x:50,y:61},{x:15,y:46},{x:38,y:49},{x:62,y:49},{x:85,y:46},{x:50,y:25},
-                    ],
+                    "4-3-3": [{x:50,y:91},{x:14,y:72},{x:37,y:75},{x:63,y:75},{x:86,y:72},{x:28,y:55},{x:50,y:51},{x:72,y:55},{x:18,y:31},{x:50,y:25},{x:82,y:31}],
+                    "4-4-2": [{x:50,y:91},{x:14,y:72},{x:37,y:75},{x:63,y:75},{x:86,y:72},{x:15,y:54},{x:38,y:56},{x:62,y:56},{x:85,y:54},{x:35,y:29},{x:65,y:29}],
+                    "3-5-2": [{x:50,y:91},{x:25,y:74},{x:50,y:77},{x:75,y:74},{x:10,y:52},{x:30,y:55},{x:50,y:57},{x:70,y:55},{x:90,y:52},{x:38,y:29},{x:62,y:29}],
+                    "4-2-3-1": [{x:50,y:91},{x:14,y:72},{x:37,y:75},{x:63,y:75},{x:86,y:72},{x:37,y:58},{x:63,y:58},{x:20,y:40},{x:50,y:36},{x:80,y:40},{x:50,y:21}],
+                    "4-1-4-1": [{x:50,y:91},{x:14,y:72},{x:37,y:75},{x:63,y:75},{x:86,y:72},{x:50,y:61},{x:15,y:46},{x:38,y:49},{x:62,y:49},{x:85,y:46},{x:50,y:25}],
                   }
                   const slots = shapes[formation]
-                  return lineup.slice(0, 11).map((playerId, i) => {
-                    const p = teamPlayers.find((player) => player.id === playerId)
-                    const slot = slots[i]
-                    if (!p || !slot) return null
-                    return (
-                      <button
-                        type="button"
-                        key={p.id}
-                        onClick={() => selectedPlayerId ? swapPlayer(p.id) : setSelectedPlayerId(p.id)}
-                        className={cn(
-                          "absolute -translate-x-1/2 -translate-y-1/2 rounded-xl p-1 text-center transition",
-                          selectedPlayerId === p.id ? "scale-110 bg-primary/30 ring-2 ring-primary" : "hover:bg-white/10",
-                        )}
-                        style={{ left: slot.x + "%", top: slot.y + "%" }}
-                        aria-label={selectedPlayerId ? `Swap with ${p.name}` : `Select ${p.name}`}
-                      >
-                        <PlayerFace player={p} />
-                        <span className="mt-0.5 block max-w-[76px] truncate rounded bg-black/70 px-1.5 py-0.5 text-[8px] font-black text-white">{p.name}</span>
-                        <span className="mx-auto mt-0.5 block w-fit rounded bg-primary px-1.5 py-0.5 text-[7px] font-black text-primary-foreground">{p.rating}</span>
-                      </button>
-                    )
+                  const phase = previewTick * 0.22
+                  const cycle = Math.floor(previewTick / (activePreset.motion === "tiki" ? 2 : 4)) % 8
+                  const carrier = [6, 5, 6, 7, 10, 8, 6, 4][cycle]
+                  const phaseProgress = (previewTick % (activePreset.motion === "tiki" ? 2 : 4)) / (activePreset.motion === "tiki" ? 2 : 4)
+                  const nextCarrier = [6, 5, 6, 7, 10, 8, 6, 4][(cycle + 1) % 8]
+                  const carrierSlot = slots[carrier] || slots[6]
+                  const nextSlot = slots[nextCarrier] || slots[6]
+                  const ballX = carrierSlot.x + (nextSlot.x - carrierSlot.x) * phaseProgress * 0.55
+                  const ballY = carrierSlot.y + (nextSlot.y - carrierSlot.y) * phaseProgress * 0.55
+
+                  const previewPosition = (slot: {x:number;y:number}, i: number) => {
+                    const p = teamPlayers.find((player) => player.id === lineup[i])
+                    const role = p?.style || ""
+                    let x = slot.x
+                    let y = slot.y
+
+                    if (activePreset.motion === "pass" || activePreset.motion === "tiki") {
+                      const support = i === carrier ? 1 : 0
+                      const towardBall = Math.max(0, 1 - Math.hypot(ballX - x, ballY - y) / 55)
+                      x += (ballX - x) * (0.07 + towardBall * 0.10)
+                      y += (ballY - y) * (0.05 + towardBall * 0.08)
+                      x += Math.sin(phase + i * 1.7) * (activePreset.motion === "tiki" ? 2.8 : 1.6)
+                      y += Math.cos(phase * 0.8 + i) * 1.4
+                      if (role === "Winger" || role === "Wingback") x += (x < 50 ? -1 : 1) * 4
+                      if (role === "Inside Forward" || role === "Mezzala") x += (50 - x) * 0.10
+                      if (support) { x += (50 - x) * 0.03; y += 2 }
+                    } else if (activePreset.motion === "press" || activePreset.motion === "high") {
+                      const press = i < 5 ? 0.22 : 0.10
+                      x += (ballX - x) * press
+                      y += (ballY - y) * press - (activePreset.motion === "high" ? 6 : 3)
+                    } else if (activePreset.motion === "counter") {
+                      y -= i >= 8 ? 11 : i >= 5 ? 5 : 1
+                      if (i === 8 || i === 10) x += (i === 8 ? -1 : 1) * 5
+                    } else if (activePreset.motion === "wing") {
+                      if (i === 1 || i === 4 || i === 8 || i === 10) x = x < 50 ? 9 : 91
+                      if (i >= 5 && i <= 7) x += (50 - x) * 0.12
+                    } else if (activePreset.motion === "long") {
+                      if (i >= 9) y -= 16
+                      if (i === 1 || i === 4) x += (x < 50 ? -1 : 1) * 4
+                    } else if (activePreset.motion === "direct") {
+                      y -= i >= 8 ? 10 : 3
+                    } else if (activePreset.motion === "low") {
+                      y += i < 5 ? 7 : 3
+                      x = 50 + (x - 50) * 0.78
+                    }
+
+                    return {
+                      x: Math.max(7, Math.min(93, x)),
+                      y: Math.max(8, Math.min(92, y)),
+                    }
+                  }
+
+                  const positions = lineup.slice(0, 11).map((_, i) => previewPosition(slots[i], i))
+                  const opponentBase = [
+                    {x:50,y:9},{x:14,y:27},{x:35,y:24},{x:65,y:24},{x:86,y:27},
+                    {x:22,y:42},{x:43,y:40},{x:57,y:40},{x:78,y:42},{x:36,y:58},{x:64,y:58}
+                  ]
+                  const opponents = opponentBase.map((op, i) => {
+                    let x = op.x
+                    let y = op.y
+                    const target = positions[(i + cycle + 3) % positions.length] || {x:50,y:45}
+                    const markStrength = activePreset.motion === "low" ? 0.08 : activePreset.motion === "press" || activePreset.motion === "high" ? 0.22 : 0.14
+                    x += (target.x - x) * markStrength + Math.sin(phase + i) * 0.8
+                    y += (target.y - y) * markStrength
+                    if (activePreset.motion === "low") y += 4
+                    return {x: Math.max(6, Math.min(94, x)), y: Math.max(7, Math.min(90, y))}
                   })
+
+                  return (
+                    <>
+                      <div className="pointer-events-none absolute inset-0">
+                        <svg viewBox="0 0 100 100" className="h-full w-full">
+                          {positions.map((p, i) => {
+                            if (i === carrier) return null
+                            const distance = Math.hypot(p.x - ballX, p.y - ballY)
+                            if (distance > 34) return null
+                            return <line key={`lane-${i}`} x1={ballX} y1={ballY} x2={p.x} y2={p.y} stroke="currentColor" className="text-white/20" strokeDasharray="1.5 2" strokeWidth="0.7" />
+                          })}
+                          <line x1={ballX} y1={ballY} x2={nextSlot.x} y2={nextSlot.y} stroke="currentColor" className="text-primary/70" strokeWidth="1" strokeDasharray="2 2" />
+                        </svg>
+                      </div>
+
+                      {opponents.map((p, i) => (
+                        <div key={`op-${i}`} className="absolute -translate-x-1/2 -translate-y-1/2" style={{left:`${p.x}%`,top:`${p.y}%`}}>
+                          <div className="h-4 w-4 rounded-full border border-red-200/70 bg-red-500/75 shadow-[0_0_8px_rgba(239,68,68,.35)]" />
+                          <span className="absolute left-1/2 top-4 -translate-x-1/2 whitespace-nowrap text-[5px] font-black text-red-200/80">MARK</span>
+                        </div>
+                      ))}
+
+                      {lineup.slice(0, 11).map((playerId, i) => {
+                        const p = teamPlayers.find((player) => player.id === playerId)
+                        const pos = positions[i]
+                        if (!p || !pos) return null
+                        const isCarrier = i === carrier
+                        return (
+                          <button
+                            type="button"
+                            key={p.id}
+                            onClick={() => selectedPlayerId ? swapPlayer(p.id) : setSelectedPlayerId(p.id)}
+                            className={cn(
+                              "absolute -translate-x-1/2 -translate-y-1/2 rounded-xl p-1 text-center transition-transform duration-500",
+                              selectedPlayerId === p.id ? "scale-110 bg-primary/30 ring-2 ring-primary" : "hover:bg-white/10",
+                              isCarrier && "scale-110",
+                            )}
+                            style={{left:`${pos.x}%`,top:`${pos.y}%`}}
+                            aria-label={selectedPlayerId ? `Swap with ${p.name}` : `Select ${p.name}`}
+                          >
+                            <div className={cn("relative", isCarrier && "drop-shadow-[0_0_8px_rgba(34,211,238,.9)]")}>
+                              <PlayerFace player={p} />
+                              {isCarrier && <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,.95)]" />}
+                            </div>
+                            <span className="mt-0.5 block max-w-[76px] truncate rounded bg-black/70 px-1.5 py-0.5 text-[8px] font-black text-white">{p.name}</span>
+                            <span className="mx-auto mt-0.5 block w-fit rounded bg-primary px-1.5 py-0.5 text-[7px] font-black text-primary-foreground">{p.rating}</span>
+                          </button>
+                        )
+                      })}
+
+                      <span className="pointer-events-none absolute h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-[0_0_12px_rgba(255,255,255,.95)] transition-all duration-500" style={{left:`${ballX}%`,top:`${ballY}%`}} />
+                      <div className="pointer-events-none absolute left-1/2 top-2 -translate-x-1/2 rounded-full bg-black/60 px-2 py-1 text-[6px] font-black uppercase tracking-widest text-white/80">
+                        {activePreset.name} · WITH BALL
+                      </div>
+                    </>
+                  )
                 })()}
               </div>
 
