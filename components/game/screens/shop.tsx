@@ -158,7 +158,7 @@ export function Shop() {
     const nextClaims = { ...claims, [reward.id]: now }
     localStorage.setItem(FREE_CLAIMS_KEY, JSON.stringify(nextClaims))
     setClaims(nextClaims)
-    grant(reward.coins, reward.gems, reward.name + " claimed free.")
+    grant(reward.bucks, reward.gems, reward.name + " claimed free.")
   }
 
   const claimTimed = (id: string, bucks: number, gems: number, label: string) => {
@@ -168,7 +168,7 @@ export function Shop() {
     const nextClaims = { ...claims, [id]: now }
     localStorage.setItem(FREE_CLAIMS_KEY, JSON.stringify(nextClaims))
     setClaims(nextClaims)
-    grant(coins, gems, label)
+    grant(bucks, gems, label)
   }
 
   const buyTrainingBoost = (tier: TrainingBoostTier) => {
