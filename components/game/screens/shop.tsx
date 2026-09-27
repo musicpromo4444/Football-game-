@@ -228,7 +228,7 @@ export function Shop() {
   }
 
   const spend = (currency: "bucks" | "gems", amount: number, reward: { bucks?: number; gems?: number }, label: string) => {
-    if (wallet[currency] < amount) return flash(`Not enough ${currency === "bucks" ? "Bucks" : "Gems"}.`)
+    if (wallet[currency] < amount) return flash(`Not enough ${currency === "bucks" ? "Banknote" : "Gems"}.`)
     const next = { bucks: wallet.bucks, gems: wallet.gems, ...reward }
     next[currency] -= amount
     saveWallet(next)
@@ -260,11 +260,11 @@ export function Shop() {
         <SectionTitle icon={<Trophy className="h-3.5 w-3.5" />} title="PLAYER CARD PACKAGE STORE" meta="Guaranteed Player" />
         <div className="grid grid-cols-3 gap-2.5">
           <ProductCard kind="card" icon={<Gift className="h-8 w-8 text-fuchsia-200" />} title="Freemystery" subtitle="80% Silver · 40% Gold · 5% Rare" price={<><Play className="mr-1 inline h-3 w-3" />WATCH AD</>} onBuy={() => claimTimed("free-card", 0, 0, "Mystery card reward claimed.")} accent="pink" badge="FREE" />
-          <ProductCard kind="card" icon={<Package className="h-8 w-8 text-slate-200" />} title="Silver Scout" subtitle="Rating 75–82 · 1 player" price="11,000 Bux" priceIcon={<Bucks className="mr-1 inline h-3 w-3" />} onBuy={() => spend("bucks", 11000, {}, "Silver Scout pack purchased.")} accent="cyan" />
-          <ProductCard kind="card" icon={<Crown className="h-8 w-8 text-amber-200" />} title="Gold Elite" subtitle="Rating 83–88 · Poacher" price="28,000 Bux" priceIcon={<Bucks className="mr-1 inline h-3 w-3" />} onBuy={() => spend("bucks", 28000, {}, "Gold Elite pack purchased.")} accent="gold" />
-          <ProductCard kind="card" icon={<Star className="h-8 w-8 text-cyan-200" />} title="Diamond Stars" subtitle="Rating 90–92 · Commander" price="45,000 Bux" priceIcon={<Bucks className="mr-1 inline h-3 w-3" />} onBuy={() => spend("bucks", 45000, {}, "Diamond Stars pack purchased.")} accent="cyan" />
-          <ProductCard kind="card" icon={<Swords className="h-8 w-8 text-violet-200" />} title="Producer Pack" subtitle="Architect Archetype" price="15,000 Bux" priceIcon={<Bucks className="mr-1 inline h-3 w-3" />} onBuy={() => spend("bucks", 15000, {}, "Producer Pack purchased.")} accent="pink" />
-          <ProductCard kind="card" icon={<Shield className="h-8 w-8 text-emerald-200" />} title="Stopper Pack" subtitle="Defender & Keeper Box" price="20,000 Bux" priceIcon={<Bucks className="mr-1 inline h-3 w-3" />} onBuy={() => spend("bucks", 20000, {}, "Stopper Pack purchased.")} accent="green" />
+          <ProductCard kind="card" icon={<Package className="h-8 w-8 text-slate-200" />} title="Silver Scout" subtitle="Rating 75–82 · 1 player" price="11,000 Bux" priceIcon={<Banknote className="mr-1 inline h-3 w-3" />} onBuy={() => spend("bucks", 11000, {}, "Silver Scout pack purchased.")} accent="cyan" />
+          <ProductCard kind="card" icon={<Crown className="h-8 w-8 text-amber-200" />} title="Gold Elite" subtitle="Rating 83–88 · Poacher" price="28,000 Bux" priceIcon={<Banknote className="mr-1 inline h-3 w-3" />} onBuy={() => spend("bucks", 28000, {}, "Gold Elite pack purchased.")} accent="gold" />
+          <ProductCard kind="card" icon={<Star className="h-8 w-8 text-cyan-200" />} title="Diamond Stars" subtitle="Rating 90–92 · Commander" price="45,000 Bux" priceIcon={<Banknote className="mr-1 inline h-3 w-3" />} onBuy={() => spend("bucks", 45000, {}, "Diamond Stars pack purchased.")} accent="cyan" />
+          <ProductCard kind="card" icon={<Swords className="h-8 w-8 text-violet-200" />} title="Producer Pack" subtitle="Architect Archetype" price="15,000 Bux" priceIcon={<Banknote className="mr-1 inline h-3 w-3" />} onBuy={() => spend("bucks", 15000, {}, "Producer Pack purchased.")} accent="pink" />
+          <ProductCard kind="card" icon={<Shield className="h-8 w-8 text-emerald-200" />} title="Stopper Pack" subtitle="Defender & Keeper Box" price="20,000 Bux" priceIcon={<Banknote className="mr-1 inline h-3 w-3" />} onBuy={() => spend("bucks", 20000, {}, "Stopper Pack purchased.")} accent="green" />
         </div>
       </section>
 
@@ -283,12 +283,12 @@ export function Shop() {
       <section className="mt-6">
         <SectionTitle icon={<CircleDollarSign className="h-3.5 w-3.5" />} title="BUX STORE" meta="Club Currency" />
         <div className="grid grid-cols-3 gap-2.5">
-          <ProductCard kind="bux" icon={<Bucks className="h-8 w-8 text-emerald-200" />} title="Free Bux" subtitle="Grants 250 to 500 Bux" price={<><Play className="mr-1 inline h-3 w-3" />WATCH AD</>} onBuy={() => claimTimed("free-bux", 350, 0, "350 Bux claimed.")} accent="green" badge="AD" />
-          <ProductCard kind="bux" icon={<Bucks className="h-8 w-8 text-emerald-200" />} title="1,500 Bux" subtitle="Pile of Bux" price="30 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 30, { bucks: wallet.bucks + 1500 }, "1,500 Bux added.")} accent="green" />
-          <ProductCard kind="bux" icon={<Bucks className="h-8 w-8 text-emerald-200" />} title="3,500 Bux" subtitle="+15% Bonus" price="60 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 60, { bucks: wallet.bucks + 3500 }, "3,500 Bux added.")} accent="green" />
-          <ProductCard kind="bux" icon={<Bucks className="h-8 w-8 text-emerald-200" />} title="8,000 Bux" subtitle="+30% Best Deal" price="130 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 130, { bucks: wallet.bucks + 8000 }, "8,000 Bux added.")} accent="green" />
-          <ProductCard kind="bux" icon={<Bucks className="h-8 w-8 text-emerald-200" />} title="20,000 Bux" subtitle="+50% Value" price="300 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 300, { bucks: wallet.bucks + 20000 }, "20,000 Bux added.")} accent="green" />
-          <ProductCard kind="bux" icon={<Bucks className="h-8 w-8 text-emerald-200" />} title="50,000 Bux" subtitle="Treasury Pallet" price="₦6,500" onBuy={() => flash("Payment will open when store billing is connected.")} accent="green" />
+          <ProductCard kind="bux" icon={<Banknote className="h-8 w-8 text-emerald-200" />} title="Free Bux" subtitle="Grants 250 to 500 Bux" price={<><Play className="mr-1 inline h-3 w-3" />WATCH AD</>} onBuy={() => claimTimed("free-bux", 350, 0, "350 Bux claimed.")} accent="green" badge="AD" />
+          <ProductCard kind="bux" icon={<Banknote className="h-8 w-8 text-emerald-200" />} title="1,500 Bux" subtitle="Pile of Bux" price="30 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 30, { bucks: wallet.bucks + 1500 }, "1,500 Bux added.")} accent="green" />
+          <ProductCard kind="bux" icon={<Banknote className="h-8 w-8 text-emerald-200" />} title="3,500 Bux" subtitle="+15% Bonus" price="60 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 60, { bucks: wallet.bucks + 3500 }, "3,500 Bux added.")} accent="green" />
+          <ProductCard kind="bux" icon={<Banknote className="h-8 w-8 text-emerald-200" />} title="8,000 Bux" subtitle="+30% Best Deal" price="130 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 130, { bucks: wallet.bucks + 8000 }, "8,000 Bux added.")} accent="green" />
+          <ProductCard kind="bux" icon={<Banknote className="h-8 w-8 text-emerald-200" />} title="20,000 Bux" subtitle="+50% Value" price="300 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 300, { bucks: wallet.bucks + 20000 }, "20,000 Bux added.")} accent="green" />
+          <ProductCard kind="bux" icon={<Banknote className="h-8 w-8 text-emerald-200" />} title="50,000 Bux" subtitle="Treasury Pallet" price="₦6,500" onBuy={() => flash("Payment will open when store billing is connected.")} accent="green" />
         </div>
       </section>
 
@@ -299,7 +299,7 @@ export function Shop() {
           <ProductCard kind="item" icon={<Zap className="h-8 w-8 text-cyan-200" />} title="3-5-2 Tactic" subtitle="Wing play formation" price="UNLOCKED" onBuy={() => flash("3-5-2 Tactic is already unlocked.")} accent="cyan" />
           <ProductCard kind="item" icon={<Shirt className="h-8 w-8 text-emerald-200" />} title="Kit Editor" subtitle="Normal · Pro · Legendary · Special Event" price="OPEN" onBuy={() => setKitEditorOpen(true)} accent="green" badge="CUSTOMIZE" />
           <ProductCard kind="item" icon={<Footprints className="h-8 w-8 text-orange-200" />} title="Speed Boots" subtitle="+2% speed per match" price="40 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 40, {}, "Speed Boots activated.")} accent="pink" />
-          <ProductCard kind="item" icon={<HeartPulse className="h-8 w-8 text-rose-200" />} title="Injury Shield" subtitle="20 matches guard" price="8,000 Bux" priceIcon={<Bucks className="mr-1 inline h-3 w-3" />} onBuy={() => spend("bucks", 8000, {}, "Injury Shield activated.")} accent="gold" />
+          <ProductCard kind="item" icon={<HeartPulse className="h-8 w-8 text-rose-200" />} title="Injury Shield" subtitle="20 matches guard" price="8,000 Bux" priceIcon={<Banknote className="mr-1 inline h-3 w-3" />} onBuy={() => spend("bucks", 8000, {}, "Injury Shield activated.")} accent="gold" />
           <ProductCard kind="item" icon={<Crown className="h-8 w-8 text-yellow-200" />} title="Extra Sub Slot" subtitle="+1 squad slot" price="80 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 80, {}, "Extra Sub Slot unlocked.")} accent="pink" />
         </div>
       </section>
@@ -369,7 +369,7 @@ export function Shop() {
         <div className="grid grid-cols-2 gap-2.5">
           {realMoneyPacks.map((pack) => (
             <Card key={pack.id} className="border-white/5 bg-[#111416] p-2.5">
-              <ProductArt kind={pack.gems ? "gems" : "bux"} icon={pack.gems ? <Gem className="h-8 w-8 fill-pink-300 text-pink-100" /> : <Bucks className="h-8 w-8 text-emerald-200" />} />
+              <ProductArt kind={pack.gems ? "gems" : "bux"} icon={pack.gems ? <Gem className="h-8 w-8 fill-pink-300 text-pink-100" /> : <Banknote className="h-8 w-8 text-emerald-200" />} />
               <p className="mt-2 font-black">{pack.name}</p>
               <p className="mt-0.5 text-[8px] text-muted-foreground">{pack.description}</p>
               <p className="mt-2 text-sm font-black">{formatRealMoney(pack.usd, profile?.countryCode)}</p>
