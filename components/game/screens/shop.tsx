@@ -138,11 +138,6 @@ export function Shop() {
     if (open === "1") { localStorage.removeItem("pitchside-open-kit-editor"); setKitEditorOpen(true) }
   }, [])
 
-  /* removed duplicate timer effect */
-  useEffect(() => {
-    setClaims(readClaims())
-    
-  }, [])
 
   const flash = (text: string) => {
     setMessage(text)
