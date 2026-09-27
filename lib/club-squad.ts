@@ -43,6 +43,11 @@ export function auctionToPlayer(player: AuctionPlayer): Player {
     rating: player.rating,
     stamina: player.attributes.stamina,
     style: role,
+    number: player.number,
+    face: player.face,
+    look: player.look,
+    height: player.height,
+    attributes: { ...player.attributes },
   }
 }
 
