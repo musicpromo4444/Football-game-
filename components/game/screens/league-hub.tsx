@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, type ReactNode } from "react"
-import { ChevronLeft, ChevronRight, Gift, Lock, Trophy } from "lucide-react"
+import { ChevronLeft, ChevronRight, Gift, Lock, Trophy, RefreshCw, Coins, Gem } from "lucide-react"
+import { getPromotionReward, type MatchWinLevel } from "@/lib/economy"
 import { cn } from "@/lib/utils"
 
 type League = {
@@ -47,7 +48,10 @@ const sideTeams: Team[] = premierTeams.map((team) => ({
 
 export function LeagueHub() {
   const [leagueIndex, setLeagueIndex] = useState(1)
+  const [packSeed, setPackSeed] = useState(0)
   const currentLeague = leagues[leagueIndex]
+  const promotionLevel = (currentLeague.id as MatchWinLevel)
+  const promotionReward = getPromotionReward(promotionLevel)
 
   const moveLeague = (direction: -1 | 1) => {
     setLeagueIndex((value) => Math.max(0, Math.min(leagues.length - 1, value + direction)))
@@ -89,6 +93,12 @@ export function LeagueHub() {
           </div>
         </div>
       </section>
+
+      <PromotionRewardPanel
+        reward={promotionReward}
+        seed={packSeed}
+        onReroll={() => setPackSeed((value) => value + 1)}
+      />
 
       <section className="relative mt-6">
         <div className="flex items-stretch justify-center gap-3">
@@ -149,6 +159,67 @@ export function LeagueHub() {
         <p className="text-[10px] font-bold text-white/40">W +3 • D +1 • L -3</p>
       </section>
     </div>
+  )
+}
+
+
+function PromotionRewardPanel({
+  reward,
+  seed,
+  onReroll,
+}: {
+  reward: { bux: number; gems: number }
+  seed: number
+  onReroll: () => void
+}) {
+  const names = [
+    "A. Silva", "K. Mensah", "J. Okafor", "L. Rossi", "M. Diallo",
+    "D. Costa", "T. Berg", "R. Santos", "E. Adeyemi", "N. Karim",
+  ]
+  const positions = ["FWD", "MID", "DEF", "GK"]
+  const players = Array.from({ length: 10 }, (_, i) => {
+    const index = (i + seed) % names.length
+    return {
+      name: names[index],
+      position: positions[(i + seed) % positions.length],
+      rating: 74 + ((i * 2 + seed) % 13),
+    }
+  })
+
+  return (
+    <section className="mx-auto mt-5 w-[calc(100%-40px)] max-w-[560px]">
+      <div className="rounded-2xl border border-emerald-500/25 bg-[#0b0d0d] p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-[9px] font-black uppercase tracking-widest text-emerald-400">Promotion Bonus</p>
+            <div className="mt-1 flex items-center gap-2">
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-1 text-xs font-black text-emerald-300"><Coins className="h-3 w-3" />{reward.bux.toLocaleString()}</span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-cyan-500/10 px-2 py-1 text-xs font-black text-cyan-300"><Gem className="h-3 w-3" />{reward.gems}</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onReroll}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-white/80"
+          >
+            <RefreshCw className="h-3.5 w-3.5" /> Watch Ad & Reroll
+          </button>
+        </div>
+
+        <div className="mt-4">
+          <p className="text-[10px] font-black uppercase tracking-widest text-white/45">Choose 1 player from 10</p>
+          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-5">
+            {players.map((player, i) => (
+              <button key={player.name + i} type="button" className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-left transition active:scale-95">
+                <p className="text-sm font-black">{player.name}</p>
+                <p className="mt-1 text-[9px] font-bold text-emerald-300">{player.position} · {player.rating} OVR</p>
+                <p className="mt-2 text-[9px] text-white/40">Tap to choose</p>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
   )
 }
 
