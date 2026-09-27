@@ -85,19 +85,60 @@ function PlayerFace({ player }: { player: Player }) {
   )
 }
 
+function getPlayerCardStats(player: Player) {
+  const r = player.rating
+  const role = player.style
+  const base = {
+    SPE: r,
+    ACC: r,
+    STA: player.stamina,
+    STR: r,
+    CON: r,
+    PAS: r,
+    SHO: r,
+    TAC: r,
+  }
+  const bonus: Record<string, Partial<typeof base>> = {
+    "Sweeper Keeper": { SPE: r - 4, ACC: r - 5, STR: r - 1, CON: r + 1, PAS: r + 2, SHO: r - 28, TAC: r - 4 },
+    "Inverted Fullback": { SPE: r + 2, ACC: r + 2, STR: r - 2, CON: r, PAS: r + 3, SHO: r - 10, TAC: r + 2 },
+    "Ball-Playing Defender": { SPE: r - 2, ACC: r - 2, STR: r + 3, CON: r + 1, PAS: r + 4, SHO: r - 25, TAC: r + 4 },
+    "Mezzala": { SPE: r + 2, ACC: r + 2, STR: r - 8, CON: r + 4, PAS: r + 5, SHO: r + 2, TAC: r - 7 },
+    "Playmaker": { SPE: r - 2, ACC: r - 1, STR: r - 6, CON: r + 5, PAS: r + 7, SHO: r + 1, TAC: r - 8 },
+    "False Nine": { SPE: r + 1, ACC: r + 2, STR: r - 4, CON: r + 5, PAS: r + 5, SHO: r + 4, TAC: r - 15 },
+    "Inside Forward": { SPE: r + 4, ACC: r + 5, STR: r - 3, CON: r + 6, PAS: r + 1, SHO: r + 5, TAC: r - 15 },
+    "Stopper": { SPE: r - 2, ACC: r - 2, STR: r + 4, CON: r - 1, PAS: r - 4, SHO: r - 30, TAC: r + 6 },
+    "Wingback": { SPE: r + 3, ACC: r + 3, STR: r - 2, CON: r + 1, PAS: r + 1, SHO: r - 8, TAC: r + 2 },
+    "Box-to-Box": { SPE: r + 2, ACC: r + 1, STR: r, CON: r + 1, PAS: r + 2, SHO: r - 2, TAC: r + 2 },
+    "Winger": { SPE: r + 5, ACC: r + 5, STR: r - 6, CON: r + 6, PAS: r + 2, SHO: r + 3, TAC: r - 15 },
+    "Holding Midfielder": { SPE: r - 3, ACC: r - 3, STR: r + 3, CON: r, PAS: r + 3, SHO: r - 15, TAC: r + 6 },
+    "Deep-Lying Playmaker": { SPE: r - 2, ACC: r - 2, STR: r - 5, CON: r + 4, PAS: r + 7, SHO: r - 3, TAC: r + 1 },
+    "Ball Winner": { SPE: r + 1, ACC: r, STR: r + 3, CON: r - 1, PAS: r - 4, SHO: r - 12, TAC: r + 7 },
+    "Pressing Forward": { SPE: r + 3, ACC: r + 3, STR: r - 1, CON: r + 2, PAS: r - 2, SHO: r + 3, TAC: r - 1 },
+    "Advanced Forward": { SPE: r + 5, ACC: r + 5, STR: r - 1, CON: r + 3, PAS: r - 1, SHO: r + 6, TAC: r - 25 },
+    "Poacher": { SPE: r + 1, ACC: r + 2, STR: r, CON: r + 3, PAS: r - 6, SHO: r + 8, TAC: r - 30 },
+    "Complete Forward": { SPE: r + 2, ACC: r + 2, STR: r + 1, CON: r + 3, PAS: r + 3, SHO: r + 5, TAC: r - 12 },
+  }
+  const values = { ...base, ...(bonus[role] || {}) }
+  return Object.fromEntries(Object.entries(values).map(([key, value]) => [key, Math.max(1, Math.min(99, Math.round(value)))])) as Record<keyof typeof base, number>
+}
+
 function PlayerCard({ player, compact = false }: { player: Player; compact?: boolean }) {
-  const main = [player.rating, Math.min(99, Math.round((player.rating + player.stamina) / 2)), Math.min(99, player.rating - 3), Math.min(99, player.stamina + 5)]
+  const stats = getPlayerCardStats(player)
+  const statItems: [keyof typeof stats, string][] = [
+    ["SPE", "SPE"], ["ACC", "ACC"], ["STA", "STA"], ["STR", "STR"],
+    ["CON", "CON"], ["PAS", "PAS"], ["SHO", "SHO"], ["TAC", "TAC"],
+  ]
   return (
     <div className={cn(
       "relative overflow-hidden rounded-2xl border border-primary/25 bg-gradient-to-br from-card via-card to-primary/5 shadow-lg",
       compact ? "p-2" : "p-3",
     )}>
-      <div className="absolute right-2 top-2 rounded-full bg-primary/15 px-1.5 py-0.5 text-[8px] font-black text-primary">
+      <div className="absolute right-2 top-2 rounded-full bg-primary/15 px-2 py-1 text-[9px] font-black text-primary">
         {player.rating} OVR
       </div>
       <div className="flex items-center gap-2">
         <PlayerFace player={player} />
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 pr-14">
           <p className="truncate text-sm font-black">{player.name}</p>
           <p className="truncate text-[9px] font-semibold text-primary">{player.specialName || player.style}</p>
           <p className="mt-0.5 truncate text-[9px] text-muted-foreground">{player.style} · {player.pos}</p>
@@ -105,16 +146,11 @@ function PlayerCard({ player, compact = false }: { player: Player; compact?: boo
       </div>
       {!compact && (
         <>
-          <div className="mt-2 grid grid-cols-4 gap-1">
-            {[
-              ["RAT", main[0]],
-              ["PAS", main[1]],
-              ["DEF", main[2]],
-              ["STA", player.stamina],
-            ].map(([label, value]) => (
-              <div key={label} className="rounded-lg bg-secondary/60 px-1 py-1 text-center">
+          <div className="mt-3 grid grid-cols-4 gap-1.5">
+            {statItems.map(([key, label]) => (
+              <div key={key} className="rounded-lg border border-border/60 bg-secondary/60 px-1 py-1.5 text-center">
                 <p className="text-[7px] font-bold text-muted-foreground">{label}</p>
-                <p className="text-[10px] font-black">{value}</p>
+                <p className="text-[11px] font-black">{stats[key]}</p>
               </div>
             ))}
           </div>
