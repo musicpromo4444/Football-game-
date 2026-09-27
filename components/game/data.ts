@@ -76,7 +76,7 @@ export const sponsorChallenges: SponsorChallenge[] = [
     id: "c1",
     sponsor: "VOLTA",
     title: "Complete 40 gesture passes",
-    reward: "+2,500 coins",
+    reward: "+2,500 bucks",
     progress: 28,
     goal: 40,
     accent: "cyan",
@@ -321,14 +321,14 @@ export const weeklyChallenge = {
   endsIn: "3d 14h",
   totalReward: "Gold Package + 500 Gems",
   milestones: [
-    { id: "w1", title: "Win 5 online matches", progress: 3, goal: 5, reward: "+1,200 coins", accent: "cyan" as const },
+    { id: "w1", title: "Win 5 online matches", progress: 3, goal: 5, reward: "+1,200 bucks", accent: "cyan" as const },
     { id: "w2", title: "Score 12 goals", progress: 9, goal: 12, reward: "Silver Package", accent: "emerald" as const },
     { id: "w3", title: "Complete 3 friend matches", progress: 1, goal: 3, reward: "+150 gems", accent: "cyan" as const },
   ] satisfies WeeklyChallenge[],
 }
 
 export const wallet = {
-  coins: 10000,
+  bucks: 10000,
   gems: 100,
 }
 
@@ -350,12 +350,12 @@ export const seasonPassWidget = {
   bankValue: 12,
   bankLabel: "Progress Bank",
   rewards: [
-    { tier: 21, free: "250 Coins", paid: "Rare Crate", freeClaimed: true, paidClaimed: true },
-    { tier: 22, free: "1 Gem", paid: "500 Coins", freeClaimed: true, paidClaimed: true },
+    { tier: 21, free: "250 Bucks", paid: "Rare Crate", freeClaimed: true, paidClaimed: true },
+    { tier: 22, free: "1 Gem", paid: "500 Bucks", freeClaimed: true, paidClaimed: true },
     { tier: 23, free: "Stamina x2", paid: "Epic Kit", freeClaimed: false, paidClaimed: false },
-    { tier: 24, free: "300 Coins", paid: "5 Gems", freeClaimed: false, paidClaimed: false },
+    { tier: 24, free: "300 Bucks", paid: "5 Gems", freeClaimed: false, paidClaimed: false },
     { tier: 25, free: "Silver Crate", paid: "Legend Token", freeClaimed: false, paidClaimed: false },
-    { tier: 26, free: "150 Coins", paid: "Gold Crate", freeClaimed: false, paidClaimed: false },
+    { tier: 26, free: "150 Bucks", paid: "Gold Crate", freeClaimed: false, paidClaimed: false },
     { tier: 27, free: "2 Gems", paid: "Elite Boots", freeClaimed: false, paidClaimed: false },
   ] satisfies SeasonPassReward[],
 }
@@ -379,16 +379,16 @@ export const weeklyResetGrid = {
   title: "Weekly Reset",
   resetsIn: "3d 14h",
   days: [
-    { day: 1, reward: "100 Coins", state: "claimed" },
+    { day: 1, reward: "100 Bucks", state: "claimed" },
     { day: 2, reward: "1 Gem", state: "claimed" },
     { day: 3, reward: "Bronze Crate", state: "claimed" },
-    { day: 4, reward: "250 Coins", state: "today" },
+    { day: 4, reward: "250 Bucks", state: "today" },
     { day: 5, reward: "3 Gems", state: "locked" },
     { day: 6, reward: "Silver Crate", state: "locked" },
     { day: 7, reward: "Gold Crate", state: "locked" },
   ] satisfies DailyChallengeDay[],
   objectives: [
-    { id: "o1", title: "Win 5 online matches", progress: 5, goal: 5, reward: "+1,200 Coins", claimable: true },
+    { id: "o1", title: "Win 5 online matches", progress: 5, goal: 5, reward: "+1,200 Bucks", claimable: true },
     { id: "o2", title: "Score 12 goals", progress: 9, goal: 12, reward: "Silver Package" },
     { id: "o3", title: "Complete 3 friend matches", progress: 1, goal: 3, reward: "+150 Gems" },
   ] satisfies WeeklyResetObjective[],
@@ -396,8 +396,8 @@ export const weeklyResetGrid = {
 
 export const dailyLoginBonus = {
   day: 4,
-  reward: "250 Coins",
-  rewardIcon: "coins" as const,
+  reward: "250 Bucks",
+  rewardIcon: "bucks" as const,
   streak: 4,
 }
 
