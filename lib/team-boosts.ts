@@ -22,14 +22,14 @@ export const TEAM_BOOSTS: Record<TeamBoostType, {
     icon: "👻",
     description: "Hides your tactical shape and makes your formation harder to read.",
     effect: "Formation movement +8% · tactical unpredictability",
-    prices: { "1-match": { gems: 50 }, "2-matches": { gems: 50 }, "10-matches": { usd: 0.75 }, "20-matches": { usd: 1.50 } },
+    prices: { "1-match": { gems: 50 }, "2-matches": { gems: 50 }, "10-matches": { usd: 1.00 }, "20-matches": { usd: 1.80 } },
   },
   "team-boost": {
     name: "Team Boost",
     icon: "⚡",
     description: "Temporarily raises the performance of your whole starting team.",
     effect: "All starting players +5% performance",
-    prices: { "1-match": { gems: 40 }, "2-matches": { gems: 65 }, "10-matches": { usd: 1.00 }, "20-matches": { usd: 1.75 } },
+    prices: { "1-match": { gems: 40 }, "2-matches": { gems: 65 }, "10-matches": { usd: 1.20 }, "20-matches": { usd: 2.00 } },
   },
   "captain-boost": {
     name: "Captain Boost",
