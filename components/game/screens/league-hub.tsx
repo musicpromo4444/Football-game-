@@ -1,45 +1,26 @@
 "use client"
 
-import { useMemo, useState } from "react"
-import {
-  ArrowRight,
-  ChevronLeft,
-  ChevronRight,
-  Gift,
-  Info,
-  Lock,
-  Trophy,
-} from "lucide-react"
-import { Card, Pill } from "@/components/game/ui-bits"
+import { useState } from "react"
+import { ChevronLeft, ChevronRight, Gift, Lock, Trophy } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 type League = {
   id: string
   name: string
   tier: number
-  unlockPoints: number
-  reward: string
-  color: "cyan" | "emerald" | "amber"
+  locked?: boolean
 }
 
 const leagues: League[] = [
-  { id: "academy", name: "Academy League", tier: 1, unlockPoints: 0, reward: "Starter rewards", color: "cyan" },
-  { id: "league-1", name: "League 1", tier: 2, unlockPoints: 9, reward: "League 1 rewards", color: "cyan" },
-  { id: "league-2", name: "League 2", tier: 3, unlockPoints: 60, reward: "League 2 rewards", color: "emerald" },
-  { id: "league-3", name: "League 3", tier: 4, unlockPoints: 110, reward: "League 3 rewards", color: "emerald" },
-  { id: "league-4", name: "League 4", tier: 5, unlockPoints: 250, reward: "League 4 rewards", color: "amber" },
-  { id: "premier", name: "Premier League", tier: 6, unlockPoints: 400, reward: "Premier League rewards", color: "emerald" },
-  { id: "champions", name: "Champions League", tier: 7, unlockPoints: 750, reward: "Champions League rewards", color: "amber" },
-  { id: "super", name: "Super League", tier: 8, unlockPoints: 1200, reward: "Super League rewards", color: "amber" },
-  { id: "legendary", name: "Legendary League", tier: 9, unlockPoints: 1800, reward: "Legendary League rewards", color: "amber" },
-  { id: "elite", name: "Elite League", tier: 10, unlockPoints: 2450, reward: "Elite League rewards", color: "amber" },
-  { id: "hall-of-fame", name: "HALL OF FAME", tier: 11, unlockPoints: 0, reward: "Special requirement", color: "amber" },
+  { id: "league-4", name: "League 4", tier: 5 },
+  { id: "premier", name: "Premier League", tier: 6 },
+  { id: "champions", name: "Champions League", tier: 7, locked: true },
 ]
 
 type Team = {
   pos: number
   club: string
-  short: string
+  p: number
   w: number
   d: number
   l: number
@@ -47,248 +28,216 @@ type Team = {
   self?: boolean
 }
 
-const featuredTeams: Team[] = [
-  { pos: 1, club: "Neon Rovers", short: "NRV", w: 11, d: 2, l: 1, pts: 35 },
-  { pos: 2, club: "Obsidian FC", short: "OBS", w: 10, d: 3, l: 1, pts: 33 },
-  { pos: 3, club: "Vertex United", short: "VTX", w: 9, d: 3, l: 2, pts: 30 },
-  { pos: 4, club: "Aurora FC", short: "AUR", w: 9, d: 2, l: 3, pts: 29, self: true },
+const premierTeams: Team[] = [
+  { pos: 1, club: "Grandmaster Royal FC", p: 14, w: 11, d: 2, l: 1, pts: 35 },
+  { pos: 2, club: "Apex United FC", p: 14, w: 10, d: 3, l: 1, pts: 33, self: true },
+  { pos: 3, club: "Grandmaster Titans", p: 14, w: 9, d: 3, l: 2, pts: 30 },
+  { pos: 4, club: "Grandmaster Athletic", p: 14, w: 8, d: 4, l: 2, pts: 28 },
+  { pos: 5, club: "Grandmaster City", p: 14, w: 7, d: 2, l: 5, pts: 23 },
+  { pos: 6, club: "Grandmaster United", p: 14, w: 5, d: 4, l: 5, pts: 19 },
+  { pos: 7, club: "Grandmaster Dynamo", p: 14, w: 4, d: 3, l: 7, pts: 15 },
+  { pos: 8, club: "Grandmaster Rovers", p: 14, w: 3, d: 3, l: 8, pts: 12 },
 ]
 
-const relegationTeams: Team[] = [
-  { pos: 77, club: "Ember Wanderers", short: "EMB", w: 4, d: 3, l: 7, pts: 9 },
-  { pos: 78, club: "Halcyon Town", short: "HAL", w: 3, d: 3, l: 8, pts: 6 },
-  { pos: 79, club: "Redwood Athletic", short: "RWA", w: 2, d: 3, l: 9, pts: 3 },
-  { pos: 80, club: "Cobalt Rovers", short: "CBR", w: 1, d: 3, l: 10, pts: 0 },
-]
-
-const middleTeams: Team[] = Array.from({ length: 72 }, (_, index) => {
-  const pos = index + 5
-  const names = [
-    "Pulse City", "Titan Athletic", "Metro United", "Summit FC", "Royal City",
-    "Northstar FC", "Velocity", "Ironbridge", "Blue Harbor", "Capital FC",
-    "Phoenix Town", "Crown Athletic",
-  ]
-  const base = 27 - Math.floor((pos - 5) * 0.31)
-  const w = Math.max(2, Math.min(8, Math.floor(base / 3)))
-  const d = 3 + (pos % 3)
-  const l = Math.max(2, 14 - w - d)
-  return {
-    pos,
-    club: `${names[index % names.length]} ${Math.floor(index / names.length) + 1}`,
-    short: `${String.fromCharCode(65 + (index % 26))}${String((index * 7) % 100).padStart(2, "0")}`,
-    w,
-    d,
-    l,
-    pts: Math.max(12, base),
-  }
-})
-
-const allTeams = [...featuredTeams, ...middleTeams, ...relegationTeams]
+const sideTeams: Team[] = premierTeams.map((team) => ({
+  ...team,
+  club: team.club.replace("Grandmaster", "Grandmaster"),
+  self: false,
+}))
 
 export function LeagueHub() {
   const [leagueIndex, setLeagueIndex] = useState(1)
   const currentLeague = leagues[leagueIndex]
-  const nextLeague = leagues[Math.min(leagueIndex + 1, leagues.length - 1)]
-  const currentPoints = 6
-  const pointsNeeded = Math.max(0, nextLeague.unlockPoints - currentPoints)
-  const progress = Math.min(100, Math.round((currentPoints / nextLeague.unlockPoints) * 100))
-
-  const currentTable = useMemo(() => allTeams, [])
 
   const moveLeague = (direction: -1 | 1) => {
     setLeagueIndex((value) => Math.max(0, Math.min(leagues.length - 1, value + direction)))
   }
 
   return (
-    <div className="pb-5">
-      <header className="px-5 pb-3 pt-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-primary">Your current league</p>
-            <h1 className="mt-1 font-display text-3xl font-black tracking-tight">{currentLeague.name}</h1>
-          </div>
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-primary/25 bg-primary/10">
-            <Trophy className="h-5 w-5 text-primary" />
-          </div>
-        </div>
+    <div className="min-h-full overflow-hidden bg-black pb-6 text-white">
+      <header className="px-5 pb-4 pt-7 text-center">
+        <h1 className="font-display text-4xl font-black tracking-tight">{currentLeague.name}</h1>
       </header>
 
-      <div className="px-5">
-        <Card className="overflow-hidden border-primary/15">
-          <div className="flex items-center justify-between border-b border-border px-4 py-3">
-            <div className="flex items-center gap-2">
-              <Gift className="h-4 w-4 text-chart-4" />
+      <section className="mx-auto w-[calc(100%-40px)] max-w-[560px]">
+        <div className="rounded-[22px] border border-white/10 bg-[#0b0d0d] p-4 shadow-[0_8px_35px_rgba(0,0,0,0.5)]">
+          <div className="flex items-start justify-between">
+            <div className="flex items-start gap-3">
+              <div className="mt-1 flex h-8 w-8 items-center justify-center rounded-full bg-[#332a12]">
+                <Trophy className="h-4 w-4 text-[#e7b82f]" />
+              </div>
               <div>
-                <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">League rewards</p>
-                <p className="text-sm font-bold">{currentLeague.reward}</p>
+                <p className="text-sm font-black uppercase tracking-wide text-white">Season Finish</p>
+                <p className="text-sm font-black uppercase tracking-wide text-white">Rewards</p>
+                <p className="mt-1 text-[9px] text-white/45">Awarded automatically to all qualified</p>
+                <p className="text-[9px] text-white/45">managers at season conclusion</p>
               </div>
             </div>
-            <Pill accent="emerald">Current</Pill>
+            <div className="text-right">
+              <p className="text-xs font-black text-emerald-400">(LEAGUE</p>
+              <p className="text-xs font-black text-emerald-400">7)</p>
+              <span className="mt-1 inline-flex rounded-full bg-emerald-900/60 px-3 py-1 text-[9px] font-black text-emerald-400">
+                Guaranteed
+              </span>
+            </div>
           </div>
-          <div className="grid grid-cols-3 gap-2 p-3">
-            <Rule value="+3" label="WIN" tone="text-primary" />
-            <Rule value="+1" label="DRAW" tone="text-foreground" />
-            <Rule value="-3" label="LOSS" tone="text-destructive" />
-          </div>
-        </Card>
-      </div>
 
-      <section className="mt-4">
-        <div className="mb-2 flex items-center justify-between px-5">
-          <div>
-            <p className="text-sm font-bold">League progression</p>
-            <p className="text-[11px] text-muted-foreground">Swipe to inspect other leagues</p>
+          <div className="mt-4 grid grid-cols-3 gap-2">
+            <RewardCard icon="▰" title={<>CLUB<br />CURRENCY</>} value="1,000" suffix="Box / Coins" tone="emerald" />
+            <RewardCard icon="◆" title={<>PREMIUM<br />GEMS</>} value="50" suffix="Gems 💎" tone="cyan" />
+            <RewardCard icon="★" title={<>#9 CB</>} value="89" suffix="SANDBERG (TITA..." tone="amber" />
           </div>
-          <div className="flex gap-1">
-            <button type="button" onClick={() => moveLeague(-1)} className="rounded-lg border border-border bg-card p-1.5 text-muted-foreground" aria-label="Previous league">
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <button type="button" onClick={() => moveLeague(1)} className="rounded-lg border border-border bg-card p-1.5 text-muted-foreground" aria-label="Next league">
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-
-        <div className="no-scrollbar flex snap-x gap-2 overflow-x-auto px-5 pb-1">
-          {leagues.map((league) => {
-            const active = league.id === currentLeague.id
-            return (
-              <button
-                key={league.id}
-                type="button"
-                onClick={() => active && setLeagueIndex(leagues.findIndex((item) => item.id === league.id))}
-                className={cn(
-                  "relative min-w-[150px] snap-center rounded-2xl border p-3 text-left transition",
-                  active
-                    ? "border-primary/50 bg-primary/10 shadow-[0_0_20px_rgba(16,185,129,0.08)]"
-                    : "border-border bg-card/45 opacity-45",
-                )}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">League {league.tier}</span>
-                  {active ? <span className="h-2 w-2 rounded-full bg-primary" /> : <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
-                </div>
-                <p className="mt-2 font-display text-base font-black">{league.name}</p>
-                <p className="mt-1 text-[10px] text-muted-foreground">{league.unlockPoints} pts required</p>
-                <p className="mt-2 truncate text-[10px] font-semibold text-chart-4">{league.reward}</p>
-              </button>
-            )
-          })}
         </div>
       </section>
 
-      <div className="mt-4 grid gap-3 px-5 sm:grid-cols-2">
-        <Card className="p-4">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Next league</p>
-              <p className="mt-1 font-display text-xl font-black">{nextLeague.name}</p>
-            </div>
-            <ArrowRight className="mt-1 h-5 w-5 text-primary" />
-          </div>
-          <div className="mt-3 flex items-end justify-between">
-            <div>
-              <span className="font-display text-2xl font-black text-primary">{currentPoints}</span>
-              <span className="ml-1 text-xs text-muted-foreground">/ {nextLeague.unlockPoints} pts</span>
-            </div>
-            <span className="text-xs font-bold text-chart-4">{pointsNeeded} more</span>
-          </div>
-          <div className="mt-2 h-2 overflow-hidden rounded-full bg-secondary">
-            <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${progress}%` }} />
-          </div>
-        </Card>
+      <section className="relative mt-6">
+        <div className="flex items-stretch justify-center gap-3">
+          <button
+            type="button"
+            onClick={() => moveLeague(-1)}
+            className="mt-10 hidden w-[calc((100vw-340px)/2)] min-w-[42px] max-w-[150px] overflow-hidden rounded-r-xl border border-white/10 bg-[#090b0b] text-left opacity-60 sm:block"
+            aria-label="Previous league"
+          >
+            <SideTable teams={sideTeams} />
+          </button>
 
-        <Card className="p-4">
-          <div className="flex items-center gap-2">
-            <Info className="h-4 w-4 text-primary" />
-            <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">League rules</p>
+          <div className="w-[calc(100vw-72px)] max-w-[380px] rounded-xl border-[5px] border-white/65 bg-[#080a0a] shadow-[0_0_30px_rgba(255,255,255,0.08)]">
+            <StandingsTable teams={premierTeams} />
           </div>
-          <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-            <Rule value="+3" label="Win" tone="text-accent" />
-            <Rule value="+1" label="Draw" tone="text-chart-4" />
-            <Rule value="-3" label="Loss" tone="text-destructive" />
-          </div>
-          <p className="mt-3 text-[10px] leading-relaxed text-muted-foreground">
-            Matchmaking is random within your current league. There is no fixed number of players in a league.
-          </p>
-        </Card>
-      </div>
 
-      <section className="mt-5 px-5">
-        <div className="mb-2 flex items-end justify-between">
+          <button
+            type="button"
+            onClick={() => moveLeague(1)}
+            className="mt-10 hidden w-[calc((100vw-340px)/2)] min-w-[42px] max-w-[150px] overflow-hidden rounded-l-xl border border-white/10 bg-[#090b0b] text-left opacity-60 sm:block"
+            aria-label="Next league"
+          >
+            <SideTable teams={sideTeams} />
+          </button>
+        </div>
+
+        <div className="mx-auto mt-3 flex max-w-[380px] items-center justify-between px-1">
+          <button type="button" onClick={() => moveLeague(-1)} className="rounded-full p-2 text-white/45 sm:hidden" aria-label="Previous league">
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <div className="flex items-center gap-1.5">
+            {leagues.map((league, index) => (
+              <button
+                key={league.id}
+                type="button"
+                onClick={() => setLeagueIndex(index)}
+                className={cn("h-1.5 rounded-full transition-all", index === leagueIndex ? "w-7 bg-emerald-400" : "w-1.5 bg-white/20")}
+                aria-label={league.name}
+              />
+            ))}
+          </div>
+          <button type="button" onClick={() => moveLeague(1)} className="rounded-full p-2 text-white/45 sm:hidden" aria-label="Next league">
+            <ChevronRight className="h-5 w-5" />
+          </button>
+        </div>
+      </section>
+
+      <section className="mx-auto mt-5 flex w-[calc(100%-40px)] max-w-[560px] items-center justify-between rounded-2xl border border-white/10 bg-[#0b0d0d] px-4 py-3">
+        <div className="flex items-center gap-2">
+          {currentLeague.locked ? <Lock className="h-4 w-4 text-amber-400" /> : <Gift className="h-4 w-4 text-emerald-400" />}
           <div>
-            <p className="text-sm font-bold">League table</p>
-            <p className="text-[11px] text-muted-foreground">Players currently in this league</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-white/45">
+              {currentLeague.locked ? "League locked" : "Current league"}
+            </p>
+            <p className="text-xs font-bold">{currentLeague.name}</p>
           </div>
-          <Pill accent="emerald">Current league</Pill>
         </div>
-
-        <Card className="overflow-hidden">
-          <div className="overflow-x-auto">
-            <div className="min-w-[360px]">
-              <div className="grid grid-cols-[30px_minmax(150px,1fr)_34px_34px_34px_42px] gap-1 border-b border-border bg-secondary/25 px-3 py-2 text-[9px] font-black uppercase tracking-wider text-muted-foreground">
-                <span>#</span><span>Club</span><span className="text-center">W</span><span className="text-center">D</span><span className="text-center">L</span><span className="text-center">Pts</span>
-              </div>
-
-              <div className="max-h-[520px] overflow-y-auto">
-                {currentTable.map((row) => (
-                  <div key={row.pos}>
-                    {row.pos === 1 && (
-                      <div className="flex items-center gap-2 border-b border-primary/15 bg-primary/5 px-3 py-2 text-[9px] font-black uppercase tracking-widest text-primary">
-                        
-                      </div>
-                    )}
-
-                    {row.pos === 77 && (
-                      <div className="flex items-center gap-2 border-y border-destructive/15 bg-destructive/5 px-3 py-2 text-[9px] font-black uppercase tracking-widest text-destructive">
-                        
-                      </div>
-                    )}
-
-                    <div
-                      className={cn(
-                        "grid grid-cols-[30px_minmax(150px,1fr)_34px_34px_34px_42px] items-center gap-1 border-b border-border/70 px-3 py-2.5",
-                        row.self && "bg-primary/10",
-                      )}
-                    >
-                      <span className={cn("text-xs font-black tabular-nums", row.pos <= 4 ? "text-primary" : row.pos >= 77 ? "text-destructive" : "text-muted-foreground")}>
-                        {row.pos}
-                      </span>
-                      <div className="flex min-w-0 items-center gap-2">
-                        <span className={cn("flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[8px] font-black", row.self ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground")}>
-                          {row.short}
-                        </span>
-                        <span className={cn("truncate text-xs", row.self ? "font-black text-primary" : "font-semibold")}>{row.club}</span>
-                        {row.self && <span className="shrink-0 rounded-full bg-primary px-1.5 py-0.5 text-[8px] font-black text-primary-foreground">YOU</span>}
-                      </div>
-                      <span className="text-center text-xs font-bold tabular-nums text-accent">{row.w}</span>
-                      <span className="text-center text-xs font-bold tabular-nums text-muted-foreground">{row.d}</span>
-                      <span className="text-center text-xs font-bold tabular-nums text-destructive">{row.l}</span>
-                      <span className="text-center text-xs font-black tabular-nums">{row.pts}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        <div className="mt-3 flex items-start gap-2 rounded-xl border border-border bg-card/50 px-3 py-2.5">
-          <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-          <p className="text-[10px] leading-relaxed text-muted-foreground">
-            Your position changes with your match results. Reach the next point requirement to move immediately into the next league.
-          </p>
-        </div>
+        <p className="text-[10px] font-bold text-white/40">W +3 • D +1 • L -3</p>
       </section>
     </div>
   )
 }
 
-function Rule({ value, label, tone }: { value: string; label: string; tone: string }) {
+function RewardCard({
+  icon,
+  title,
+  value,
+  suffix,
+  tone,
+}: {
+  icon: string
+  title: React.ReactNode
+  value: string
+  suffix: string
+  tone: "emerald" | "cyan" | "amber"
+}) {
+  const tones = {
+    emerald: "border-emerald-500/35 bg-emerald-500/5 text-emerald-400",
+    cyan: "border-cyan-500/30 bg-cyan-500/5 text-cyan-300",
+    amber: "border-amber-500/40 bg-amber-500/5 text-amber-300",
+  }
   return (
-    <div className="rounded-xl border border-border bg-secondary/25 px-2 py-2">
-      <p className={cn("font-display text-lg font-black", tone)}>{value}</p>
-      <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">{label}</p>
+    <div className={cn("flex min-h-[128px] flex-col items-center justify-center rounded-2xl border px-2 py-3 text-center", tones[tone])}>
+      <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-black/30 text-base">{icon}</div>
+      <p className="text-[9px] font-black leading-4 text-white/65">{title}</p>
+      <p className="mt-1 font-display text-xl font-black">{value}</p>
+      <p className="mt-0.5 max-w-full truncate text-[8px] font-bold text-white/40">{suffix}</p>
+    </div>
+  )
+}
+
+function StandingsTable({ teams }: { teams: Team[] }) {
+  return (
+    <div className="overflow-hidden">
+      <div className="grid grid-cols-[25px_minmax(120px,1fr)_28px_28px_28px_34px] gap-1 bg-[#111313] px-2 py-3 text-[8px] font-black uppercase tracking-wider text-white/50">
+        <span>#</span>
+        <span>Club</span>
+        <span className="text-center">P</span>
+        <span className="text-center">W</span>
+        <span className="text-center">D</span>
+        <span className="text-center">L</span>
+        <span className="text-center">PTS</span>
+      </div>
+
+      {teams.map((team) => (
+        <div key={team.pos}>
+          {team.pos === 1 && (
+            <div className="border-b border-emerald-500/20 bg-emerald-500/5 px-2 py-2 text-[8px] font-black uppercase tracking-widest text-emerald-400">
+              <span>● Promotion</span>
+              <span className="float-right">Qualify for League 8</span>
+            </div>
+          )}
+
+          {team.pos === 7 && (
+            <div className="border-y border-rose-500/20 bg-rose-500/5 px-2 py-2 text-[8px] font-black uppercase tracking-widest text-rose-400">
+              <span>● Relegation danger zone</span>
+              <span className="float-right">Drop risk</span>
+            </div>
+          )}
+
+          <div className={cn(
+            "grid grid-cols-[25px_minmax(120px,1fr)_28px_28px_28px_34px] items-center gap-1 border-b border-white/5 px-2 py-2.5",
+            team.self && "rounded-xl border border-emerald-500/45 bg-emerald-500/15",
+          )}>
+            <span className={cn(
+              "text-xs font-black tabular-nums",
+              team.pos <= 4 ? "text-emerald-400" : team.pos >= 7 ? "text-rose-400" : "text-white/70",
+            )}>
+              {team.pos}
+            </span>
+            <div className="flex min-w-0 items-center gap-1.5">
+              <span className={cn("truncate text-[10px] font-semibold", team.self && "font-black text-emerald-300")}>{team.club}</span>
+              {team.self && <span className="shrink-0 rounded-full bg-emerald-500 px-1.5 py-0.5 text-[7px] font-black text-black">YOU</span>}
+            </div>
+            <span className="text-center text-[10px] font-bold tabular-nums text-white/65">{team.p}</span>
+            <span className="text-center text-[10px] font-bold tabular-nums text-emerald-300">+{team.w}</span>
+            <span className="text-center text-[10px] font-bold tabular-nums text-white/60">+{team.d}</span>
+            <span className="text-center text-[10px] font-black tabular-nums text-white">{team.pts}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function SideTable({ teams }: { teams: Team[] }) {
+  return (
+    <div className="min-w-[300px]">
+      <StandingsTable teams={teams} />
     </div>
   )
 }
