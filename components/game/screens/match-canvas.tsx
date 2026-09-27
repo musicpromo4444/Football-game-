@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Play, Pause, RotateCcw, Hand, Star } from "lucide-react"
 import { squad, type PlayerRole } from "@/components/game/data"
+import { readPlayerTrainingBoost } from "@/lib/training-boosts"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -111,6 +112,7 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
     return loadLineupIds().map((id) => squad.find((p) => p.id === id)).filter(Boolean).map((p) => ({
       id: p!.id, name: p!.name, role: p!.style as PlayerRole, specialStyle: p!.specialStyle, specialName: p!.specialName, pos: p!.pos, stamina: p!.stamina,
       trainingBoost: training[p!.id] && now >= training[p!.id].completesAt ? training[p!.id].boost : 0,
+      shopBoost: readPlayerTrainingBoost(p!.id),
       trainingActive: !!training[p!.id] && now < training[p!.id].completesAt,
     }))
   }, [])
@@ -176,6 +178,7 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
         const player = playerArchetypes[i]
         const injuryFactor = injuries[i] === "heavy" ? 0.4 : injuries[i] === "light" ? 0.7 : 1
         const trainingFactor = 1 + (player?.trainingBoost || 0) * 0.01
+        const speedBoost = 1 + ((player?.shopBoost?.stats.SPE || 0) + (player?.shopBoost?.stats.ACC || 0)) * 0.004
         const anchor = base[i] || p
         if (injuries[i] === "heavy") return { ...anchor }
         const dx = ballNow.x - p.x
@@ -203,7 +206,7 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
         }
 
         if (tactics.preset === "counter-attack") {
-          y -= (player.pos === "FWD" ? 15 : i === 1 ? 8 : 2) * trainingFactor
+          y -= (player.pos === "FWD" ? 15 : i === 1 ? 8 : 2) * trainingFactor * speedBoost
           if (i === 0 || i === 1) x += side * 3
         }
 
@@ -235,7 +238,7 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
         }
 
         if (tactics.preset === "direct-play") {
-          y -= (player.pos === "FWD" ? 13 : 4) * trainingFactor
+          y -= (player.pos === "FWD" ? 13 : 4) * trainingFactor * speedBoost
         }
 
         // Defensive AI: every unselected defender keeps working even while the user
@@ -318,7 +321,7 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
           const tackleSkill =
             (defenderPlayer?.specialStyle === "Wall" ? 0.96 : 0.76) +
             (defenderPlayer?.role === "Ball Winner" ? 0.08 : 0) +
-            (defenderPlayer?.role === "Stopper" ? 0.06 : 0)
+            (defenderPlayer?.role === "Stopper" ? 0.06 : 0) + ((defenderPlayer?.shopBoost?.stats.TAC || 0) * 0.008) + ((defenderPlayer?.shopBoost?.stats.STR || 0) * 0.003)
           if ((distance < 6.5 && frontAngle) || slide) {
             const hardContact = slide && tackleSkill < 0.9
             const clean = tackleSkill >= 0.86 || Math.random() > (hardContact ? 0.34 : 0.16)
@@ -550,8 +553,8 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
         }
 
         // Guardian reads the shot with elite positioning/reactions.
-        accuracy = Math.min(0.99, accuracy + (shooter?.trainingBoost || 0) * 0.015)
-        power = Math.min(0.99, power + (shooter?.trainingBoost || 0) * 0.015)
+        accuracy = Math.min(0.99, accuracy + (shooter?.trainingBoost || 0) * 0.015 + (shooter?.shopBoost?.stats.SHO || 0) * 0.008 + (shooter?.shopBoost?.stats.CON || 0) * 0.003)
+        power = Math.min(0.99, power + (shooter?.trainingBoost || 0) * 0.015 + (shooter?.shopBoost?.stats.SHO || 0) * 0.006 + (shooter?.shopBoost?.stats.STR || 0) * 0.003)
         const guardianSave = 0.22 + (special === "Long-Range Sniper" ? 0.03 : 0)
         const saved = Math.random() > accuracy || Math.random() < guardianSave
         const rebound = saved && Math.random() < (power > 0.88 ? 0.46 : 0.28)
@@ -613,7 +616,7 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
       else if (passer?.specialStyle === "Mezzala") passQuality = 0.90
       else if (passer?.role === "Playmaker" || passer?.role === "Deep-Lying Playmaker") passQuality = 0.84
       else if (passer?.role === "Ball-Playing Defender") passQuality = 0.80
-      passQuality = Math.min(0.99, passQuality + (passer?.trainingBoost || 0) * 0.015)
+      passQuality = Math.min(0.99, passQuality + (passer?.trainingBoost || 0) * 0.015 + (passer?.shopBoost?.stats.PAS || 0) * 0.009 + (passer?.shopBoost?.stats.CON || 0) * 0.002)
 
       let intercepted = false
       if (passerPos && targetPos && targetIndex !== null) {
