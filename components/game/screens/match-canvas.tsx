@@ -132,6 +132,10 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
   const [substitutionPending, setSubstitutionPending] = useState<number | null>(null)
   const [substitutionCountdown, setSubstitutionCountdown] = useState(0)
   const [turnover, setTurnover] = useState(false)
+  const [passDecisionOpen, setPassDecisionOpen] = useState(false)
+  const [passDecisionTargets, setPassDecisionTargets] = useState<number[]>([])
+  const decisionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const decisionCooldownRef = useRef(0)
   const [shotResult, setShotResult] = useState<string | null>(null)
   const shotCooldownRef = useRef(false)
   const pitchRef = useRef<HTMLDivElement>(null)
@@ -149,6 +153,90 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
   useEffect(() => {
     if (time === 0) setRunning(false)
   }, [time])
+
+  useEffect(() => {
+    if (!running || ballOwner === null || substitutionPending !== null) {
+      setPassDecisionOpen(false)
+      setPassDecisionTargets([])
+      if (decisionTimerRef.current) {
+        clearTimeout(decisionTimerRef.current)
+        decisionTimerRef.current = null
+      }
+      return
+    }
+
+    // Every time a player receives the ball, give the user a short, explicit
+    // decision moment. The match action holds while the player waits for the
+    // user's swipe, so tactics shape the visible options rather than secretly
+    // choosing the pass for them.
+    if (decisionCooldownRef.current > Date.now()) return
+
+    const owner = ballOwner
+    const ownerPos = positions[owner]
+    if (!ownerPos) return
+
+    const scoreTarget = (p: Point, i: number) => {
+      const player = playerArchetypes[i]
+      if (!player || i === owner) return -Infinity
+      const d = Math.hypot(ownerPos.x - p.x, ownerPos.y - p.y)
+      if (d > 36) return -Infinity
+
+      const forward = Math.max(0, ownerPos.y - p.y)
+      const wide = Math.abs(p.x - 50)
+      const closeBonus = Math.max(0, 24 - d) * 1.1
+
+      if (tactics.preset === "wing-play") {
+        const wideRole = player.role === "Winger" || player.role === "Wingback"
+        return (wideRole ? 30 : 0) + wide * 0.35 + forward * 0.22 - d * 0.45
+      }
+      if (tactics.preset === "counter-attack") {
+        const runner = ["Advanced Forward", "Complete Forward", "Poacher", "Target Forward", "Inside Forward"].includes(player.role)
+        return (runner ? 28 : 0) + forward * 0.85 - d * 0.28
+      }
+      if (tactics.preset === "direct-play" || tactics.preset === "long-ball") {
+        const runner = ["Advanced Forward", "Complete Forward", "Poacher", "Target Forward", "Inside Forward"].includes(player.role)
+        return (runner ? 32 : 0) + forward * 0.95 - d * 0.18
+      }
+      if (tactics.preset === "possession" || tactics.preset === "tiki-taka") {
+        const connector = ["Playmaker", "Deep-Lying Playmaker", "Mezzala", "Box-to-Box"].includes(player.role)
+        return (connector ? 8 : 0) + closeBonus - d * 0.65 + forward * 0.08
+      }
+      return closeBonus + forward * 0.2 - d * 0.5
+    }
+
+    const targets = positions
+      .map((p, i) => ({ i, score: scoreTarget(p, i) }))
+      .filter(v => Number.isFinite(v.score))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3)
+      .map(v => v.i)
+
+    if (!targets.length) return
+
+    setPassDecisionTargets(targets)
+    setPassDecisionOpen(true)
+    setMessage(
+      tactics.preset === "wing-play" ? "WIDE OPTIONS — swipe to the winger or wingback" :
+      tactics.preset === "counter-attack" ? "FORWARD RUNS — swipe to the runner" :
+      tactics.preset === "direct-play" || tactics.preset === "long-ball" ? "FORWARD OPTIONS — choose the runner" :
+      tactics.preset === "possession" || tactics.preset === "tiki-taka" ? "SHORT OPTIONS — choose a nearby support player" :
+      "PASS OPTIONS — swipe to a teammate"
+    )
+
+    decisionTimerRef.current = setTimeout(() => {
+      setPassDecisionOpen(false)
+      setPassDecisionTargets([])
+      decisionCooldownRef.current = Date.now() + 650
+      setMessage("Play resumes — swipe from the ball to pass")
+    }, 1800)
+
+    return () => {
+      if (decisionTimerRef.current) {
+        clearTimeout(decisionTimerRef.current)
+        decisionTimerRef.current = null
+      }
+    }
+  }, [running, ballOwner, positions, playerArchetypes, tactics.preset, substitutionPending])
 
   useEffect(() => {
     if (time === 0 && !completionSentRef.current) {
@@ -608,37 +696,43 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
       const passerIndex = ballOwner
       const tacticalTargetScore = (p: Point, i: number) => {
         const d = Math.hypot(nextBall.x - p.x, nextBall.y - p.y)
-        if (d > 22) return -Infinity
+        if (d > 36) return -Infinity
         const player = playerArchetypes[i]
         if (!player || i === passerIndex) return -Infinity
         const forward = Math.max(0, 55 - p.y)
         const wide = Math.abs(p.x - 50)
         const roleBonus =
-          tactics.preset === "wing-play" && (player.role === "Winger" || player.role === "Wingback") ? 18 :
+          tactics.preset === "wing-play" && (player.role === "Winger" || player.role === "Wingback") ? 30 :
           (tactics.preset === "long-ball" || tactics.preset === "direct-play" || tactics.preset === "counter-attack") &&
-            ["Advanced Forward", "Complete Forward", "Poacher", "Target Forward", "Inside Forward"].includes(player.role) ? 16 :
+            ["Advanced Forward", "Complete Forward", "Poacher", "Target Forward", "Inside Forward"].includes(player.role) ? 26 :
           (tactics.preset === "possession" || tactics.preset === "tiki-taka") &&
             ["Playmaker", "Deep-Lying Playmaker", "Mezzala", "Box-to-Box"].includes(player.role) ? 10 : 0
-        const widthBonus = tactics.preset === "wing-play" ? wide * 0.22 : 0
+        const widthBonus = tactics.preset === "wing-play" ? wide * 0.28 : 0
         const distanceWeight =
-          tactics.preset === "possession" || tactics.preset === "tiki-taka" ? -d * 0.9 :
-          tactics.preset === "long-ball" ? -d * 0.15 : -d * 0.45
+          tactics.preset === "possession" || tactics.preset === "tiki-taka" ? -d * 1.05 :
+          tactics.preset === "long-ball" ? -d * 0.12 : -d * 0.4
         const forwardWeight =
-          tactics.preset === "possession" || tactics.preset === "tiki-taka" ? forward * 0.12 :
-          tactics.preset === "counter-attack" || tactics.preset === "direct-play" || tactics.preset === "long-ball" ? forward * 0.55 :
-          forward * 0.22
+          tactics.preset === "possession" || tactics.preset === "tiki-taka" ? forward * 0.08 :
+          tactics.preset === "counter-attack" || tactics.preset === "direct-play" || tactics.preset === "long-ball" ? forward * 0.65 :
+          forward * 0.2
         return roleBonus + widthBonus + distanceWeight + forwardWeight
       }
 
       let targetIndex: number | null = null
       let bestTargetScore = -Infinity
-      positions.forEach((p, i) => {
+      const allowedTargets = passDecisionTargets.length ? passDecisionTargets : positions.map((_, i) => i)
+      allowedTargets.forEach((i) => {
+        const p = positions[i]
+        if (!p) return
         const score = tacticalTargetScore(p, i)
         if (score > bestTargetScore) {
           bestTargetScore = score
           targetIndex = i
         }
       })
+      if (swipeTargetIndex !== null && allowedTargets.includes(swipeTargetIndex)) {
+        targetIndex = swipeTargetIndex
+      }
 
       // Passing quality: ordinary passes can be intercepted; elite special passers
       // make the ball much harder to read, with only rare subtle errors.
@@ -761,6 +855,13 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
     setSubstitutionPending(null)
     setSubstitutionCountdown(0)
     setTurnover(false)
+    setPassDecisionOpen(false)
+    setPassDecisionTargets([])
+    decisionCooldownRef.current = 0
+    if (decisionTimerRef.current) {
+      clearTimeout(decisionTimerRef.current)
+      decisionTimerRef.current = null
+    }
     setShotResult(null)
     shotCooldownRef.current = false
     setPasses(0)
@@ -822,6 +923,34 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
         <div className="pointer-events-none absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/15" />
         <div className="pointer-events-none absolute left-1/2 top-3 h-14 w-28 -translate-x-1/2 rounded-b-lg border border-t-0 border-white/15" />
         <div className="pointer-events-none absolute bottom-3 left-1/2 h-14 w-28 -translate-x-1/2 rounded-t-lg border border-b-0 border-white/15" />
+
+        {passDecisionOpen && ballOwner !== null && (
+          <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+            {passDecisionTargets.map((i) => {
+              const target = positions[i]
+              if (!target) return null
+              const player = playerArchetypes[i]
+              return (
+                <g key={i}>
+                  <line
+                    x1={positions[ballOwner]?.x ?? ball.x}
+                    y1={positions[ballOwner]?.y ?? ball.y}
+                    x2={target.x}
+                    y2={target.y}
+                    className={cn(
+                      "stroke-primary",
+                      tactics.preset === "wing-play" && (player?.role === "Winger" || player?.role === "Wingback") ? "opacity-100" : "opacity-60"
+                    )}
+                    strokeWidth="1.1"
+                    strokeDasharray="2 1.5"
+                    vectorEffect="non-scaling-stroke"
+                  />
+                  <circle cx={target.x} cy={target.y} r="2.5" className="fill-primary/20 stroke-primary" strokeWidth="0.8" vectorEffect="non-scaling-stroke" />
+                </g>
+              )
+            })}
+          </svg>
+        )}
 
         {/* gesture arrow */}
         {drag && (
@@ -895,7 +1024,12 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
         {/* tactical status */}
         {running && (
           <div className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2 rounded-full bg-background/70 px-3 py-1 text-[9px] font-bold uppercase tracking-widest text-primary backdrop-blur-sm">
-            {turnover ? "TURNOVER — COUNTER" : ballOwner === null ? "DEFEND — AUTO TACKLE" : tactics.preset.replace("-", " ")}
+            {turnover ? "TURNOVER — COUNTER" : ballOwner === null ? "DEFEND — AUTO TACKLE" : passDecisionOpen ? (
+              tactics.preset === "wing-play" ? "WIDE OPTIONS" :
+              tactics.preset === "counter-attack" ? "FORWARD RUNS" :
+              tactics.preset === "direct-play" || tactics.preset === "long-ball" ? "FORWARD OPTIONS" :
+              tactics.preset === "possession" || tactics.preset === "tiki-taka" ? "SHORT OPTIONS" : "PASS OPTIONS"
+            ) : tactics.preset.replace("-", " ")}
           </div>
         )}
 
@@ -909,7 +1043,7 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
         {!drag && (
           <div className="pointer-events-none absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-background/70 px-3 py-1.5 text-[11px] font-medium text-muted-foreground backdrop-blur-sm">
             <Hand className="h-3.5 w-3.5" />
-            {ballOwner === null ? "Defenders tackle automatically when positioned correctly" : "Swipe from the ball to pass"}
+            {ballOwner === null ? "Defenders tackle automatically when positioned correctly" : passDecisionOpen ? "Swipe from the ball to choose a highlighted option" : "Swipe from the ball to pass"}
           </div>
         )}
       </div>
