@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, type ReactNode } from "react"
-import { ChevronLeft, ChevronRight, Gift, Lock, Trophy, RefreshCw, Bucks, Gem } from "lucide-react"
+import { ChevronLeft, ChevronRight, Gift, Lock, Trophy, RefreshCw, Banknote, Gem } from "lucide-react"
 import { getPromotionReward, type MatchWinLevel } from "@/lib/economy"
 import { cn } from "@/lib/utils"
 
