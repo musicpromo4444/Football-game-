@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, type ReactNode } from "react"
 import { ChevronLeft, ChevronRight, Gift, Lock, Trophy } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -160,7 +160,7 @@ function RewardCard({
   tone,
 }: {
   icon: string
-  title: React.ReactNode
+  title: ReactNode
   value: string
   suffix: string
   tone: "emerald" | "cyan" | "amber"
@@ -183,7 +183,7 @@ function RewardCard({
 function StandingsTable({ teams }: { teams: Team[] }) {
   return (
     <div className="overflow-hidden">
-      <div className="grid grid-cols-[25px_minmax(120px,1fr)_28px_28px_28px_34px] gap-1 bg-[#111313] px-2 py-3 text-[8px] font-black uppercase tracking-wider text-white/50">
+      <div className="grid grid-cols-[25px_minmax(120px,1fr)_28px_28px_28px_28px_34px] gap-1 bg-[#111313] px-2 py-3 text-[8px] font-black uppercase tracking-wider text-white/50">
         <span>#</span>
         <span>Club</span>
         <span className="text-center">P</span>
@@ -210,7 +210,7 @@ function StandingsTable({ teams }: { teams: Team[] }) {
           )}
 
           <div className={cn(
-            "grid grid-cols-[25px_minmax(120px,1fr)_28px_28px_28px_34px] items-center gap-1 border-b border-white/5 px-2 py-2.5",
+            "grid grid-cols-[25px_minmax(120px,1fr)_28px_28px_28px_28px_34px] items-center gap-1 border-b border-white/5 px-2 py-2.5",
             team.self && "rounded-xl border border-emerald-500/45 bg-emerald-500/15",
           )}>
             <span className={cn(
