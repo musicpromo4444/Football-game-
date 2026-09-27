@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react"
 import {
-  Coins, Gem, ShoppingBag, Lock, Play, Sparkles, Crown, Zap, Shield,
+  Bucks, Gem, ShoppingBag, Lock, Play, Sparkles, Crown, Zap, Shield,
   Timer, Package, Trophy, Shirt, Footprints, HeartPulse, Crosshair,
   Gift, Star, Swords, CircleDollarSign
 } from "lucide-react"
@@ -21,10 +21,10 @@ const FREE_CLAIMS_KEY = "pitchside-free-store-claims"
 const FREE_COOLDOWN = 30 * 60 * 1000
 
 const FREE_REWARDS = [
-  { id: "coin-small", name: "Coin Boost", icon: "🪙", coins: 2500, gems: 0, text: "2,500 Coins" },
-  { id: "coin-medium", name: "Gem Boost", icon: "💎", coins: 0, gems: 10, text: "10 Gems" },
-  { id: "gem-small", name: "Training Boost", icon: "⚡", coins: 1200, gems: 5, text: "1,200 Coins + 5 Gems" },
-  { id: "stamina-boost", name: "Stamina Boost", icon: "🔥", coins: 1800, gems: 0, text: "1,800 Coins" },
+  { id: "coin-small", name: "Bucks Boost", icon: "💰", bucks: 2500, gems: 0, text: "2,500 Bucks" },
+  { id: "coin-medium", name: "Gem Boost", icon: "💎", bucks: 0, gems: 10, text: "10 Gems" },
+  { id: "gem-small", name: "Training Boost", icon: "⚡", bucks: 1200, gems: 5, text: "1,200 Bucks + 5 Gems" },
+  { id: "stamina-boost", name: "Stamina Boost", icon: "🔥", bucks: 1800, gems: 0, text: "1,800 Bucks" },
 ]
 
 const BOOST_TYPES: TeamBoostType[] = ["ghost-formation", "team-boost", "captain-boost", "defense-shield", "goalkeeper-boost"]
@@ -144,8 +144,8 @@ export function Shop() {
     window.setTimeout(() => setMessage(""), 2200)
   }
 
-  const grant = (coins: number, gems: number, label: string) => {
-    const next = { coins: wallet.coins + coins, gems: wallet.gems + gems }
+  const grant = (bucks: number, gems: number, label: string) => {
+    const next = { bucks: wallet.bucks + bucks, gems: wallet.gems + gems }
     saveWallet(next)
     setWallet(next)
     flash(label)
@@ -161,7 +161,7 @@ export function Shop() {
     grant(reward.coins, reward.gems, reward.name + " claimed free.")
   }
 
-  const claimTimed = (id: string, coins: number, gems: number, label: string) => {
+  const claimTimed = (id: string, bucks: number, gems: number, label: string) => {
     const now = Date.now()
     const last = Number(claims[id] || 0)
     if (last && now - last < FREE_COOLDOWN) return flash("This free reward is still locked.")
@@ -227,9 +227,9 @@ export function Shop() {
     flash(result.message)
   }
 
-  const spend = (currency: "coins" | "gems", amount: number, reward: { coins?: number; gems?: number }, label: string) => {
-    if (wallet[currency] < amount) return flash(`Not enough ${currency === "coins" ? "Coins" : "Gems"}.`)
-    const next = { coins: wallet.coins, gems: wallet.gems, ...reward }
+  const spend = (currency: "bucks" | "gems", amount: number, reward: { bucks?: number; gems?: number }, label: string) => {
+    if (wallet[currency] < amount) return flash(`Not enough ${currency === "bucks" ? "Bucks" : "Gems"}.`)
+    const next = { bucks: wallet.bucks, gems: wallet.gems, ...reward }
     next[currency] -= amount
     saveWallet(next)
     setWallet(next)
@@ -247,11 +247,11 @@ export function Shop() {
             <p className="text-[10px] font-black uppercase tracking-widest text-emerald-300">Tactical Store & Upgrades</p>
             <p className="mt-0.5 text-[8px] text-muted-foreground">Watch daily sponsors for free cards, gems, bux and tactical boosts.</p>
           </div>
-          <div className="shrink-0 text-right"><p className="text-[9px] text-muted-foreground">Bux</p><p className="font-black text-emerald-300">{wallet.coins.toLocaleString()}</p></div>
+          <div className="shrink-0 text-right"><p className="text-[9px] text-muted-foreground">Bux</p><p className="font-black text-emerald-300">{wallet.bucks.toLocaleString()}</p></div>
         </div>
         <div className="mt-2 flex items-center gap-2 rounded-xl bg-black/25 px-2.5 py-2">
           <CircleDollarSign className="h-4 w-4 text-emerald-300" />
-          <span className="text-[9px] font-black">{wallet.coins.toLocaleString()} Bux</span>
+          <span className="text-[9px] font-black">{wallet.bucks.toLocaleString()} Bux</span>
           <span className="ml-auto flex items-center gap-1 text-[9px] font-black text-pink-300"><Gem className="h-3.5 w-3.5 fill-pink-300" />{wallet.gems.toLocaleString()}</span>
         </div>
       </div>
@@ -260,11 +260,11 @@ export function Shop() {
         <SectionTitle icon={<Trophy className="h-3.5 w-3.5" />} title="PLAYER CARD PACKAGE STORE" meta="Guaranteed Player" />
         <div className="grid grid-cols-3 gap-2.5">
           <ProductCard kind="card" icon={<Gift className="h-8 w-8 text-fuchsia-200" />} title="Freemystery" subtitle="80% Silver · 40% Gold · 5% Rare" price={<><Play className="mr-1 inline h-3 w-3" />WATCH AD</>} onBuy={() => claimTimed("free-card", 0, 0, "Mystery card reward claimed.")} accent="pink" badge="FREE" />
-          <ProductCard kind="card" icon={<Package className="h-8 w-8 text-slate-200" />} title="Silver Scout" subtitle="Rating 75–82 · 1 player" price="11,000 Bux" priceIcon={<Coins className="mr-1 inline h-3 w-3" />} onBuy={() => spend("coins", 11000, {}, "Silver Scout pack purchased.")} accent="cyan" />
-          <ProductCard kind="card" icon={<Crown className="h-8 w-8 text-amber-200" />} title="Gold Elite" subtitle="Rating 83–88 · Poacher" price="28,000 Bux" priceIcon={<Coins className="mr-1 inline h-3 w-3" />} onBuy={() => spend("coins", 28000, {}, "Gold Elite pack purchased.")} accent="gold" />
-          <ProductCard kind="card" icon={<Star className="h-8 w-8 text-cyan-200" />} title="Diamond Stars" subtitle="Rating 90–92 · Commander" price="45,000 Bux" priceIcon={<Coins className="mr-1 inline h-3 w-3" />} onBuy={() => spend("coins", 45000, {}, "Diamond Stars pack purchased.")} accent="cyan" />
-          <ProductCard kind="card" icon={<Swords className="h-8 w-8 text-violet-200" />} title="Producer Pack" subtitle="Architect Archetype" price="15,000 Bux" priceIcon={<Coins className="mr-1 inline h-3 w-3" />} onBuy={() => spend("coins", 15000, {}, "Producer Pack purchased.")} accent="pink" />
-          <ProductCard kind="card" icon={<Shield className="h-8 w-8 text-emerald-200" />} title="Stopper Pack" subtitle="Defender & Keeper Box" price="20,000 Bux" priceIcon={<Coins className="mr-1 inline h-3 w-3" />} onBuy={() => spend("coins", 20000, {}, "Stopper Pack purchased.")} accent="green" />
+          <ProductCard kind="card" icon={<Package className="h-8 w-8 text-slate-200" />} title="Silver Scout" subtitle="Rating 75–82 · 1 player" price="11,000 Bux" priceIcon={<Bucks className="mr-1 inline h-3 w-3" />} onBuy={() => spend("bucks", 11000, {}, "Silver Scout pack purchased.")} accent="cyan" />
+          <ProductCard kind="card" icon={<Crown className="h-8 w-8 text-amber-200" />} title="Gold Elite" subtitle="Rating 83–88 · Poacher" price="28,000 Bux" priceIcon={<Bucks className="mr-1 inline h-3 w-3" />} onBuy={() => spend("bucks", 28000, {}, "Gold Elite pack purchased.")} accent="gold" />
+          <ProductCard kind="card" icon={<Star className="h-8 w-8 text-cyan-200" />} title="Diamond Stars" subtitle="Rating 90–92 · Commander" price="45,000 Bux" priceIcon={<Bucks className="mr-1 inline h-3 w-3" />} onBuy={() => spend("bucks", 45000, {}, "Diamond Stars pack purchased.")} accent="cyan" />
+          <ProductCard kind="card" icon={<Swords className="h-8 w-8 text-violet-200" />} title="Producer Pack" subtitle="Architect Archetype" price="15,000 Bux" priceIcon={<Bucks className="mr-1 inline h-3 w-3" />} onBuy={() => spend("bucks", 15000, {}, "Producer Pack purchased.")} accent="pink" />
+          <ProductCard kind="card" icon={<Shield className="h-8 w-8 text-emerald-200" />} title="Stopper Pack" subtitle="Defender & Keeper Box" price="20,000 Bux" priceIcon={<Bucks className="mr-1 inline h-3 w-3" />} onBuy={() => spend("bucks", 20000, {}, "Stopper Pack purchased.")} accent="green" />
         </div>
       </section>
 
@@ -283,12 +283,12 @@ export function Shop() {
       <section className="mt-6">
         <SectionTitle icon={<CircleDollarSign className="h-3.5 w-3.5" />} title="BUX STORE" meta="Club Currency" />
         <div className="grid grid-cols-3 gap-2.5">
-          <ProductCard kind="bux" icon={<Coins className="h-8 w-8 text-emerald-200" />} title="Free Bux" subtitle="Grants 250 to 500 Bux" price={<><Play className="mr-1 inline h-3 w-3" />WATCH AD</>} onBuy={() => claimTimed("free-bux", 350, 0, "350 Bux claimed.")} accent="green" badge="AD" />
-          <ProductCard kind="bux" icon={<Coins className="h-8 w-8 text-emerald-200" />} title="1,500 Bux" subtitle="Pile of Bux" price="30 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 30, { coins: wallet.coins + 1500 }, "1,500 Bux added.")} accent="green" />
-          <ProductCard kind="bux" icon={<Coins className="h-8 w-8 text-emerald-200" />} title="3,500 Bux" subtitle="+15% Bonus" price="60 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 60, { coins: wallet.coins + 3500 }, "3,500 Bux added.")} accent="green" />
-          <ProductCard kind="bux" icon={<Coins className="h-8 w-8 text-emerald-200" />} title="8,000 Bux" subtitle="+30% Best Deal" price="130 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 130, { coins: wallet.coins + 8000 }, "8,000 Bux added.")} accent="green" />
-          <ProductCard kind="bux" icon={<Coins className="h-8 w-8 text-emerald-200" />} title="20,000 Bux" subtitle="+50% Value" price="300 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 300, { coins: wallet.coins + 20000 }, "20,000 Bux added.")} accent="green" />
-          <ProductCard kind="bux" icon={<Coins className="h-8 w-8 text-emerald-200" />} title="50,000 Bux" subtitle="Treasury Pallet" price="₦6,500" onBuy={() => flash("Payment will open when store billing is connected.")} accent="green" />
+          <ProductCard kind="bux" icon={<Bucks className="h-8 w-8 text-emerald-200" />} title="Free Bux" subtitle="Grants 250 to 500 Bux" price={<><Play className="mr-1 inline h-3 w-3" />WATCH AD</>} onBuy={() => claimTimed("free-bux", 350, 0, "350 Bux claimed.")} accent="green" badge="AD" />
+          <ProductCard kind="bux" icon={<Bucks className="h-8 w-8 text-emerald-200" />} title="1,500 Bux" subtitle="Pile of Bux" price="30 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 30, { bucks: wallet.bucks + 1500 }, "1,500 Bux added.")} accent="green" />
+          <ProductCard kind="bux" icon={<Bucks className="h-8 w-8 text-emerald-200" />} title="3,500 Bux" subtitle="+15% Bonus" price="60 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 60, { bucks: wallet.bucks + 3500 }, "3,500 Bux added.")} accent="green" />
+          <ProductCard kind="bux" icon={<Bucks className="h-8 w-8 text-emerald-200" />} title="8,000 Bux" subtitle="+30% Best Deal" price="130 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 130, { bucks: wallet.bucks + 8000 }, "8,000 Bux added.")} accent="green" />
+          <ProductCard kind="bux" icon={<Bucks className="h-8 w-8 text-emerald-200" />} title="20,000 Bux" subtitle="+50% Value" price="300 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 300, { bucks: wallet.bucks + 20000 }, "20,000 Bux added.")} accent="green" />
+          <ProductCard kind="bux" icon={<Bucks className="h-8 w-8 text-emerald-200" />} title="50,000 Bux" subtitle="Treasury Pallet" price="₦6,500" onBuy={() => flash("Payment will open when store billing is connected.")} accent="green" />
         </div>
       </section>
 
@@ -299,7 +299,7 @@ export function Shop() {
           <ProductCard kind="item" icon={<Zap className="h-8 w-8 text-cyan-200" />} title="3-5-2 Tactic" subtitle="Wing play formation" price="UNLOCKED" onBuy={() => flash("3-5-2 Tactic is already unlocked.")} accent="cyan" />
           <ProductCard kind="item" icon={<Shirt className="h-8 w-8 text-emerald-200" />} title="Kit Editor" subtitle="Normal · Pro · Legendary · Special Event" price="OPEN" onBuy={() => setKitEditorOpen(true)} accent="green" badge="CUSTOMIZE" />
           <ProductCard kind="item" icon={<Footprints className="h-8 w-8 text-orange-200" />} title="Speed Boots" subtitle="+2% speed per match" price="40 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 40, {}, "Speed Boots activated.")} accent="pink" />
-          <ProductCard kind="item" icon={<HeartPulse className="h-8 w-8 text-rose-200" />} title="Injury Shield" subtitle="20 matches guard" price="8,000 Bux" priceIcon={<Coins className="mr-1 inline h-3 w-3" />} onBuy={() => spend("coins", 8000, {}, "Injury Shield activated.")} accent="gold" />
+          <ProductCard kind="item" icon={<HeartPulse className="h-8 w-8 text-rose-200" />} title="Injury Shield" subtitle="20 matches guard" price="8,000 Bux" priceIcon={<Bucks className="mr-1 inline h-3 w-3" />} onBuy={() => spend("bucks", 8000, {}, "Injury Shield activated.")} accent="gold" />
           <ProductCard kind="item" icon={<Crown className="h-8 w-8 text-yellow-200" />} title="Extra Sub Slot" subtitle="+1 squad slot" price="80 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 80, {}, "Extra Sub Slot unlocked.")} accent="pink" />
         </div>
       </section>
@@ -369,7 +369,7 @@ export function Shop() {
         <div className="grid grid-cols-2 gap-2.5">
           {realMoneyPacks.map((pack) => (
             <Card key={pack.id} className="border-white/5 bg-[#111416] p-2.5">
-              <ProductArt kind={pack.gems ? "gems" : "bux"} icon={pack.gems ? <Gem className="h-8 w-8 fill-pink-300 text-pink-100" /> : <Coins className="h-8 w-8 text-emerald-200" />} />
+              <ProductArt kind={pack.gems ? "gems" : "bux"} icon={pack.gems ? <Gem className="h-8 w-8 fill-pink-300 text-pink-100" /> : <Bucks className="h-8 w-8 text-emerald-200" />} />
               <p className="mt-2 font-black">{pack.name}</p>
               <p className="mt-0.5 text-[8px] text-muted-foreground">{pack.description}</p>
               <p className="mt-2 text-sm font-black">{formatRealMoney(pack.usd, profile?.countryCode)}</p>
