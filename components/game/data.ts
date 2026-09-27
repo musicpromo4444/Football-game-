@@ -202,6 +202,19 @@ export type Player = {
   rating: number
   stamina: number
   style: PlayerRole
+  number?: number
+  face?: string
+  look?: string
+  height?: number
+  attributes?: {
+    pace: number
+    passing: number
+    shooting: number
+    defending: number
+    stamina: number
+    heading: number
+    strength: number
+  }
   specialStyle?: SpecialPlayerStyle
   specialName?: string
 }
