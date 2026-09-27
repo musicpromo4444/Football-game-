@@ -263,6 +263,7 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
     const base = formationSlots[tactics.formation]
     const preset = tacticalPresets[tactics.preset] || tacticalPresets.possession
     const id = setInterval(() => {
+      if (passDecisionOpen) return
       const t = Date.now() / 1000
       const ballNow = lastBallRef.current
       setPositions((current) => current.map((p, i) => {
