@@ -35,7 +35,7 @@ import {
   weeklyResetGrid,
   type TabId,
 } from "@/components/game/data"
-import { awardMatchWin, type MatchWinLevel } from "@/lib/economy"
+import { awardMatchWin, awardMatchDraw, type MatchWinLevel } from "@/lib/economy"
 
 export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
   const [inMatch, setInMatch] = useState(false)
@@ -47,6 +47,7 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
   const [rematchOffer, setRematchOffer] = useState<any>(null)
   const [matchDone, setMatchDone] = useState(false)
   const [matchReward, setMatchReward] = useState<number | null>(null)
+  const [matchRewardLabel, setMatchRewardLabel] = useState<"WIN" | "DRAW" | null>(null)
 
   useEffect(() => {
     if (!supabase) return
@@ -68,6 +69,8 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
             setQueueing(false)
             setMatchDone(false)
             setMatchReward(null)
+        setMatchRewardLabel(null)
+            setMatchRewardLabel(null)
           }
         })
         .on("postgres_changes", { event: "INSERT", schema: "public", table: "rematch_offers" }, (payload) => {
@@ -110,6 +113,11 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
       if (outcome.home > outcome.away) {
         const reward = awardMatchWin(matchLevel)
         setMatchReward(reward.reward)
+        setMatchRewardLabel("WIN")
+      } else if (outcome.home === outcome.away) {
+        const reward = awardMatchDraw()
+        setMatchReward(reward.reward)
+        setMatchRewardLabel("DRAW")
       }
       if (result?.rematch_offer_id) {
         setRematchOffer({ id: result.rematch_offer_id, status: "open" })
@@ -155,7 +163,7 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
         <MatchCanvas onMatchComplete={finishOnlineMatch} />
         {matchReward !== null ? (
           <div className="mx-5 mt-3 rounded-2xl border border-emerald-500/35 bg-emerald-500/10 px-4 py-3 text-center">
-            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-300">Match Win Reward</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-300">{matchRewardLabel === "DRAW" ? "Draw Reward" : "Match Win Reward"}</p>
             <p className="mt-1 text-xl font-black text-emerald-200">+{matchReward.toLocaleString()} Bux</p>
           </div>
         ) : null}
