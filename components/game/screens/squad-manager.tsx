@@ -104,7 +104,7 @@ function PlayerFace({ player }: { player: Player }) {
   )
 }
 
-function getPlayerCardStats(player: Player) {
+function getPlayerCardStats(player: Player, trainingBoost = 0) {
   const r = player.rating
   const role = player.style
   const base = {
@@ -138,7 +138,8 @@ function getPlayerCardStats(player: Player) {
     "Complete Forward": { SPE: r + 2, ACC: r + 2, STR: r + 1, CON: r + 3, PAS: r + 3, SHO: r + 5, TAC: r - 12 },
   }
   const values = { ...base, ...(bonus[role] || {}) }
-  return Object.fromEntries(Object.entries(values).map(([key, value]) => [key, Math.max(1, Math.min(99, Math.round(value)))])) as Record<keyof typeof base, number>
+  const boosted = Object.fromEntries(Object.entries(values).map(([key, value]) => [key, Number(value) + trainingBoost])) as typeof values
+  return Object.fromEntries(Object.entries(boosted).map(([key, value]) => [key, Math.max(1, Math.min(99, Math.round(value)))])) as Record<keyof typeof base, number>
 }
 
 function PlayerCard({ player, compact = false }: { player: Player; compact?: boolean }) {
@@ -509,7 +510,7 @@ export function SquadManager() {
                 {selectedPlayer ? <button type="button" onClick={() => setSelectedPlayerId(null)} className="rounded-lg border border-border px-2 py-1 text-[9px] font-bold">Cancel</button> : null}
               </div>
             <div className="grid grid-cols-1 gap-2">
-              {lineup.map((id) => { const p = teamPlayers.find((player) => player.id === id); return p ? <button type="button" key={p.id} onClick={() => setSelectedPlayerId(p.id)} className="text-left">{<PlayerCard player={p} />}</button> : null })}
+              {lineup.map((id) => { const p = teamPlayers.find((player) => player.id === id); return p ? <button type="button" key={p.id} onClick={() => setSelectedPlayerId(p.id)} className="text-left">{<PlayerCard player={p} trainingBoost={(() => { const record = trainingState[p.id]; return record && trainingNow >= record.completesAt ? record.boost : 0 })()} />}</button> : null })}
             </div>
             </Card>
 
