@@ -1,10 +1,14 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Coins, Gem, ShoppingBag, Lock, Play, Sparkles, Crown, Zap, Shield, Timer } from "lucide-react"
+import {
+  Coins, Gem, ShoppingBag, Lock, Play, Sparkles, Crown, Zap, Shield,
+  Timer, Package, Trophy, Shirt, Footprints, HeartPulse, Crosshair,
+  Gift, Star, Swords, CircleDollarSign
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, Pill, ScreenHeader } from "@/components/game/ui-bits"
-import { readWallet, purchaseShopItem, readShopItems, saveWallet, type Wallet } from "@/lib/economy"
+import { readWallet, saveWallet, purchaseShopItem, readShopItems, type Wallet } from "@/lib/economy"
 import { formatRealMoney, getCountry, readProfile } from "@/lib/locale"
 import { readRealMoneyPacks } from "@/lib/shop-pricing"
 import { loadClubSquad } from "@/lib/club-squad"
@@ -14,14 +18,73 @@ import { squad } from "@/components/game/data"
 
 const FREE_CLAIMS_KEY = "pitchside-free-store-claims"
 const FREE_COOLDOWN = 30 * 60 * 1000
+
 const FREE_REWARDS = [
   { id: "coin-small", name: "Coin Boost", icon: "🪙", coins: 2500, gems: 0, text: "2,500 Coins" },
   { id: "coin-medium", name: "Gem Boost", icon: "💎", coins: 0, gems: 10, text: "10 Gems" },
   { id: "gem-small", name: "Training Boost", icon: "⚡", coins: 1200, gems: 5, text: "1,200 Coins + 5 Gems" },
   { id: "stamina-boost", name: "Stamina Boost", icon: "🔥", coins: 1800, gems: 0, text: "1,800 Coins" },
 ]
+
 const BOOST_TYPES: TeamBoostType[] = ["ghost-formation", "team-boost", "captain-boost", "defense-shield", "goalkeeper-boost"]
 const BOOST_DURATIONS: TeamBoostDuration[] = ["1-match", "3-matches", "24-hours"]
+
+type ArtKind = "card" | "gems" | "bux" | "item" | "package"
+
+function ProductArt({ kind, icon, label }: { kind: ArtKind; icon?: React.ReactNode; label?: string }) {
+  const styles: Record<ArtKind, string> = {
+    card: "from-violet-500/40 via-indigo-500/15 to-cyan-400/20 border-violet-300/30",
+    gems: "from-pink-500/45 via-rose-500/15 to-purple-500/20 border-pink-300/30",
+    bux: "from-emerald-500/40 via-green-500/15 to-cyan-400/15 border-emerald-300/30",
+    item: "from-amber-400/35 via-orange-500/10 to-lime-400/15 border-amber-300/30",
+    package: "from-sky-500/35 via-blue-500/10 to-violet-500/20 border-sky-300/30",
+  }
+  return (
+    <div className={`relative mx-auto flex h-[82px] w-full items-center justify-center overflow-hidden rounded-2xl border bg-gradient-to-br ${styles[kind]} shadow-[inset_0_1px_0_rgba(255,255,255,.14),0_8px_20px_rgba(0,0,0,.22)]`}>
+      <div className="absolute -right-6 -top-8 h-20 w-20 rounded-full bg-white/10 blur-xl" />
+      <div className="absolute -bottom-8 -left-5 h-16 w-16 rounded-full bg-black/20 blur-xl" />
+      <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl border border-white/15 bg-black/20 text-white shadow-lg backdrop-blur-sm">
+        {icon}
+      </div>
+      {label && <span className="absolute bottom-1.5 rounded-full bg-black/55 px-2 py-0.5 text-[7px] font-black uppercase tracking-wider text-white/90">{label}</span>}
+    </div>
+  )
+}
+
+function PriceButton({ children, onClick, accent = "cyan" }: { children: React.ReactNode; onClick: () => void; accent?: "cyan" | "pink" | "green" | "gold" }) {
+  const colors = {
+    cyan: "bg-cyan-400 text-slate-950 hover:bg-cyan-300",
+    pink: "bg-pink-500 text-white hover:bg-pink-400",
+    green: "bg-emerald-400 text-slate-950 hover:bg-emerald-300",
+    gold: "bg-amber-400 text-slate-950 hover:bg-amber-300",
+  }
+  return <Button size="sm" onClick={onClick} className={`mt-2 w-full rounded-xl px-2 text-[10px] font-black shadow-lg ${colors[accent]}`}>{children}</Button>
+}
+
+function ProductCard({
+  kind, icon, title, subtitle, price, priceIcon, onBuy, accent = "cyan", badge
+}: {
+  kind: ArtKind
+  icon: React.ReactNode
+  title: string
+  subtitle: string
+  price: React.ReactNode
+  priceIcon?: React.ReactNode
+  onBuy: () => void
+  accent?: "cyan" | "pink" | "green" | "gold"
+  badge?: string
+}) {
+  return (
+    <Card className="overflow-hidden border-white/5 bg-[#111416] p-2.5 shadow-[0_8px_24px_rgba(0,0,0,.28)]">
+      <div className="relative">
+        <ProductArt kind={kind} icon={icon} label={badge} />
+      </div>
+      <p className="mt-2 truncate text-[11px] font-black">{title}</p>
+      <p className="mt-0.5 min-h-[24px] text-[8px] leading-3 text-muted-foreground">{subtitle}</p>
+      <PriceButton onClick={onBuy} accent={accent}>{priceIcon}{price}</PriceButton>
+    </Card>
+  )
+}
 
 function readClaims(): Record<string, number> {
   try {
@@ -45,7 +108,6 @@ export function Shop() {
   const [claims, setClaims] = useState<Record<string, number>>({})
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>(() => loadClubSquad(squad)[0]?.id || "")
   const [boostAd, setBoostAd] = useState<{ tier: TrainingBoostTier; seconds: number } | null>(null)
-  const [tab, setTab] = useState<"featured" | "training" | "team" | "currency">("featured")
   const [selectedDuration, setSelectedDuration] = useState<Record<TeamBoostType, TeamBoostDuration>>({
     "ghost-formation": "1-match",
     "team-boost": "3-matches",
@@ -72,22 +134,31 @@ export function Shop() {
     window.setTimeout(() => setMessage(""), 2200)
   }
 
+  const grant = (coins: number, gems: number, label: string) => {
+    const next = { coins: wallet.coins + coins, gems: wallet.gems + gems }
+    saveWallet(next)
+    setWallet(next)
+    flash(label)
+  }
+
   const claimFree = (reward: typeof FREE_REWARDS[number]) => {
     const now = Date.now()
     const last = Number(claims[reward.id] || 0)
     if (last && now - last < FREE_COOLDOWN) return flash("This reward is still locked.")
-    const nextWallet = { coins: wallet.coins + reward.coins, gems: wallet.gems + reward.gems }
-    saveWallet(nextWallet)
     const nextClaims = { ...claims, [reward.id]: now }
     localStorage.setItem(FREE_CLAIMS_KEY, JSON.stringify(nextClaims))
-    setWallet(nextWallet); setClaims(nextClaims)
-    flash(reward.name + " claimed free.")
+    setClaims(nextClaims)
+    grant(reward.coins, reward.gems, reward.name + " claimed free.")
   }
 
-  const applyTrainingBoost = (tier: TrainingBoostTier) => {
-    if (!selectedPlayerId) return flash("Select a player first.")
-    const result = grantTrainingBoost(selectedPlayerId, tier)
-    flash(`${TRAINING_BOOST_PACKAGES[tier].label} applied instantly to ${selectedPlayer?.name || "player"}.`)
+  const claimTimed = (id: string, coins: number, gems: number, label: string) => {
+    const now = Date.now()
+    const last = Number(claims[id] || 0)
+    if (last && now - last < FREE_COOLDOWN) return flash("This free reward is still locked.")
+    const nextClaims = { ...claims, [id]: now }
+    localStorage.setItem(FREE_CLAIMS_KEY, JSON.stringify(nextClaims))
+    setClaims(nextClaims)
+    grant(coins, gems, label)
   }
 
   const buyTrainingBoost = (tier: TrainingBoostTier) => {
@@ -96,14 +167,22 @@ export function Shop() {
     if (tier === "power") {
       if (wallet.gems < 30) return flash("Not enough Gems.")
       const next = { ...wallet, gems: wallet.gems - 30 }
-      saveWallet(next); setWallet(next); applyTrainingBoost(tier); return
+      saveWallet(next); setWallet(next)
+      grantTrainingBoost(selectedPlayerId, tier)
+      flash(`${TRAINING_BOOST_PACKAGES[tier].label} applied to ${selectedPlayer?.name || "player"}.`)
+      return
     }
     flash("Payment will open when store billing is connected.")
   }
 
   useEffect(() => {
     if (!boostAd) return
-    if (boostAd.seconds <= 0) { applyTrainingBoost(boostAd.tier); setBoostAd(null); return }
+    if (boostAd.seconds <= 0) {
+      grantTrainingBoost(selectedPlayerId, boostAd.tier)
+      setBoostAd(null)
+      flash(`${TRAINING_BOOST_PACKAGES[boostAd.tier].label} applied to ${selectedPlayer?.name || "player"}.`)
+      return
+    }
     const id = window.setTimeout(() => setBoostAd((v) => v ? { ...v, seconds: v.seconds - 1 } : null), 1000)
     return () => window.clearTimeout(id)
   }, [boostAd])
@@ -120,97 +199,174 @@ export function Shop() {
 
   const buy = (id: string) => {
     const result = purchaseShopItem(id)
-    setWallet(result.wallet); flash(result.message)
+    setWallet(result.wallet)
+    flash(result.message)
+  }
+
+  const spend = (currency: "coins" | "gems", amount: number, reward: { coins?: number; gems?: number }, label: string) => {
+    if (wallet[currency] < amount) return flash(`Not enough ${currency === "coins" ? "Coins" : "Gems"}.`)
+    const next = { coins: wallet.coins, gems: wallet.gems, ...reward }
+    next[currency] -= amount
+    saveWallet(next)
+    setWallet(next)
+    flash(label)
   }
 
   return (
-    <div className="px-4 pb-8 pt-4">
+    <div className="min-h-full bg-[#070909] px-3 pb-8 pt-3 text-white">
       <ScreenHeader title="Store" subtitle={country.flag + " " + country.name + " · " + country.currency} />
-      <div className="mb-4 rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/15 via-card to-card p-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/15"><Sparkles className="h-6 w-6 text-primary" /></div>
-          <div className="min-w-0 flex-1"><p className="font-display text-lg font-black">PitchSide Store</p><p className="text-[10px] text-muted-foreground">Permanent player upgrades and temporary match boosts.</p></div>
-          <Pill accent="cyan">LIVE</Pill>
-        </div>
-      </div>
 
-      <div className="mb-5 grid grid-cols-4 gap-2">
-        {(["featured", "training", "team", "currency"] as const).map((value) => (
-          <Button key={value} size="sm" variant={tab === value ? "default" : "outline"} onClick={() => setTab(value)} className="rounded-xl px-2 text-[10px] capitalize">{value}</Button>
-        ))}
-      </div>
-
-      {(tab === "featured" || tab === "currency") && <>
-        <div className="mb-3 flex items-center gap-2"><ShoppingBag className="h-4 w-4 text-primary" /><p className="font-black">Daily Free Rewards</p><Pill accent="cyan">Watch Ad</Pill></div>
-        <div className="grid grid-cols-2 gap-3">
-          {FREE_REWARDS.map((reward) => {
-            const remaining = Math.max(0, FREE_COOLDOWN - (Date.now() - Number(claims[reward.id] || 0)))
-            const locked = remaining > 0
-            return <Card key={reward.id} className="relative overflow-hidden p-3">
-              <div className="absolute right-2 top-2 rounded-full bg-primary/10 px-2 py-1 text-[8px] font-black text-primary">FREE</div>
-              <div className="flex h-14 items-center justify-center text-4xl">{reward.icon}</div>
-              <p className="mt-2 font-black">{reward.name}</p><p className="mt-1 text-[10px] text-muted-foreground">{reward.text}</p>
-              <Button disabled={locked} onClick={() => claimFree(reward)} size="sm" className="mt-3 w-full rounded-xl">{locked ? <><Lock className="mr-1 inline h-3 w-3" />{formatCooldown(remaining)}</> : <><Play className="mr-1 inline h-3 w-3" />Watch Ad</>}</Button>
-            </Card>
-          })}
-        </div>
-      </>}
-
-      {(tab === "featured" || tab === "training") && <>
-        <div className="mb-3 mt-7 flex items-center gap-2"><Zap className="h-4 w-4 text-primary" /><p className="font-black">Player Training Boosts</p><Pill accent="cyan">Permanent</Pill></div>
-        <Card className="mb-3 border-primary/20 bg-primary/5 p-3">
-          <p className="text-[9px] font-black uppercase tracking-wider text-muted-foreground">Selected player</p>
-          <div className="mt-2 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary font-black">{selectedPlayer?.rating ?? "--"}</div>
-            <div className="min-w-0 flex-1"><p className="truncate font-black">{selectedPlayer?.name ?? "Select a player"}</p><p className="text-[9px] text-muted-foreground">Permanent and usable immediately.</p></div><Crown className="h-5 w-5 text-amber-300" />
+      <div className="mb-3 rounded-2xl border border-emerald-400/15 bg-gradient-to-r from-emerald-500/10 via-[#111416] to-[#111416] p-3 shadow-[0_10px_30px_rgba(0,0,0,.25)]">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-400/10"><ShoppingBag className="h-5 w-5 text-emerald-300" /></div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-300">Tactical Store & Upgrades</p>
+            <p className="mt-0.5 text-[8px] text-muted-foreground">Watch daily sponsors for free cards, gems, bux and tactical boosts.</p>
           </div>
-          <div className="mt-3 flex gap-2 overflow-x-auto pb-1">{club.map((player) => {
-            const active = player.id === selectedPlayerId
-            const boost = readPlayerTrainingBoost(player.id)
-            return <button key={player.id} type="button" onClick={() => setSelectedPlayerId(player.id)} className={`min-w-[96px] rounded-xl border px-2 py-2 text-left ${active ? "border-primary bg-primary/15" : "border-border bg-card/60"}`}><p className="truncate text-[10px] font-black">{player.name}</p><p className="text-[9px] text-muted-foreground">{player.pos} · OVR {player.rating + boost.ovr}</p></button>
-          })}</div>
-        </Card>
-        <div className="space-y-3">
-          <Card className="p-4"><div className="flex items-center gap-3"><div className="text-xl">⚡</div><div className="flex-1"><p className="font-black">Starter Boost</p><p className="text-[10px] text-muted-foreground">+1 OVR · +1 to 3 random stats</p></div><Button size="sm" onClick={() => buyTrainingBoost("starter")}>Watch Ad</Button></div></Card>
-          <Card className="p-4"><div className="flex items-center gap-3"><div className="text-xl">💎</div><div className="flex-1"><p className="font-black">Power Boost</p><p className="text-[10px] text-muted-foreground">+2 OVR · +3 to 3 random stats</p></div><Button size="sm" onClick={() => buyTrainingBoost("power")}>30 Gems</Button></div></Card>
-          <Card className="p-4"><div className="flex items-center gap-3"><div className="text-xl">👑</div><div className="flex-1"><p className="font-black">Elite Boost</p><p className="text-[10px] text-muted-foreground">+4 OVR · +5 to 4 random stats</p></div><Button size="sm" onClick={() => buyTrainingBoost("elite")}>$1.25</Button></div></Card>
+          <div className="shrink-0 text-right"><p className="text-[9px] text-muted-foreground">Bux</p><p className="font-black text-emerald-300">{wallet.coins.toLocaleString()}</p></div>
         </div>
-      </>}
+        <div className="mt-2 flex items-center gap-2 rounded-xl bg-black/25 px-2.5 py-2">
+          <CircleDollarSign className="h-4 w-4 text-emerald-300" />
+          <span className="text-[9px] font-black">{wallet.coins.toLocaleString()} Bux</span>
+          <span className="ml-auto flex items-center gap-1 text-[9px] font-black text-pink-300"><Gem className="h-3.5 w-3.5 fill-pink-300" />{wallet.gems.toLocaleString()}</span>
+        </div>
+      </div>
 
-      {(tab === "featured" || tab === "team") && <>
-        <div className="mb-3 mt-7 flex items-center gap-2"><Shield className="h-4 w-4 text-primary" /><p className="font-black">Temporary Team Boosts</p><Pill accent="cyan">Match Boosts</Pill></div>
-        <p className="mb-3 text-[10px] text-muted-foreground">Each boost has its own effect, duration option and price. Active boosts work in real matches.</p>
-        <div className="space-y-3">
+      <section>
+        <SectionTitle icon={<Trophy className="h-3.5 w-3.5" />} title="PLAYER CARD PACKAGE STORE" meta="Guaranteed Player" />
+        <div className="grid grid-cols-3 gap-2.5">
+          <ProductCard kind="card" icon={<Gift className="h-8 w-8 text-fuchsia-200" />} title="Freemystery" subtitle="80% Silver · 40% Gold · 5% Rare" price={<><Play className="mr-1 inline h-3 w-3" />WATCH AD</>} onBuy={() => claimTimed("free-card", 0, 0, "Mystery card reward claimed.")} accent="pink" badge="FREE" />
+          <ProductCard kind="card" icon={<Package className="h-8 w-8 text-slate-200" />} title="Silver Scout" subtitle="Rating 75–82 · 1 player" price="800 Bux" priceIcon={<Coins className="mr-1 inline h-3 w-3" />} onBuy={() => spend("coins", 800, {}, "Silver Scout pack purchased.")} accent="cyan" />
+          <ProductCard kind="card" icon={<Crown className="h-8 w-8 text-amber-200" />} title="Gold Elite" subtitle="Rating 83–88 · Poacher" price="2,000 Bux" priceIcon={<Coins className="mr-1 inline h-3 w-3" />} onBuy={() => spend("coins", 2000, {}, "Gold Elite pack purchased.")} accent="gold" />
+          <ProductCard kind="card" icon={<Star className="h-8 w-8 text-cyan-200" />} title="Diamond Stars" subtitle="Rating 90–92 · Commander" price="3,500 Bux" priceIcon={<Coins className="mr-1 inline h-3 w-3" />} onBuy={() => spend("coins", 3500, {}, "Diamond Stars pack purchased.")} accent="cyan" />
+          <ProductCard kind="card" icon={<Swords className="h-8 w-8 text-violet-200" />} title="Producer Pack" subtitle="Architect Archetype" price="1,200 Bux" priceIcon={<Coins className="mr-1 inline h-3 w-3" />} onBuy={() => spend("coins", 1200, {}, "Producer Pack purchased.")} accent="pink" />
+          <ProductCard kind="card" icon={<Shield className="h-8 w-8 text-emerald-200" />} title="Stopper Pack" subtitle="Defender & Keeper Box" price="1,500 Bux" priceIcon={<Coins className="mr-1 inline h-3 w-3" />} onBuy={() => spend("coins", 1500, {}, "Stopper Pack purchased.")} accent="green" />
+        </div>
+      </section>
+
+      <section className="mt-6">
+        <SectionTitle icon={<Gem className="h-3.5 w-3.5 fill-current" />} title="GEMS STORE" meta="Instant Delivery" />
+        <div className="grid grid-cols-3 gap-2.5">
+          <ProductCard kind="gems" icon={<Gem className="h-8 w-8 fill-pink-300 text-pink-100" />} title="Free Gems" subtitle="Grants 5–10 free gems" price={<><Play className="mr-1 inline h-3 w-3" />WATCH AD</>} onBuy={() => claimTimed("free-gems", 0, 10, "10 Gems claimed.")} accent="pink" badge="AD" />
+          <ProductCard kind="gems" icon={<Gem className="h-8 w-8 fill-pink-300 text-pink-100" />} title="80 Gems" subtitle="Handful of Gems" price="₦650" onBuy={() => spend("coins", 650, { gems: wallet.gems + 80 }, "80 Gems added.")} accent="pink" />
+          <ProductCard kind="gems" icon={<Gem className="h-9 w-9 fill-pink-300 text-pink-100" />} title="500 Gems" subtitle="+10% Bonus" price="₦2,900" onBuy={() => spend("coins", 2900, { gems: wallet.gems + 500 }, "500 Gems added.")} accent="pink" />
+          <ProductCard kind="gems" icon={<Gem className="h-9 w-9 fill-pink-300 text-pink-100" />} title="1,200 Gems" subtitle="Best Value" price="₦6,500" onBuy={() => spend("coins", 6500, { gems: wallet.gems + 1200 }, "1,200 Gems added.")} accent="pink" />
+          <ProductCard kind="gems" icon={<Gem className="h-9 w-9 fill-pink-300 text-pink-100" />} title="2,500 Gems" subtitle="+35% Bonus" price="₦12,500" onBuy={() => spend("coins", 12500, { gems: wallet.gems + 2500 }, "2,500 Gems added.")} accent="pink" />
+          <ProductCard kind="gems" icon={<Gem className="h-9 w-9 fill-pink-300 text-pink-100" />} title="6,500 Gems" subtitle="+50% Value" price="₦29,000" onBuy={() => spend("coins", 29000, { gems: wallet.gems + 6500 }, "6,500 Gems added.")} accent="pink" />
+        </div>
+      </section>
+
+      <section className="mt-6">
+        <SectionTitle icon={<CircleDollarSign className="h-3.5 w-3.5" />} title="BUX STORE" meta="Club Currency" />
+        <div className="grid grid-cols-3 gap-2.5">
+          <ProductCard kind="bux" icon={<Coins className="h-8 w-8 text-emerald-200" />} title="Free Bux" subtitle="Grants 250 to 500 Bux" price={<><Play className="mr-1 inline h-3 w-3" />WATCH AD</>} onBuy={() => claimTimed("free-bux", 350, 0, "350 Bux claimed.")} accent="green" badge="AD" />
+          <ProductCard kind="bux" icon={<Coins className="h-8 w-8 text-emerald-200" />} title="1,500 Bux" subtitle="Pile of Bux" price="30 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 30, { coins: wallet.coins + 1500 }, "1,500 Bux added.")} accent="green" />
+          <ProductCard kind="bux" icon={<Coins className="h-8 w-8 text-emerald-200" />} title="3,500 Bux" subtitle="+15% Bonus" price="60 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 60, { coins: wallet.coins + 3500 }, "3,500 Bux added.")} accent="green" />
+          <ProductCard kind="bux" icon={<Coins className="h-8 w-8 text-emerald-200" />} title="8,000 Bux" subtitle="+30% Best Deal" price="130 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 130, { coins: wallet.coins + 8000 }, "8,000 Bux added.")} accent="green" />
+          <ProductCard kind="bux" icon={<Coins className="h-8 w-8 text-emerald-200" />} title="20,000 Bux" subtitle="+50% Value" price="300 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 300, { coins: wallet.coins + 20000 }, "20,000 Bux added.")} accent="green" />
+          <ProductCard kind="bux" icon={<Coins className="h-8 w-8 text-emerald-200" />} title="50,000 Bux" subtitle="Treasury Pallet" price="₦6,500" onBuy={() => spend("coins", 6500, { coins: wallet.coins + 50000 }, "50,000 Bux added.")} accent="green" />
+        </div>
+      </section>
+
+      <section className="mt-6">
+        <SectionTitle icon={<Crown className="h-3.5 w-3.5" />} title="ITEM STORE" meta="Team Boosts & Gear" />
+        <div className="grid grid-cols-3 gap-2.5">
+          <ProductCard kind="item" icon={<Crown className="h-8 w-8 text-amber-200" />} title="Captain Boost" subtitle="Boosts your captain" price={<><Play className="mr-1 inline h-3 w-3" />WATCH AD</>} onBuy={() => buyTeamBoost("captain-boost")} accent="gold" badge="FREE" />
+          <ProductCard kind="item" icon={<Zap className="h-8 w-8 text-cyan-200" />} title="3-5-2 Tactic" subtitle="Wing play formation" price="UNLOCKED" onBuy={() => flash("3-5-2 Tactic is already unlocked.")} accent="cyan" />
+          <ProductCard kind="item" icon={<Shirt className="h-8 w-8 text-emerald-200" />} title="Emerald Kit" subtitle="Home customization" price="EQUIPPED" onBuy={() => flash("Emerald Kit is equipped.")} accent="green" />
+          <ProductCard kind="item" icon={<Footprints className="h-8 w-8 text-orange-200" />} title="Speed Boots" subtitle="+2% speed per match" price="40 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 40, {}, "Speed Boots activated.")} accent="pink" />
+          <ProductCard kind="item" icon={<HeartPulse className="h-8 w-8 text-rose-200" />} title="Injury Shield" subtitle="20 matches guard" price="350 Bux" priceIcon={<Coins className="mr-1 inline h-3 w-3" />} onBuy={() => spend("coins", 350, {}, "Injury Shield activated.")} accent="gold" />
+          <ProductCard kind="item" icon={<Crown className="h-8 w-8 text-yellow-200" />} title="Extra Sub Slot" subtitle="+1 squad slot" price="80 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 80, {}, "Extra Sub Slot unlocked.")} accent="pink" />
+        </div>
+      </section>
+
+      <section className="mt-6">
+        <SectionTitle icon={<Package className="h-3.5 w-3.5" />} title="PACKAGE STORE" meta="Limited Bundles" />
+        <div className="grid grid-cols-3 gap-2.5">
+          <ProductCard kind="package" icon={<Package className="h-8 w-8 text-amber-200" />} title="Starter Box" subtitle="20 Cards · 500 Bux · 3 Boosts" price="₦1,250" onBuy={() => spend("coins", 1250, { coins: wallet.coins + 500 }, "Starter Box claimed.")} accent="gold" />
+          <ProductCard kind="package" icon={<Trophy className="h-8 w-8 text-orange-200" />} title="Arena Special" subtitle="45 Cards · 2,000 Bux" price="₦2,800" onBuy={() => spend("coins", 2800, { coins: wallet.coins + 2000 }, "Arena Special claimed.")} accent="gold" />
+          <ProductCard kind="package" icon={<Package className="h-8 w-8 text-cyan-200" />} title="Mega Bundle" subtitle="100 Cards · 60,000 Bux" price="₦12,500" onBuy={() => spend("coins", 12500, { coins: wallet.coins + 60000 }, "Mega Bundle claimed.")} accent="cyan" badge="BEST VALUE" />
+        </div>
+      </section>
+
+      <section className="mt-6">
+        <SectionTitle icon={<Swords className="h-3.5 w-3.5" />} title="TACTICAL MATCH BOOSTS" meta="Different durations & prices" />
+        <div className="space-y-2.5">
           {BOOST_TYPES.map((type) => {
             const item = TEAM_BOOSTS[type]
             const duration = selectedDuration[type]
-            return <Card key={type} className="p-4">
-              <div className="flex items-start gap-3">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-2xl">{item.icon}</div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-black">{item.name}</p>
-                  <p className="mt-1 text-[10px] text-muted-foreground">{item.description}</p>
-                  <p className="mt-1 text-[9px] text-primary">{item.effect}</p>
-                  <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
-                    {BOOST_DURATIONS.map((d) => <button key={d} type="button" onClick={() => setSelectedDuration((v) => ({ ...v, [type]: d }))} className={`min-w-[76px] rounded-lg border px-2 py-2 text-center text-[9px] font-black ${duration === d ? "border-primary bg-primary/15" : "border-border"}`}><Timer className="mx-auto mb-1 h-3 w-3" />{durationLabel(d)}<br/><span className="text-primary">{item.prices[d]} Gems</span></button>)}
+            return (
+              <Card key={type} className="border-white/5 bg-[#111416] p-3">
+                <div className="flex items-start gap-3">
+                  <ProductArt kind="item" icon={<span className="text-2xl">{item.icon}</span>} />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-black">{item.name}</p>
+                    <p className="mt-0.5 text-[8px] leading-3 text-muted-foreground">{item.description}</p>
+                    <p className="mt-1 text-[8px] font-bold text-emerald-300">{item.effect}</p>
+                    <div className="mt-2 flex gap-1.5 overflow-x-auto pb-1">
+                      {BOOST_DURATIONS.map((d) => (
+                        <button key={d} type="button" onClick={() => setSelectedDuration((v) => ({ ...v, [type]: d }))} className={`min-w-[70px] rounded-lg border px-2 py-1.5 text-center text-[8px] font-black ${duration === d ? "border-emerald-300 bg-emerald-300/10 text-emerald-200" : "border-white/10 text-muted-foreground"}`}>
+                          <Timer className="mx-auto mb-0.5 h-3 w-3" />{durationLabel(d)}<br/><span className="text-emerald-300">{item.prices[d]} Gems</span>
+                        </button>
+                      ))}
+                    </div>
+                    <PriceButton onClick={() => buyTeamBoost(type)} accent="green"><Gem className="mr-1 inline h-3 w-3" />ACTIVATE · {item.prices[duration]} GEMS</PriceButton>
                   </div>
-                  <Button size="sm" className="mt-3 w-full rounded-xl" onClick={() => buyTeamBoost(type)}>Activate · {item.prices[duration]} Gems</Button>
                 </div>
-              </div>
-            </Card>
+              </Card>
+            )
           })}
         </div>
-      </>}
+      </section>
 
-      {(tab === "featured" || tab === "currency") && <>
-        <div className="mb-3 mt-7 flex items-center gap-2"><Coins className="h-4 w-4 text-amber-300" /><p className="font-black">Club Currency</p></div>
-        <div className="space-y-3">{items.map((item) => <Card key={item.id} className="p-4"><div className="flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-secondary text-xl">{item.icon}</div><div className="min-w-0 flex-1"><p className="font-black">{item.name}</p><p className="text-[10px] text-muted-foreground">{item.description}</p></div><Button size="sm" onClick={() => buy(item.id)} className="shrink-0 rounded-xl px-3">{item.price.toLocaleString()} {item.currency === "gems" ? "Gems" : "Coins"}</Button></div></Card>)}</div>
-        <div className="mb-3 mt-7"><p className="font-black">Premium Bundles</p><p className="text-[10px] text-muted-foreground">Prices are shown in your selected currency.</p></div>
-        <div className="grid grid-cols-2 gap-3">{realMoneyPacks.map((pack) => <Card key={pack.id} className="p-4"><div className="mb-2 text-2xl">{pack.icon}</div><p className="font-black">{pack.name}</p><p className="mt-1 text-[10px] text-muted-foreground">{pack.description}</p><p className="mt-3 font-display text-lg font-black">{formatRealMoney(pack.usd, profile?.countryCode)}</p><Button size="sm" className="mt-2 w-full rounded-xl" onClick={() => flash("Payment will open when store billing is connected.")}>Purchase</Button></Card>)}</div>
-      </>}
+      <section className="mt-6">
+        <SectionTitle icon={<Zap className="h-3.5 w-3.5" />} title="PERMANENT PLAYER TRAINING" meta="Choose a player" />
+        <Card className="border-primary/20 bg-primary/5 p-3">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-secondary font-black">{selectedPlayer?.rating ?? "--"}</div>
+            <div className="min-w-0 flex-1"><p className="truncate font-black">{selectedPlayer?.name ?? "Select a player"}</p><p className="text-[8px] text-muted-foreground">Permanent upgrades apply instantly.</p></div>
+            <Crown className="h-5 w-5 text-amber-300" />
+          </div>
+          <div className="mt-2 flex gap-2 overflow-x-auto pb-1">{club.map((player) => {
+            const active = player.id === selectedPlayerId
+            const boost = readPlayerTrainingBoost(player.id)
+            return <button key={player.id} type="button" onClick={() => setSelectedPlayerId(player.id)} className={`min-w-[92px] rounded-xl border px-2 py-2 text-left ${active ? "border-primary bg-primary/15" : "border-border bg-card/60"}`}><p className="truncate text-[9px] font-black">{player.name}</p><p className="text-[8px] text-muted-foreground">{player.pos} · OVR {player.rating + boost.ovr}</p></button>
+          })}</div>
+        </Card>
+        <div className="mt-2.5 grid grid-cols-3 gap-2.5">
+          <ProductCard kind="item" icon={<Zap className="h-7 w-7 text-yellow-200" />} title="Starter Boost" subtitle="+1 OVR · 3 stats" price={<><Play className="mr-1 inline h-3 w-3" />WATCH AD</>} onBuy={() => buyTrainingBoost("starter")} accent="gold" />
+          <ProductCard kind="item" icon={<Gem className="h-7 w-7 fill-cyan-300 text-cyan-100" />} title="Power Boost" subtitle="+2 OVR · 3 stats" price="30 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => buyTrainingBoost("power")} accent="cyan" />
+          <ProductCard kind="item" icon={<Crown className="h-7 w-7 text-amber-200" />} title="Elite Boost" subtitle="+4 OVR · 4 stats" price="$1.25" onBuy={() => flash("Payment will open when store billing is connected.")} accent="gold" />
+        </div>
+      </section>
 
-      {message && <div className="fixed bottom-5 left-4 right-4 z-50 rounded-2xl border border-primary/30 bg-card p-3 text-center text-xs font-bold shadow-2xl">{message}</div>}
+      <section className="mt-6">
+        <SectionTitle icon={<CircleDollarSign className="h-3.5 w-3.5" />} title="PREMIUM STORE" meta="Real-money packs" />
+        <div className="grid grid-cols-2 gap-2.5">
+          {realMoneyPacks.map((pack) => (
+            <Card key={pack.id} className="border-white/5 bg-[#111416] p-2.5">
+              <ProductArt kind={pack.gems ? "gems" : "bux"} icon={pack.gems ? <Gem className="h-8 w-8 fill-pink-300 text-pink-100" /> : <Coins className="h-8 w-8 text-emerald-200" />} />
+              <p className="mt-2 font-black">{pack.name}</p>
+              <p className="mt-0.5 text-[8px] text-muted-foreground">{pack.description}</p>
+              <p className="mt-2 text-sm font-black">{formatRealMoney(pack.usd, profile?.countryCode)}</p>
+              <PriceButton onClick={() => flash("Payment will open when store billing is connected.")} accent={pack.gems ? "pink" : "green"}>PURCHASE</PriceButton>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      {message && <div className="fixed bottom-5 left-3 right-3 z-50 rounded-2xl border border-primary/30 bg-[#111416] p-3 text-center text-xs font-bold shadow-2xl">{message}</div>}
       {boostAd && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-6"><Card glow="cyan" className="w-full max-w-sm p-5 text-center"><p className="text-[10px] uppercase tracking-widest text-muted-foreground">Sponsored Boost</p><p className="mt-2 font-display text-xl font-black">Training Boost Ad</p><p className="mt-2 text-sm text-muted-foreground">Boost applies immediately after the ad. {boostAd.seconds}s</p></Card></div>}
+    </div>
+  )
+}
+
+function SectionTitle({ icon, title, meta }: { icon: React.ReactNode; title: string; meta?: string }) {
+  return (
+    <div className="mb-2.5 flex items-center gap-1.5">
+      <span className="text-amber-300">{icon}</span>
+      <p className="text-[10px] font-black uppercase tracking-wide">{title}</p>
+      {meta && <span className="ml-auto text-[7px] font-black text-emerald-300">{meta}</span>}
     </div>
   )
 }
