@@ -8,31 +8,89 @@ export type AuctionAttributes = {
   shooting: number
   defending: number
   stamina: number
+  heading: number
+  strength: number
 }
 
 export type AuctionPlayer = {
   id: string
   name: string
+  number: number
   position: AuctionPosition
   rating: number
+  height: number
   style: string
   face: string
+  look: string
   attributes: AuctionAttributes
-  startingBid: number
-  currentBid: number
-  buyNow: number
+  startingBucks: number
+  startingGems: number
+  currentBucks: number
+  currentGems: number
+  buyNowBucks: number
+  buyNowGems: number
   endsAt: number
   enabled: boolean
   highestBidder?: "you" | null
   status?: "live" | "sold" | "unsold"
+  heldBucks?: number
+  heldGems?: number
 }
 
-export const DEFAULT_AUCTION_PLAYERS: AuctionPlayer[] = [
-  { id: "a1", highestBidder: null, status: "live", name: "T. Bergström", position: "FWD", rating: 89, style: "Fluid Front Three", face: "TB", attributes: { pace: 91, passing: 82, shooting: 94, defending: 42, stamina: 86 }, startingBid: 4200, currentBid: 4200, buyNow: 7500, endsAt: Date.now() + 2 * 60 * 1000, enabled: true },
-  { id: "a2", highestBidder: null, status: "live", name: "O. Diallo", position: "MID", rating: 87, style: "Gegenpress", face: "OD", attributes: { pace: 84, passing: 92, shooting: 78, defending: 76, stamina: 91 }, startingBid: 3100, currentBid: 3100, buyNow: 5800, endsAt: Date.now() + 9 * 60 * 1000, enabled: true },
-  { id: "a3", highestBidder: null, status: "live", name: "V. Rossi", position: "DEF", rating: 84, style: "Catenaccio", face: "VR", attributes: { pace: 72, passing: 79, shooting: 48, defending: 94, stamina: 82 }, startingBid: 1900, currentBid: 1900, buyNow: 3400, endsAt: Date.now() + 14 * 60 * 1000, enabled: true },
-  { id: "a4", highestBidder: null, status: "live", name: "S. Haruki", position: "GK", rating: 82, style: "Sweeper Keeper", face: "SH", attributes: { pace: 61, passing: 83, shooting: 25, defending: 91, stamina: 78 }, startingBid: 1200, currentBid: 1200, buyNow: 2600, endsAt: Date.now() + 21 * 60 * 1000, enabled: true },
-]
+const NAMES = ["Milo Vance","Kairo Mendes","Jonas Vale","Rayan Costa","Dario Silva","Noah Mercer","Luca Marin","Eli Navarro","Tariq Bello","Soren Nygaard","Kenji Ito","Mateo Cruz","Amir Diallo","Nico Varela","Jude Mercer","Leo Santos","Mika Tanaka","Adrian Cole","Samir Khan","Theo Grant"]
+const STYLES = ["Advanced Forward","Poacher","Complete Forward","Inside Forward","Winger","Mezzala","Playmaker","Box-to-Box","Ball Winner","Deep-Lying Playmaker","Wingback","Ball-Playing Defender","Stopper","Sweeper Keeper"]
+const LOOKS = ["Sharp Fade","Curly Crop","Short Twist","Clean Cut","High Fade","Wavy Top","Buzz Cut","Braided Top","Classic Crop","Long Curl"]
+const FACES = ["MV","KM","JV","RC","DS","NM","LM","EN","TB","SN","KI","MC","AD","NV","JM","LS","MT","AC","SK","TG"]
+
+function rand(min:number,max:number){ return Math.floor(Math.random()*(max-min+1))+min }
+function pick<T>(items:T[]){ return items[rand(0,items.length-1)] }
+
+export function generateAuctionPlayer(index = 0): AuctionPlayer {
+  const position = pick<AuctionPosition>(["GK","DEF","MID","FWD"])
+  const rating = rand(72, 91)
+  const base = rand(62, 94)
+  const attributes = {
+    pace: Math.max(35, Math.min(99, base + rand(-12,12))),
+    passing: Math.max(35, Math.min(99, base + rand(-12,12))),
+    shooting: Math.max(25, Math.min(99, base + rand(-14,14))),
+    defending: Math.max(25, Math.min(99, base + rand(-14,14))),
+    stamina: Math.max(45, Math.min(99, base + rand(-10,10))),
+    heading: Math.max(30, Math.min(99, base + rand(-15,10))),
+    strength: Math.max(40, Math.min(99, base + rand(-10,10))),
+  }
+  const bucks = Math.round(rand(1200, 15000) / 100) * 100
+  const gems = rand(0, 80)
+  return {
+    id: `a-${Date.now()}-${index}-${rand(1000,9999)}`,
+    name: pick(NAMES),
+    number: rand(1,99),
+    position,
+    rating,
+    height: rand(168,201),
+    style: pick(STYLES),
+    face: pick(FACES),
+    look: pick(LOOKS),
+    attributes,
+    startingBucks: bucks,
+    startingGems: gems,
+    currentBucks: bucks,
+    currentGems: gems,
+    buyNowBucks: Math.round((bucks * 1.8) / 100) * 100,
+    buyNowGems: Math.max(gems, Math.round((gems * 1.6))),
+    endsAt: Date.now() + rand(5,30) * 60 * 1000,
+    enabled: true,
+    highestBidder: null,
+    status: "live",
+    heldBucks: 0,
+    heldGems: 0,
+  }
+}
+
+export function generateAuctionPlayers(amount:number): AuctionPlayer[] {
+  return Array.from({length:Math.max(1,Math.min(30,amount))},(_,i)=>generateAuctionPlayer(i))
+}
+
+export const DEFAULT_AUCTION_PLAYERS: AuctionPlayer[] = generateAuctionPlayers(4)
 
 export const AUCTION_KEY = "pitchside-auction-players"
 export const AUCTION_WALLET_KEY = "pitchside-wallet"
@@ -41,30 +99,24 @@ export function readAuctionPlayers(): AuctionPlayer[] {
   if (typeof window === "undefined") return DEFAULT_AUCTION_PLAYERS
   try {
     const saved = JSON.parse(localStorage.getItem(AUCTION_KEY) || "null")
-    return Array.isArray(saved) ? saved : DEFAULT_AUCTION_PLAYERS
-  } catch {
-    return DEFAULT_AUCTION_PLAYERS
-  }
+    if (Array.isArray(saved) && saved.length) return saved
+  } catch {}
+  return DEFAULT_AUCTION_PLAYERS
 }
 
 export function saveAuctionPlayers(players: AuctionPlayer[]) {
   if (typeof window !== "undefined") localStorage.setItem(AUCTION_KEY, JSON.stringify(players))
 }
 
-export function formatAuctionTime(endsAt: number, now = Date.now()) {
-  const seconds = Math.max(0, Math.ceil((endsAt - now) / 1000))
-  const m = Math.floor(seconds / 60).toString().padStart(2, "0")
-  const s = (seconds % 60).toString().padStart(2, "0")
+export function formatAuctionTime(endsAt:number, now=Date.now()) {
+  const seconds=Math.max(0,Math.ceil((endsAt-now)/1000))
+  const m=Math.floor(seconds/60).toString().padStart(2,"0")
+  const s=(seconds%60).toString().padStart(2,"0")
   return `${m}:${s}`
 }
 
+export function getNextBid(current:number){ return Math.max(100,current+100) }
 
-export function getNextBid(currentBid: number) {
-  return Math.max(1, currentBid + 100)
-}
-
-export function settleAuction(player: AuctionPlayer, coins: number) {
-  if (player.highestBidder !== "you") return { status: "unsold" as const, coins, won: false }
-  if (coins < player.currentBid) return { status: "unsold" as const, coins, won: false }
-  return { status: "sold" as const, coins: coins - player.currentBid, won: true }
+export function renameAuctionPlayer(name:string): string {
+  return name.trim().slice(0,24) || "Panda Player"
 }
