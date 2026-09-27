@@ -23,13 +23,15 @@ export type AuctionPlayer = {
   buyNow: number
   endsAt: number
   enabled: boolean
+  highestBidder?: "you" | null
+  status?: "live" | "sold" | "unsold"
 }
 
 export const DEFAULT_AUCTION_PLAYERS: AuctionPlayer[] = [
-  { id: "a1", name: "T. Bergström", position: "FWD", rating: 89, style: "Fluid Front Three", face: "TB", attributes: { pace: 91, passing: 82, shooting: 94, defending: 42, stamina: 86 }, startingBid: 4200, currentBid: 4200, buyNow: 7500, endsAt: Date.now() + 2 * 60 * 1000, enabled: true },
-  { id: "a2", name: "O. Diallo", position: "MID", rating: 87, style: "Gegenpress", face: "OD", attributes: { pace: 84, passing: 92, shooting: 78, defending: 76, stamina: 91 }, startingBid: 3100, currentBid: 3100, buyNow: 5800, endsAt: Date.now() + 9 * 60 * 1000, enabled: true },
-  { id: "a3", name: "V. Rossi", position: "DEF", rating: 84, style: "Catenaccio", face: "VR", attributes: { pace: 72, passing: 79, shooting: 48, defending: 94, stamina: 82 }, startingBid: 1900, currentBid: 1900, buyNow: 3400, endsAt: Date.now() + 14 * 60 * 1000, enabled: true },
-  { id: "a4", name: "S. Haruki", position: "GK", rating: 82, style: "Sweeper Keeper", face: "SH", attributes: { pace: 61, passing: 83, shooting: 25, defending: 91, stamina: 78 }, startingBid: 1200, currentBid: 1200, buyNow: 2600, endsAt: Date.now() + 21 * 60 * 1000, enabled: true },
+  { id: "a1", highestBidder: null, status: "live", name: "T. Bergström", position: "FWD", rating: 89, style: "Fluid Front Three", face: "TB", attributes: { pace: 91, passing: 82, shooting: 94, defending: 42, stamina: 86 }, startingBid: 4200, currentBid: 4200, buyNow: 7500, endsAt: Date.now() + 2 * 60 * 1000, enabled: true },
+  { id: "a2", highestBidder: null, status: "live", name: "O. Diallo", position: "MID", rating: 87, style: "Gegenpress", face: "OD", attributes: { pace: 84, passing: 92, shooting: 78, defending: 76, stamina: 91 }, startingBid: 3100, currentBid: 3100, buyNow: 5800, endsAt: Date.now() + 9 * 60 * 1000, enabled: true },
+  { id: "a3", highestBidder: null, status: "live", name: "V. Rossi", position: "DEF", rating: 84, style: "Catenaccio", face: "VR", attributes: { pace: 72, passing: 79, shooting: 48, defending: 94, stamina: 82 }, startingBid: 1900, currentBid: 1900, buyNow: 3400, endsAt: Date.now() + 14 * 60 * 1000, enabled: true },
+  { id: "a4", highestBidder: null, status: "live", name: "S. Haruki", position: "GK", rating: 82, style: "Sweeper Keeper", face: "SH", attributes: { pace: 61, passing: 83, shooting: 25, defending: 91, stamina: 78 }, startingBid: 1200, currentBid: 1200, buyNow: 2600, endsAt: Date.now() + 21 * 60 * 1000, enabled: true },
 ]
 
 export const AUCTION_KEY = "pitchside-auction-players"
@@ -54,4 +56,15 @@ export function formatAuctionTime(endsAt: number, now = Date.now()) {
   const m = Math.floor(seconds / 60).toString().padStart(2, "0")
   const s = (seconds % 60).toString().padStart(2, "0")
   return `${m}:${s}`
+}
+
+
+export function getNextBid(currentBid: number) {
+  return Math.max(1, currentBid + 100)
+}
+
+export function settleAuction(player: AuctionPlayer, coins: number) {
+  if (player.highestBidder !== "you") return { status: "unsold" as const, coins, won: false }
+  if (coins < player.currentBid) return { status: "unsold" as const, coins, won: false }
+  return { status: "sold" as const, coins: coins - player.currentBid, won: true }
 }
