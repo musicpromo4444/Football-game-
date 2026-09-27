@@ -1,6 +1,6 @@
 "use client"
 
-import { User, Trophy, Gamepad2, Shield, SlidersHorizontal, ShoppingBag } from "lucide-react"
+import { User, Trophy, Gamepad2, Shield, ShoppingBag } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { TabId } from "@/components/game/data"
 
@@ -22,7 +22,7 @@ export function BottomNav({
 }) {
   return (
     <nav className="pointer-events-auto sticky bottom-0 z-20 border-t border-border bg-background/85 backdrop-blur-xl">
-      <div className="mx-auto grid max-w-md grid-cols-6 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2">
+      <div className="mx-auto grid max-w-md grid-cols-5 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2">
         {items.map((item) => {
           const Icon = item.icon
           const isActive = active === item.id
