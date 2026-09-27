@@ -12,7 +12,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
+          package-manager-cache: false
       - run: npm install
       - run: npm run build
       - name: Package project
