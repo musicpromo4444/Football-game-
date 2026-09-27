@@ -5,18 +5,15 @@ import { ArrowLeft, Plus, Save, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, Pill, ScreenHeader } from "@/components/game/ui-bits"
 import { AdminShop } from "@/components/game/admin-shop"
-import { AuctionPlayer, readAuctionPlayers, saveAuctionPlayers } from "@/lib/auction"
+import { AuctionPlayer, generateAuctionPlayers, readAuctionPlayers, saveAuctionPlayers } from "@/lib/auction"
 import { AuctionDisplaySettings, DEFAULT_AUCTION_DISPLAY, readAuctionDisplay, saveAuctionDisplay } from "@/lib/auction-display"
 
-const emptyPlayer = (): AuctionPlayer => ({
-  id: `a-${Date.now()}`, name: "New Player", position: "MID", rating: 80, style: "Balanced", face: "NP",
-  attributes: { pace: 80, passing: 80, shooting: 80, defending: 80, stamina: 80 },
-  startingBid: 1, currentBid: 1, buyNow: 2, endsAt: Date.now() + 60 * 60 * 1000, enabled: true,
-})
+const emptyPlayer = (): AuctionPlayer => generateAuctionPlayers(1)[0]
 
 export default function AdminPage() {
   const [players, setPlayers] = useState<AuctionPlayer[]>([])
   const [count, setCount] = useState(4)
+  const [generateAmount, setGenerateAmount] = useState(10)
   const [saved, setSaved] = useState(false)
   const [display, setDisplay] = useState<AuctionDisplaySettings>(DEFAULT_AUCTION_DISPLAY)
 
@@ -57,6 +54,14 @@ export default function AdminPage() {
             <div className="flex items-center gap-2"><input aria-label="Auction player count" type="number" min={1} max={30} value={count} onChange={(e) => setAuctionCount(Number(e.target.value) || 1)} className="w-20 rounded-xl border border-border bg-card px-3 py-2 text-center font-black" /><Button onClick={save} className="rounded-xl"><Save className="mr-1 h-4 w-4" />{saved ? "Saved" : "Save"}</Button></div>
           </div>
           <p className="mt-2 text-xs text-muted-foreground">Choose exactly how many players appear in the public auction. Edit every player's name, look, style, price and attributes below.</p>
+          <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
+            <select value={generateAmount} onChange={(e) => setGenerateAmount(Number(e.target.value))} className="rounded-xl border border-border bg-secondary/50 px-3 py-2 text-xs font-bold">
+              {[5,10,20,30].map((n) => <option key={n} value={n}>{n} random players</option>)}
+            </select>
+            <Button variant="outline" className="rounded-xl" onClick={() => { const generated = generateAuctionPlayers(generateAmount); setPlayers(generated); setCount(generated.length); }}>
+              Auction Player
+            </Button>
+          </div>
         </Card>
 
         {players.slice(0, count).map((player, index) => (
@@ -73,7 +78,13 @@ export default function AdminPage() {
               <label className="text-[10px] font-bold text-muted-foreground">Starting bid<input type="number" min={0.1} value={player.startingBid} onChange={(e) => update(player.id, { startingBid: Number(e.target.value), currentBid: Number(e.target.value) })} className="mt-1 w-full rounded-lg border border-border bg-secondary/50 px-2 py-2 text-xs" /></label>
               <label className="text-[10px] font-bold text-muted-foreground">Buy now<input type="number" min={0.1} value={player.buyNow} onChange={(e) => update(player.id, { buyNow: Number(e.target.value) })} className="mt-1 w-full rounded-lg border border-border bg-secondary/50 px-2 py-2 text-xs" /></label>
             </div>
-            <div className="mt-3 grid grid-cols-5 gap-1">{(Object.keys(player.attributes) as (keyof AuctionPlayer["attributes"])[]).map((key) => <label key={key} className="text-center text-[8px] font-bold uppercase text-muted-foreground">{key}<input type="number" min={1} max={99} value={player.attributes[key]} onChange={(e) => updateAttr(player.id, key, Number(e.target.value))} className="mt-1 w-full rounded-lg border border-border bg-secondary/50 px-1 py-2 text-center text-[10px]" /></label>)}</div>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <label className="text-[10px] font-bold text-muted-foreground">Starting Bucks<input type="number" min={0} value={player.startingBucks} onChange={(e) => update(player.id, { startingBucks: Number(e.target.value), currentBucks: Number(e.target.value) })} className="mt-1 w-full rounded-lg border border-border bg-secondary/50 px-2 py-2 text-xs" /></label>
+              <label className="text-[10px] font-bold text-muted-foreground">Starting Gems<input type="number" min={0} value={player.startingGems} onChange={(e) => update(player.id, { startingGems: Number(e.target.value), currentGems: Number(e.target.value) })} className="mt-1 w-full rounded-lg border border-border bg-secondary/50 px-2 py-2 text-xs" /></label>
+              <label className="text-[10px] font-bold text-muted-foreground">Buy Now Bucks<input type="number" min={0} value={player.buyNowBucks} onChange={(e) => update(player.id, { buyNowBucks: Number(e.target.value) })} className="mt-1 w-full rounded-lg border border-border bg-secondary/50 px-2 py-2 text-xs" /></label>
+              <label className="text-[10px] font-bold text-muted-foreground">Buy Now Gems<input type="number" min={0} value={player.buyNowGems} onChange={(e) => update(player.id, { buyNowGems: Number(e.target.value) })} className="mt-1 w-full rounded-lg border border-border bg-secondary/50 px-2 py-2 text-xs" /></label>
+            </div>
+            <div className="mt-3 grid grid-cols-7 gap-1">{(Object.keys(player.attributes) as (keyof AuctionPlayer["attributes"])[]).map((key) => <label key={key} className="text-center text-[8px] font-bold uppercase text-muted-foreground">{key}<input type="number" min={1} max={99} value={player.attributes[key]} onChange={(e) => updateAttr(player.id, key, Number(e.target.value))} className="mt-1 w-full rounded-lg border border-border bg-secondary/50 px-1 py-2 text-center text-[10px]" /></label>)}</div>
             <label className="mt-3 flex items-center gap-2 text-xs font-bold"><input type="checkbox" checked={player.enabled} onChange={(e) => update(player.id, { enabled: e.target.checked })} /> Show in auction</label>
           </Card>
         ))}
