@@ -130,6 +130,22 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
     }
   }
 
+  const handleFriendForfeit = async (forfeitUserId: string) => {
+    const { data } = await supabase.auth.getUser()
+    if (!data.user) return
+    const loser = forfeitUserId === data.user.id
+    setMatchDone(true)
+    setMatchReward(loser ? 0 : 180)
+    setMatchRewardLabel(loser ? null : "WIN")
+    setOnlineError(loser ? "You disconnected for 20 seconds and forfeited the match." : "Your opponent disconnected for 20 seconds and forfeited the match. You receive 180 Bux.")
+    try {
+      const { data: w } = await supabase.from("pitchside_wallets").select("bucks").eq("user_id", data.user.id).maybeSingle()
+      if (w) { const { saveWallet, readWallet } = await import("@/lib/economy"); saveWallet({ ...readWallet(), bucks: Number(w.bucks) }) }
+    } catch {}
+    setFriendMatchId(null)
+    setFriendRole(null)
+  }
+
   const finishOnlineMatch = async (outcome: { home: number; away: number }) => {
     if (!matchId || matchDone) return
     setMatchDone(true)
@@ -285,7 +301,7 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
             <p className="text-xs text-muted-foreground">Online Ranked · Sudden Death</p>
           </div>
         </div>
-        <MatchCanvas onMatchComplete={finishOnlineMatch} onlineMatch={friendMatchId && friendRole ? { matchId: friendMatchId, role: friendRole } : undefined} />
+        <MatchCanvas onMatchComplete={finishOnlineMatch} onMatchForfeit={handleFriendForfeit} onlineMatch={friendMatchId && friendRole ? { matchId: friendMatchId, role: friendRole } : undefined} />
         {leagueOutcome ? <div className="mx-5 mt-3 rounded-2xl border border-cyan-500/35 bg-cyan-500/10 px-4 py-3 text-center"><p className="text-[10px] font-black uppercase tracking-widest text-cyan-300">League Update</p><p className="mt-1 text-sm font-black text-cyan-100">{leagueOutcome}</p></div> : null}
         {matchReward !== null ? (
           <div className="mx-5 mt-3 rounded-2xl border border-emerald-500/35 bg-emerald-500/10 px-4 py-3 text-center">
