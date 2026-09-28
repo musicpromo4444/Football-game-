@@ -110,7 +110,7 @@ function format(t: number) {
 
 export type MatchOutcome = { home: number; away: number }
 
-export function MatchCanvas({ onMatchComplete, onlineMatch, onMatchForfeit }: { onMatchComplete?: (outcome: MatchOutcome) => void; onlineMatch?: { matchId: string; role: "challenger" | "opponent" }; onMatchForfeit?: (forfeitUserId: string) => void }) {
+export function MatchCanvas({ onMatchComplete, onlineMatch, onMatchForfeit }: { onMatchComplete?: (outcome: MatchOutcome) => void; onlineMatch?: { matchId: string; role: "challenger" | "opponent"; kind?: "friend" | "ranked" }; onMatchForfeit?: (forfeitUserId: string) => void }) {
   const [time, setTime] = useState(120)
   const [running, setRunning] = useState(false)
   const [ball, setBall] = useState<Point>({ x: 50, y: 55 })
@@ -188,7 +188,7 @@ export function MatchCanvas({ onMatchComplete, onlineMatch, onMatchForfeit }: { 
 
   useEffect(() => {
     if (!onlineMatch) return
-    const channel = supabase.channel(`pitchside-friend-game:${onlineMatch.matchId}`, { config: { private: true } })
+    const channel = supabase.channel(`pitchside-${onlineMatch.kind || "friend"}-game:${onlineMatch.matchId}`, { config: { private: true } })
     friendChannelRef.current = channel
     channel.on("broadcast", { event: "state" }, ({ payload }: any) => {
       if (!payload?.state) return
@@ -219,7 +219,8 @@ export function MatchCanvas({ onMatchComplete, onlineMatch, onMatchForfeit }: { 
     if (!onlineMatch) return
     let cancelled = false
     const heartbeat = async () => {
-      const { data, error } = await supabase.rpc("pitchside_friend_heartbeat", { p_match_id: onlineMatch.matchId })
+      const fn = onlineMatch.kind === "ranked" ? "pitchside_ranked_heartbeat" : "pitchside_friend_heartbeat"
+      const { data, error } = await supabase.rpc(fn, { p_match_id: onlineMatch.matchId })
       if (error) setOnlineNotice(error.message)
       else if (data?.status === "ok") setOnlineNotice(null)
     }
@@ -227,7 +228,8 @@ export function MatchCanvas({ onMatchComplete, onlineMatch, onMatchForfeit }: { 
     const heartbeatId = window.setInterval(heartbeat, 5000)
     const check = async () => {
       if (cancelled) return
-      const { data, error } = await supabase.rpc("pitchside_friend_check_disconnect", { p_match_id: onlineMatch.matchId })
+      const fn = onlineMatch.kind === "ranked" ? "pitchside_ranked_check_disconnect" : "pitchside_friend_check_disconnect"
+      const { data, error } = await supabase.rpc(fn, { p_match_id: onlineMatch.matchId })
       if (error) return
       if (data?.status === "grace") {
         setDisconnectSeconds(Math.max(0, Number(data.seconds_remaining ?? 20)))
