@@ -29,7 +29,7 @@ const tacticalPresets: Record<TacticalPresetId, { formation: Formation; instruct
   balanced: { formation: "4-2-3-1", instruction: "Possession", width: 1.0, tempo: 0.95, line: 0, direct: 0.5 },
 }
 
-const formationSlots: Record<Formation, Point[]> = {
+const ghostFormationSlots: Point[] = [{x:50,y:90},{x:10,y:72},{x:30,y:78},{x:70,y:78},{x:90,y:72},{x:18,y:50},{x:42,y:55},{x:58,y:55},{x:82,y:50},{x:34,y:27},{x:66,y:27}]\n\nconst formationSlots: Record<Formation, Point[]> = {
   "4-3-3": [{x:50,y:90},{x:15,y:72},{x:37,y:75},{x:63,y:75},{x:85,y:72},{x:28,y:54},{x:50,y:51},{x:72,y:54},{x:18,y:31},{x:50,y:25},{x:82,y:31}],
   "4-4-2": [{x:50,y:90},{x:15,y:72},{x:37,y:75},{x:63,y:75},{x:85,y:72},{x:15,y:51},{x:38,y:53},{x:62,y:53},{x:85,y:51},{x:36,y:29},{x:64,y:29}],
   "3-5-2": [{x:50,y:90},{x:25,y:74},{x:50,y:76},{x:75,y:74},{x:10,y:51},{x:30,y:54},{x:50,y:56},{x:70,y:54},{x:90,y:51},{x:38,y:29},{x:62,y:29}],
@@ -150,7 +150,7 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
   useEffect(() => { const refresh = () => setInjuryShield(readInjuryShield()); const id = window.setInterval(refresh, 1000); return () => window.clearInterval(id) }, [])
   const trainingUnavailable = playerArchetypes.filter((p) => p.trainingActive)
   const trainingBlocked = trainingUnavailable.length > 0
-  const [positions, setPositions] = useState(() => formationSlots[loadTactics().formation].map((p) => ({ ...p })))
+  const [positions, setPositions] = useState(() => (teamBoosts.ghostFormation ? ghostFormationSlots : formationSlots[loadTactics().formation]).map((p) => ({ ...p })))
   const [opponentPositions, setOpponentPositions] = useState(() => opponents.map((p) => ({ ...p })))
   const [ballOwner, setBallOwner] = useState<number | null>(null)
   const [opponentBallCarrier, setOpponentBallCarrier] = useState(0)
@@ -319,7 +319,7 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
 
   useEffect(() => {
     if (!running) return
-    const base = formationSlots[tactics.formation]
+    const base = teamBoosts.ghostFormation ? ghostFormationSlots : formationSlots[tactics.formation]
     const preset = tacticalPresets[tactics.preset] || tacticalPresets.possession
     const id = setInterval(() => {
       if (passDecisionOpen) return
@@ -332,8 +332,8 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
         const effectiveFactor = injuryFactor * fatigueFactor
         const trainingFactor = 1 + (player?.trainingBoost || 0) * 0.01
         const specialSpeed = player?.specialStyle === "Speed Demon" ? 0.16 : player?.specialStyle === "Wingback Master" ? 0.08 : player?.specialStyle === "Pressing Forward" ? 0.06 : 0
-        const speedBoost = (1 + specialSpeed + ((player?.shopBoost?.stats.SPE || 0) + (player?.shopBoost?.stats.ACC || 0)) * 0.004) * (teamBoosts.team ? 1.05 : 1) * (teamBoosts.ghostFormation ? 1.08 : 1) * effectiveFactor
-        const anchor = base[i] || p
+        const speedBoost = (1 + specialSpeed + ((player?.shopBoost?.stats.SPE || 0) + (player?.shopBoost?.stats.ACC || 0)) * 0.004) * (teamBoosts.team ? 1.05 : 1) * (teamBoosts.ghostFormation ? 1.18 : 1) * effectiveFactor
+        const anchor = base[i] || p\n        if (teamBoosts.ghostFormation) {\n          const attacker = player?.pos === "FWD" || ["Advanced Forward", "Complete Forward", "Poacher", "Target Forward", "Inside Forward", "Winger"].includes(player?.role || "")\n          if (attacker) {\n            y -= 7\n            x += (50 - x) * 0.08\n          }\n        }
         if (injuries[i] === "heavy" || substituted[i]) return { ...anchor }
         const dx = ballNow.x - p.x
         const dy = ballNow.y - p.y
@@ -741,10 +741,10 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
         // Guardian reads the shot with elite positioning/reactions.
         const captainId = typeof window !== "undefined" ? localStorage.getItem("pitchside-captain-id") || playerArchetypes[0]?.id : playerArchetypes[0]?.id
         const shooterCaptainBoost = teamBoosts.captain && shooter?.id === captainId ? 0.10 : 0
-        accuracy = Math.min(0.99, accuracy + (shooter?.trainingBoost || 0) * 0.015 + (shooter?.shopBoost?.stats.SHO || 0) * 0.008 + (shooter?.shopBoost?.stats.CON || 0) * 0.003 + shooterCaptainBoost + (teamBoosts.team ? 0.05 : 0))
-        power = Math.min(0.99, power + (shooter?.trainingBoost || 0) * 0.015 + (shooter?.shopBoost?.stats.SHO || 0) * 0.006 + (shooter?.shopBoost?.stats.STR || 0) * 0.003 + shooterCaptainBoost + (teamBoosts.team ? 0.05 : 0))
+        accuracy = Math.min(0.995, accuracy + (teamBoosts.ghostFormation ? 0.16 : 0) + (shooter?.trainingBoost || 0) * 0.015 + (shooter?.shopBoost?.stats.SHO || 0) * 0.008 + (shooter?.shopBoost?.stats.CON || 0) * 0.003 + shooterCaptainBoost + (teamBoosts.team ? 0.05 : 0))
+        power = Math.min(0.995, power + (teamBoosts.ghostFormation ? 0.10 : 0) + (shooter?.trainingBoost || 0) * 0.015 + (shooter?.shopBoost?.stats.SHO || 0) * 0.006 + (shooter?.shopBoost?.stats.STR || 0) * 0.003 + shooterCaptainBoost + (teamBoosts.team ? 0.05 : 0))
         const guardianOnPitch = playerArchetypes.some((p) => p?.specialStyle === "Guardian")
-        const guardianSave = 0.22 + (guardianOnPitch ? 0.08 : 0) + (special === "Long-Range Sniper" ? 0.03 : 0) + (teamBoosts.goalkeeper ? 0.10 : 0) + (teamBoosts.team ? 0.03 : 0)
+        const guardianSave = (teamBoosts.ghostFormation ? 0.16 : 0.22) + (guardianOnPitch ? 0.08 : 0) + (special === "Long-Range Sniper" ? 0.03 : 0) + (teamBoosts.goalkeeper ? 0.10 : 0) + (teamBoosts.team ? 0.03 : 0)
         const saved = Math.random() > accuracy || Math.random() < guardianSave
         const rebound = saved && Math.random() < (power > 0.88 ? 0.46 : 0.28)
 
@@ -1019,7 +1019,7 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
           <span>Formation</span><span className="font-bold text-primary">{tactics.formation}</span>
           <span>Preset</span><span className="font-bold text-accent">{tactics.preset.replace("-", " ")}</span>
         </div>
-        <p className="mt-1 text-[10px] text-muted-foreground">Shape controls positioning · instruction controls team behaviour</p>
+        <p className="mt-1 text-[10px] text-muted-foreground">{teamBoosts.ghostFormation ? "Hidden formation · attacking positioning is automatic" : "Shape controls positioning · instruction controls team behaviour"}</p>
       </div>
 
       {/* Scoreboard */}
