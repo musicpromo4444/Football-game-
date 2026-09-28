@@ -15,6 +15,7 @@ import { claimSpecialPlayer, getSpecialPlayerClaims, addPackagePlayers, loadClub
 import { activateTeamBoost, TEAM_BOOSTS, type TeamBoostDuration, type TeamBoostType } from "@/lib/team-boosts"
 import { specialPlayers, squad } from "@/components/game/data"
 import { KitEditor } from "@/components/game/screens/kit-editor"
+import { cn } from "@/lib/utils"
 import { readLeagueProgress, LEAGUE_LEVELS } from "@/lib/league-progression"
 import { getStorePackageContents, getStorePlayer, type StorePackageReward } from "@/lib/xp-packages"
 
