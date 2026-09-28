@@ -488,6 +488,12 @@ export function MatchCanvas({ onMatchComplete, onlineMatch, onMatchForfeit, chal
 
         const isSelected = selectedDefenderRef.current === i
         const defensiveRole = ["Ball Winner", "Stopper", "Ball-Playing Defender", "Inverted Fullback", "Wingback"].includes(player.role)
+        const challengeDefence = challenge ? (
+          challenge.rating >= 100 ? { close: 0.58, cover: 0.34, press: 0.92, lane: 0.86 } :
+          challenge.rating >= 95 ? { close: 0.48, cover: 0.29, press: 0.80, lane: 0.74 } :
+          challenge.rating >= 88 ? { close: 0.38, cover: 0.24, press: 0.68, lane: 0.62 } :
+          { close: 0, cover: 0, press: 0, lane: 0 }
+        ) : { close: 0, cover: 0, press: 0, lane: 0 }
         if (ballOwner === null) {
           if (player?.specialStyle === "Pressing Forward" && opponentCarrier.distance < 34) {
             x += (opponentPositions[opponentCarrier.index].x - p.x) * 0.22
@@ -506,11 +512,18 @@ export function MatchCanvas({ onMatchComplete, onlineMatch, onMatchForfeit, chal
             const carrier = opponentPositions[opponentCarrier.index]
             const coverX = 50 + (carrier.x - 50) * (defensiveRole ? 0.72 : 0.48)
             const coverY = carrier.y + (defensiveRole ? 10 : 16)
-            x += (coverX - p.x) * 0.16
-            y += (coverY - p.y) * 0.14
+            x += (coverX - p.x) * (0.16 + challengeDefence.cover)
+            y += (coverY - p.y) * (0.14 + challengeDefence.cover * 0.75)
+            if (challengeDefence.lane > 0) {
+              // Elite AI compresses the dangerous passing lane rather than chasing blindly.
+              const laneX = carrier.x + (50 - carrier.x) * 0.32
+              const laneY = carrier.y + (8 - carrier.y) * 0.24
+              x += (laneX - p.x) * challengeDefence.lane * 0.18
+              y += (laneY - p.y) * challengeDefence.lane * 0.18
+            }
             if (defensiveRole && opponentCarrier.distance < 24) {
-              x += (carrier.x - p.x) * 0.08
-              y += (carrier.y - p.y) * 0.08
+              x += (carrier.x - p.x) * (0.08 + challengeDefence.close)
+              y += (carrier.y - p.y) * (0.08 + challengeDefence.close * 0.72)
             }
           }
         }
@@ -569,7 +582,10 @@ export function MatchCanvas({ onMatchComplete, onlineMatch, onMatchForfeit, chal
             (defenderPlayer?.role === "Stopper" ? 0.06 : 0) + ((defenderPlayer?.shopBoost?.stats.TAC || 0) * 0.008) + ((defenderPlayer?.shopBoost?.stats.STR || 0) * 0.003) + (teamBoosts.defense ? 0.10 : 0) + (teamBoosts.team ? 0.04 : 0)
           if ((distance < 6.5 && frontAngle) || slide) {
             const hardContact = slide && tackleSkill < 0.9
-            const clean = tackleSkill >= 0.86 || Math.random() > (hardContact ? 0.34 : 0.16)
+            const challengeTackleBonus = challenge
+            ? challenge.rating >= 100 ? 0.28 : challenge.rating >= 95 ? 0.22 : challenge.rating >= 88 ? 0.16 : 0
+            : 0
+          const clean = tackleSkill + challengeTackleBonus >= 0.86 || Math.random() > (hardContact ? Math.max(0.06, 0.34 - challengeTackleBonus) : Math.max(0.04, 0.16 - challengeTackleBonus))
             if (clean) {
               setBallOwner(selectedDefenderRef.current)
               setTurnover(true)
