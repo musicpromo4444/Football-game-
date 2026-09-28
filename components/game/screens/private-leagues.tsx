@@ -1,7 +1,7 @@
 "u
 function buildKnockout(teams: Team[]): Fixture[] {
   const out: Fixture[] = []
-  for (let i = 0; i + 1 < teams.length; i += 2) out.push({id:crypto.randomUUID?.() || "r1-"+i,home:teams[i].id,away:teams[i+1].id,homeGoals:null,awayGoals:null,played:false})
+  for (let i = 0; i + 1 < teams.length; i += 2) out.push({id:crypto.randomUUID?.() || "r1-"+i,round:1,home:teams[i].id,away:teams[i+1].id,homeGoals:null,awayGoals:null,played:false})
   return out
 }
 se client"
@@ -19,7 +19,7 @@ type League = {
   mode: Mode; started?: boolean
 }
 type Team = { id: string; name: string; played: number; wins: number; draws: number; losses: number; gf: number; ga: number }
-type Fixture = { id: string; home: string; away: string; homeGoals: number | null; awayGoals: number | null; played: boolean }
+type Fixture = { id: string; round?: number; home: string; away: string; homeGoals: number | null; awayGoals: number | null; played: boolean }
 
 const STORAGE_KEY = "pitchside-user-leagues"
 const DETAIL_KEY = "pitchside-league-details"
@@ -45,8 +45,8 @@ function buildRoundRobin(teams: Team[]): Fixture[] {
     for (let i = 0; i < list.length / 2; i++) {
       const a = list[i], b = list[list.length - 1 - i]
       if (a !== "BYE" && b !== "BYE") {
-        out.push({ id: crypto.randomUUID?.() || `${r}-a${i}`, home: a, away: b, homeGoals: null, awayGoals: null, played: false })
-        out.push({ id: crypto.randomUUID?.() || `${r}-b${i}`, home: b, away: a, homeGoals: null, awayGoals: null, played: false })
+        out.push({ id: crypto.randomUUID?.() || `${r}-a${i}`, round:r+1, home: a, away: b, homeGoals: null, awayGoals: null, played: false })
+        out.push({ id: crypto.randomUUID?.() || `${r}-b${i}`, round:r+1, home: b, away: a, homeGoals: null, awayGoals: null, played: false })
       }
     }
     const fixed = list[0], rest = list.slice(1)
