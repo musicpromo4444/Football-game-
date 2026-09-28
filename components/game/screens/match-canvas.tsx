@@ -10,7 +10,7 @@ import { awardMatchWin, awardMatchDraw } from "@/lib/economy"
 import { addMatchXp, calculateMatchXp, revealPackage, equipPackage, type PackageReward } from "@/lib/xp-packages"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { consumeInjuryShield, readInjuryShield } from "@/lib/injury-shield"
+import { protectInjury, readInjuryShield } from "@/lib/injury-shield"
 
 type Point = { x: number; y: number }
 type Formation = "4-3-3" | "4-4-2" | "3-5-2" | "4-2-3-1" | "4-1-4-1"
@@ -498,11 +498,11 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
               const severity = injuryRoll > 0.78 ? "heavy" : "light"
               setMessage(injury ? `HARD TACKLE — ${severity} injury` : "Tackle missed — attacker keeps the ball")
               if (injury) {
-                const shield = consumeInjuryShield()
-                if (shield) {
-                  setInjuryShield(shield.remaining > 0 ? shield : null)
+                const protection = protectInjury()
+                if (protection.shielded) {
+                  setInjuryShield(readInjuryShield())
                   setShieldPulse(carrierIndex)
-                  setMessage("INJURY SHIELDED — " + shield.remaining + " shield" + (shield.remaining === 1 ? "" : "s") + " remaining")
+                  setMessage("INJURY SHIELDED — " + protection.remaining + " shield" + (protection.remaining === 1 ? "" : "s") + " remaining")
                   window.setTimeout(() => setShieldPulse(null), 1000)
                 } else {
                   setInjuredOpponent(carrierIndex)
