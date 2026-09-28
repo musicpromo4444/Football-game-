@@ -49,6 +49,23 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
   const [matchDone, setMatchDone] = useState(false)
   const [matchReward, setMatchReward] = useState<number | null>(null)
   const [matchRewardLabel, setMatchRewardLabel] = useState<"WIN" | "DRAW" | null>(null)
+  const [leagueFixture, setLeagueFixture] = useState<{ leagueId: string; fixtureId: string; userIsHome: boolean } | null>(null)
+
+  useEffect(() => {
+    const startLeagueFixture = (event: Event) => {
+      const detail = (event as CustomEvent).detail
+      if (!detail?.leagueId || !detail?.fixtureId) return
+      setLeagueFixture(detail)
+      setMatchId("league-" + detail.fixtureId)
+      setMatchDone(false)
+      setMatchReward(null)
+      setMatchRewardLabel(null)
+      setOnlineError(null)
+      setInMatch(true)
+    }
+    window.addEventListener("pitchside-start-league-fixture", startLeagueFixture)
+    return () => window.removeEventListener("pitchside-start-league-fixture", startLeagueFixture)
+  }, [])
 
   useEffect(() => {
     if (!supabase) return
@@ -109,6 +126,44 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
   const finishOnlineMatch = async (outcome: { home: number; away: number }) => {
     if (!matchId || matchDone) return
     setMatchDone(true)
+
+    if (leagueFixture) {
+      const key = "pitchside-league-details"
+      try {
+        const all = JSON.parse(window.localStorage.getItem(key) || "{}")
+        const d = all[leagueFixture.leagueId]
+        if (d) {
+          const fixture = d.fixtures?.find((f: any) => f.id === leagueFixture.fixtureId)
+          if (fixture && !fixture.played) {
+            const userGoals = leagueFixture.userIsHome ? outcome.home : outcome.away
+            const opponentGoals = leagueFixture.userIsHome ? outcome.away : outcome.home
+            fixture.homeGoals = leagueFixture.userIsHome ? userGoals : opponentGoals
+            fixture.awayGoals = leagueFixture.userIsHome ? opponentGoals : userGoals
+            fixture.played = true
+            const userId = leagueFixture.userIsHome ? fixture.home : fixture.away
+            const opponentId = leagueFixture.userIsHome ? fixture.away : fixture.home
+            const userTeam = d.teams.find((t: any) => t.id === userId)
+            const opponentTeam = d.teams.find((t: any) => t.id === opponentId)
+            const apply = (team: any, gf: number, ga: number) => {
+              if (!team) return
+              team.played += 1; team.gf += gf; team.ga += ga
+              if (gf > ga) team.wins += 1
+              else if (gf === ga) team.draws += 1
+              else team.losses += 1
+            }
+            apply(userTeam, userGoals, opponentGoals)
+            apply(opponentTeam, opponentGoals, userGoals)
+            window.localStorage.setItem(key, JSON.stringify(all))
+            window.dispatchEvent(new Event("pitchside-leagues-updated"))
+          }
+        }
+      } catch {}
+      setLeagueFixture(null)
+      setMatchReward(outcome.home === outcome.away ? 0 : Math.max(1, outcome.home > outcome.away ? 1 : 0))
+      setMatchRewardLabel(outcome.home === outcome.away ? "DRAW" : "WIN")
+      return
+    }
+
     const leagueResult = recordLeagueResult(outcome.home, outcome.away)
     if (leagueResult.seasonResult === "promoted") setLeagueOutcome(`PROMOTED · +${leagueResult.reward.toLocaleString()} Bux`)
     else if (leagueResult.seasonResult === "relegated") setLeagueOutcome("RELEGATED · New season started")
