@@ -116,8 +116,8 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
   const [tactics] = useState(loadTactics)
   const playerArchetypes = useMemo(() => {
     const training = loadTrainingState(); const now = Date.now()
-    return loadLineupIds().map((id) => loadClubSquad(squad).find((p) => p.id === id)).filter(Boolean).map((p) => ({
-      id: p!.id, name: p!.name, role: p!.style as PlayerRole, specialStyle: p!.specialStyle, specialName: p!.specialName, pos: p!.pos, stamina: p!.stamina,
+    return loadLineupIds().map((id) => loadClubSquad(squad).find((p) => p.id === id)).filter(Boolean).slice(0, 11).map((p) => ({
+      id: p!.id, name: p!.name, role: p!.style as PlayerRole, specialStyle: p!.specialStyle, specialName: p!.specialName, pos: p!.pos, stamina: p!.stamina, rating: p!.rating, attributes: p!.attributes,
       trainingBoost: training[p!.id] && now >= training[p!.id].completesAt ? training[p!.id].boost : 0,
       shopBoost: readPlayerTrainingBoost(p!.id),
       trainingActive: !!training[p!.id] && now < training[p!.id].completesAt,
@@ -749,7 +749,7 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
       const passer = ballOwner !== null ? playerArchetypes[ballOwner] : null
       const passerPos = ballOwner !== null ? positions[ballOwner] : null
       const targetPos = targetIndex !== null ? positions[targetIndex] : null
-      let passQuality = 0.68
+      let passQuality = 0.58 + ((passer?.attributes?.passing || passer?.rating || 70) / 100) * 0.28
       // Tactical identity affects execution as well as movement.
       if (tactics.preset === "possession" || tactics.preset === "tiki-taka") passQuality += 0.06
       if (tactics.preset === "counter-attack") passQuality += 0.02
