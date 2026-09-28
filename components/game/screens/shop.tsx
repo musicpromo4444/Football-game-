@@ -11,11 +11,12 @@ import { Card, Pill, ScreenHeader } from "@/components/game/ui-bits"
 import { readWallet, saveWallet, type Wallet } from "@/lib/economy"
 import { formatRealMoney, getCountry, readProfile } from "@/lib/locale"
 import { readRealMoneyPacks } from "@/lib/shop-pricing"
-import { claimSpecialPlayer, getSpecialPlayerClaims } from "@/lib/club-squad"
+import { claimSpecialPlayer, getSpecialPlayerClaims, addPackagePlayers, loadClubSquad } from "@/lib/club-squad"
 import { activateTeamBoost, TEAM_BOOSTS, type TeamBoostDuration, type TeamBoostType } from "@/lib/team-boosts"
 import { specialPlayers, squad } from "@/components/game/data"
 import { KitEditor } from "@/components/game/screens/kit-editor"
 import { readLeagueProgress, LEAGUE_LEVELS } from "@/lib/league-progression"
+import { getStorePackageContents, getStorePlayer, type StorePackageReward } from "@/lib/xp-packages"
 
 const FREE_CLAIMS_KEY = "pitchside-free-store-claims"
 const FREE_COOLDOWN = 30 * 60 * 1000
@@ -30,6 +31,7 @@ const BOOST_TYPES: TeamBoostType[] = ["ghost-formation", "team-boost", "captain-
 const BOOST_DURATIONS: TeamBoostDuration[] = ["1-match", "2-matches", "10-matches", "20-matches"]
 const GHOST_FORMATION_PRICES = [4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9] as const
 const GHOST_FORMATION_KEY = "pitchside-ghost-formation-league"
+const INJURY_SHIELD_KEY = "pitchside-injury-shield"
 
 type ArtKind = "card" | "gems" | "bux" | "item" | "package"
 
@@ -112,6 +114,8 @@ export function Shop() {
   const [claims, setClaims] = useState<Record<string, number>>({})
   const [trainingAd, setTrainingAd] = useState<{ mode: TrainingMode; seconds: number } | null>(null)
   const [kitEditorOpen, setKitEditorOpen] = useState(false)
+  const [packagePreview, setPackagePreview] = useState<StorePackageReward | null>(null)
+  const [equippingPackage, setEquippingPackage] = useState(false)
   const [selectedDuration, setSelectedDuration] = useState<Record<TeamBoostType, TeamBoostDuration>>({
     "ghost-formation": "1-match",
     "team-boost": "1-match",
@@ -140,6 +144,35 @@ export function Shop() {
     if (open === "1") { localStorage.removeItem("pitchside-open-kit-editor"); setKitEditorOpen(true) }
   }, [])
 
+
+  const openPackagePreview = (type: StorePackageReward["type"]) => {
+    setPackagePreview(getStorePackageContents(type))
+    setEquippingPackage(false)
+  }
+
+  const equipPreviewPackage = () => {
+    if (!packagePreview) return
+    setEquippingPackage(true)
+    const players = packagePreview.players.map((id) => getStorePlayer(id)).filter(Boolean)
+    const result = addPackagePlayers(loadClubSquad(squad), players)
+    const next = { bucks: wallet.bucks + packagePreview.bucks, gems: wallet.gems + packagePreview.gems }
+    saveWallet(next)
+    setWallet(next)
+    window.setTimeout(() => {
+      setPackagePreview(null)
+      setEquippingPackage(false)
+      flash(result.added.length ? result.added.length + " player cards equipped." : "Package equipped.")
+    }, 650)
+  }
+
+  const activateInjuryShield = (matches: 2 | 5 | 10, price: number) => {
+    if (wallet.bucks < price) return flash("Not enough Bux.")
+    const next = { ...wallet, bucks: wallet.bucks - price }
+    saveWallet(next)
+    setWallet(next)
+    localStorage.setItem(INJURY_SHIELD_KEY, JSON.stringify({ matches, activatedAt: Date.now() }))
+    flash("Injury Shield active for " + matches + " matches.")
+  }
 
   const flash = (text: string) => {
     setMessage(text)
@@ -287,16 +320,18 @@ export function Shop() {
           <ProductCard kind="item" icon={<Zap className="h-8 w-8 text-cyan-200" />} title="Ghost Formation" subtitle={`League subscription · ${currentLeague.replace("-", " ")} · all matches in league`} price={`${ghostPrice.toFixed(2)}`} onBuy={() => flash(`Ghost Formation · ${currentLeague.replace("-", " ")} · ${ghostPrice.toFixed(2)}. Purchase opens when billing is connected.`)} accent="cyan" />
           <ProductCard kind="item" icon={<Shirt className="h-8 w-8 text-emerald-200" />} title="Kit Editor" subtitle="Normal · Pro · Legendary · Special Event" price="OPEN" onBuy={() => setKitEditorOpen(true)} accent="green" badge="CUSTOMIZE" />
           <ProductCard kind="item" icon={<Footprints className="h-8 w-8 text-orange-200" />} title="Speed Boots" subtitle="+2% speed per match" price="40 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 40, {}, "Speed Boots activated.")} accent="pink" />
-          <ProductCard kind="item" icon={<HeartPulse className="h-8 w-8 text-rose-200" />} title="Injury Shield" subtitle="10 matches guard" price="8,000 Bux" priceIcon={<Banknote className="mr-1 inline h-3 w-3" />} onBuy={() => spend("bucks", 8000, {}, "Injury Shield activated.")} accent="gold" />
+          <ProductCard kind="item" icon={<HeartPulse className="h-8 w-8 text-rose-200" />} title="Injury Shield · 2" subtitle="2 matches injury protection" price="2,000 Bux" priceIcon={<Banknote className="mr-1 inline h-3 w-3" />} onBuy={() => activateInjuryShield(2, 2000)} accent="gold" />
+          <ProductCard kind="item" icon={<HeartPulse className="h-8 w-8 text-rose-200" />} title="Injury Shield · 5" subtitle="5 matches injury protection" price="5,000 Bux" priceIcon={<Banknote className="mr-1 inline h-3 w-3" />} onBuy={() => activateInjuryShield(5, 5000)} accent="gold" />
+          <ProductCard kind="item" icon={<HeartPulse className="h-8 w-8 text-rose-200" />} title="Injury Shield · 10" subtitle="10 matches injury protection" price="8,000 Bux" priceIcon={<Banknote className="mr-1 inline h-3 w-3" />} onBuy={() => activateInjuryShield(10, 8000)} accent="gold" />
         </div>
       </section>
 
       <section className="mt-6">
         <SectionTitle icon={<Package className="h-3.5 w-3.5" />} title="PACKAGE STORE" meta="Limited Bundles" />
         <div className="grid grid-cols-3 gap-2.5">
-          <ProductCard kind="package" icon={<Package className="h-8 w-8 text-amber-200" />} title="Starter Box" subtitle="8 player cards · 500 Bux · 3 Gems · probability-based player pool" price="$2.30" onBuy={() => flash("Payment will open when store billing is connected.")} accent="gold" />
-          <ProductCard kind="package" icon={<Trophy className="h-8 w-8 text-orange-200" />} title="Arena Special" subtitle="15 player cards · 2,000 Bux · 2 boosts" price="$4.00" onBuy={() => flash("Payment will open when store billing is connected.")} accent="gold" />
-          <ProductCard kind="package" icon={<Package className="h-8 w-8 text-cyan-200" />} title="Mega Bundle" subtitle="20 player cards · 60,000 Bux · 3 boosts · 20 Gems" price="$10.00" onBuy={() => flash("Payment will open when store billing is connected.")} accent="cyan" badge="BEST VALUE" />
+          <ProductCard kind="package" icon={<Package className="h-8 w-8 text-amber-200" />} title="Starter Box" subtitle="5 player cards · 500 Bux · 3 Gems · at least one 80–84 OVR" price="$2.30" onBuy={() => openPackagePreview("starter-box")} accent="gold" />
+          <ProductCard kind="package" icon={<Trophy className="h-8 w-8 text-orange-200" />} title="Arena Special" subtitle="9 player cards · 2,000 Bux · 2 boosts · at least one 84–88 OVR" price="$4.00" onBuy={() => openPackagePreview("arena-special")} accent="gold" />
+          <ProductCard kind="package" icon={<Package className="h-8 w-8 text-cyan-200" />} title="Mega Bundle" subtitle="13 player cards · 60,000 Bux · 3 boosts · 20 Gems · at least one 88–90 OVR" price="$10.00" onBuy={() => openPackagePreview("mega-bundle")} accent="cyan" badge="BEST VALUE" />
         </div>
       </section>
 
@@ -345,6 +380,30 @@ export function Shop() {
         </div>
       </section>
 
+
+      {packagePreview && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/90 px-3 py-5" onClick={() => !equippingPackage && setPackagePreview(null)}>
+          <Card className="max-h-[92vh] w-full max-w-md overflow-hidden border-cyan-300/20 bg-[#0a0d0d] p-3" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <div><p className="text-[10px] font-black uppercase tracking-widest text-cyan-300">PLAYER CARDS</p><p className="mt-1 text-lg font-black">{packagePreview.count} cards revealed</p></div>
+              {!equippingPackage && <Button variant="ghost" size="icon" onClick={() => setPackagePreview(null)}><span className="text-lg">×</span></Button>}
+            </div>
+            <div className="mt-3 grid max-h-[62vh] grid-cols-2 gap-2 overflow-y-auto pr-1">
+              {packagePreview.players.map((id, index) => {
+                const player = getStorePlayer(id)
+                if (!player) return null
+                const stats = player.attributes || { pace: player.rating, passing: player.rating, shooting: player.rating, defending: player.rating, stamina: player.stamina, heading: player.rating, strength: player.rating }
+                return <div key={id} className={cn("relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-slate-950 via-[#15191a] to-cyan-500/5 p-2 transition-all duration-500", equippingPackage ? "translate-y-8 scale-75 opacity-0" : "")} style={equippingPackage ? { transitionDelay: (index * 35) + "ms" } : undefined}>
+                  <div className="relative h-28 overflow-hidden rounded-xl bg-black/30"><div className="absolute right-1 top-1 z-10 rounded-lg bg-black/70 px-1.5 py-1 text-[10px] font-black text-cyan-300">{player.rating}</div>{player.face ? <img src={player.face} alt="" className="h-full w-full object-cover object-top" /> : <div className="flex h-full items-center justify-center text-2xl font-black">{player.name.split(" ").map((n) => n[0]).join("").slice(0,2)}</div>}</div>
+                  <p className="mt-1.5 truncate text-[10px] font-black">{player.name}</p><p className="text-[7px] uppercase text-muted-foreground">{player.pos} · {player.style}</p>
+                  <div className="mt-1.5 grid grid-cols-4 gap-1">{[["PAC",stats.pace],["PAS",stats.passing],["SHO",stats.shooting],["DEF",stats.defending]].map(([label,value]) => <div key={label} className="rounded-md bg-white/5 px-1 py-1 text-center"><p className="text-[6px] text-muted-foreground">{label}</p><p className="text-[9px] font-black">{value}</p></div>)}</div>
+                </div>
+              })}
+            </div>
+            <Button disabled={equippingPackage} onClick={equipPreviewPackage} className="mt-3 w-full rounded-xl font-black">{equippingPackage ? "EQUIPPING..." : "EQUIP ALL"}</Button>
+          </Card>
+        </div>
+      )}
       {revealedSpecial && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/85 px-5" onClick={() => setRevealedSpecial(null)}>
           <Card glow="cyan" className="w-full max-w-sm overflow-hidden border-amber-300/30 bg-[#0c1010] p-4 text-center" onClick={(e) => e.stopPropagation()}>
