@@ -107,6 +107,7 @@ export function Shop() {
   const [wallet, setWallet] = useState<Wallet>(() => readWallet())
   const [message, setMessage] = useState("")
   const [specialClaims, setSpecialClaims] = useState(() => getSpecialPlayerClaims())
+  const [revealedSpecial, setRevealedSpecial] = useState<ReturnType<typeof getSpecialPlayerClaims>[number] | null>(null)
   const [claims, setClaims] = useState<Record<string, number>>({})
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>(() => loadClubSquad(squad)[0]?.id || "")
   const [boostAd, setBoostAd] = useState<{ tier: TrainingBoostTier; seconds: number } | null>(null)
@@ -380,6 +381,28 @@ export function Shop() {
         </div>
       </section>
 
+      {revealedSpecial && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/85 px-5" onClick={() => setRevealedSpecial(null)}>
+          <Card glow="cyan" className="w-full max-w-sm overflow-hidden border-amber-300/30 bg-[#0c1010] p-4 text-center" onClick={(e) => e.stopPropagation()}>
+            <p className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-300">SPECIAL PLAYER UNLOCKED</p>
+            <div className="mx-auto mt-3 h-40 w-32 overflow-hidden rounded-2xl border border-amber-300/30 bg-gradient-to-br from-amber-400/20 via-violet-500/15 to-cyan-400/15 shadow-2xl">
+              {revealedSpecial.face && <img src={revealedSpecial.face} alt="" className="h-full w-full object-cover" />}
+            </div>
+            <p className="mt-3 font-display text-2xl font-black">{revealedSpecial.name}</p>
+            <p className="mt-1 text-[9px] font-black uppercase tracking-widest text-cyan-300">{revealedSpecial.specialStyle} · {revealedSpecial.rating} OVR</p>
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              <div className="rounded-xl bg-white/5 p-2"><p className="text-[7px] text-muted-foreground">HEIGHT</p><p className="text-xs font-black">{revealedSpecial.height}cm</p></div>
+              <div className="rounded-xl bg-white/5 p-2"><p className="text-[7px] text-muted-foreground">COLOUR</p><p className="text-xs font-black">{revealedSpecial.specialColor}</p></div>
+              <div className="rounded-xl bg-white/5 p-2"><p className="text-[7px] text-muted-foreground">POS</p><p className="text-xs font-black">{revealedSpecial.pos}</p></div>
+            </div>
+            <div className="mt-3 rounded-xl border border-amber-300/15 bg-amber-300/5 p-3">
+              <p className="text-[8px] font-black uppercase text-amber-300">SPECIAL ABILITY</p>
+              <p className="mt-1 text-sm font-black">{revealedSpecial.specialAbility}</p>
+            </div>
+            <Button onClick={() => setRevealedSpecial(null)} className="mt-4 w-full rounded-xl font-black">ADD TO COLLECTION</Button>
+          </Card>
+        </div>
+      )}
       {message && <div className="fixed bottom-5 left-3 right-3 z-50 rounded-2xl border border-primary/30 bg-[#111416] p-3 text-center text-xs font-bold shadow-2xl">{message}</div>}
       {boostAd && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-6"><Card glow="cyan" className="w-full max-w-sm p-5 text-center"><p className="text-[10px] uppercase tracking-widest text-muted-foreground">Sponsored Boost</p><p className="mt-2 font-display text-xl font-black">Training Boost Ad</p><p className="mt-2 text-sm text-muted-foreground">Boost applies immediately after the ad. {boostAd.seconds}s</p></Card></div>}
     </div>
