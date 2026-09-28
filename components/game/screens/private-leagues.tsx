@@ -58,7 +58,7 @@ function buildRoundRobin(teams: Team[]): Fixture[] {
 
 function buildKnockout(teams: Team[]): Fixture[] {
   const out: Fixture[] = []
-  for (let i = 0; i + 1 < teams.length; i += 2) out.push({id:"r1-"+i,home:teams[i].id,away:teams[i+1].id,homeGoals:null,awayGoals:null,played:false})
+  for (let i = 0; i + 1 < teams.length; i += 2) out.push({id:crypto.randomUUID?.() || "r1-"+i,round:1,home:teams[i].id,away:teams[i+1].id,homeGoals:null,awayGoals:null,played:false})
   return out
 }
 
