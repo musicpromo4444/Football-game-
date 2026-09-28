@@ -156,6 +156,8 @@ export function Shop() {
     setEquippingPackage(true)
     const players = packagePreview.players.map((id) => getStorePlayer(id)).filter(Boolean)
     const result = addPackagePlayers(loadClubSquad(squad), players)
+    const rewardBoostTypes: TeamBoostType[] = ["team-boost", "defense-shield", "goalkeeper-boost", "captain-boost", "ghost-formation"]
+    for (let i = 0; i < packagePreview.boosts; i += 1) activateTeamBoost(rewardBoostTypes[i % rewardBoostTypes.length], "1-match")
     const next = { bucks: wallet.bucks + packagePreview.bucks, gems: wallet.gems + packagePreview.gems }
     saveWallet(next)
     setWallet(next)
