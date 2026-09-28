@@ -90,6 +90,9 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
           const row = payload.new as any
           if (row.player_a === userId || row.player_b === userId) {
             setMatchId(row.id)
+            setRankedRole(row.player_a === userId ? "challenger" : "opponent")
+            setFriendMatchId(null)
+            setFriendRole(null)
             setMatchLevel((row.league_id as MatchWinLevel) || "academy")
             setInMatch(true)
             setQueueing(false)
