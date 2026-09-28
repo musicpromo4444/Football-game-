@@ -1,7 +1,7 @@
 "u
 function buildKnockout(teams: Team[]): Fixture[] {
   const out: Fixture[] = []
-  for (let i = 0; i + 1 < teams.length; i += 2) out.push({id:"r1-"+i,home:teams[i].id,away:teams[i+1].id,homeGoals:null,awayGoals:null,played:false})
+  for (let i = 0; i + 1 < teams.length; i += 2) out.push({id:crypto.randomUUID?.() || "r1-"+i,home:teams[i].id,away:teams[i+1].id,homeGoals:null,awayGoals:null,played:false})
   return out
 }
 se client"
@@ -45,8 +45,8 @@ function buildRoundRobin(teams: Team[]): Fixture[] {
     for (let i = 0; i < list.length / 2; i++) {
       const a = list[i], b = list[list.length - 1 - i]
       if (a !== "BYE" && b !== "BYE") {
-        out.push({ id: `${r}-a${i}`, home: a, away: b, homeGoals: null, awayGoals: null, played: false })
-        out.push({ id: `${r}-b${i}`, home: b, away: a, homeGoals: null, awayGoals: null, played: false })
+        out.push({ id: crypto.randomUUID?.() || `${r}-a${i}`, home: a, away: b, homeGoals: null, awayGoals: null, played: false })
+        out.push({ id: crypto.randomUUID?.() || `${r}-b${i}`, home: b, away: a, homeGoals: null, awayGoals: null, played: false })
       }
     }
     const fixed = list[0], rest = list.slice(1)
@@ -142,6 +142,12 @@ export function PrivateLeagues({ onBack }: { onBack?: () => void }) {
     }
     const fixtures = l.mode === "Home & Away" ? buildRoundRobin(teams) : buildKnockout(teams)
 
+    if (supabase && fixtures.length) {
+      await supabase.from("pitchside_private_league_fixtures").delete().eq("league_id", selected)
+      await supabase.from("pitchside_private_league_fixtures").insert(fixtures.map((f:any) => ({
+        id:f.id, league_id:selected, round_no:1, home_user_id:f.home, away_user_id:f.away
+      })))
+    }
     const nextDetails = { ...details, [selected]: { ...d, teams, fixtures } }
     setDetails(nextDetails); saveDetails(nextDetails)
     const nextLeagues = leagues.map(x => x.id === selected ? { ...x, started: true } : x); setLeagues(nextLeagues); saveLeagues(nextLeagues)
