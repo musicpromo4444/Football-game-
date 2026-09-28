@@ -18,7 +18,7 @@ export const PROMOTION_REWARDS: Record<MatchWinLevel, PromotionReward> = {
 export function getPromotionReward(level: MatchWinLevel = "academy") { return PROMOTION_REWARDS[level] }
 
 const MATCH_WIN_REWARDS: Record<MatchWinLevel, number> = {
-  academy: 500, "league-1": 600, "league-2": 700, "league-3": 800, "league-4": 900, premier: 1000,
+  academy: 200, "league-1": 250, "league-2": 300, "league-3": 350, "league-4": 400, premier: 450,
   champions: 1100, super: 1200, legendary: 1300, elite: 1400, "hall-of-fame": 1500,
 }
 export function getMatchWinReward(level: MatchWinLevel = "academy") { return MATCH_WIN_REWARDS[level] }
