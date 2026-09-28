@@ -9,10 +9,9 @@ import { supabase } from "@/lib/supabase"
 
 type Page = "home" | "tournaments" | "league" | "friends"
 
-const tournaments = [
-  { id: "t1", name: "Neon Cup", format: "Knockout", entry: "Free", prize: "10,000 Bux", status: "Open", players: "8/16" },
-  { id: "t2", name: "World Rivals", format: "Group → Knockout", entry: "Free", prize: "25 Gems + Elite Kit", status: "Starts in 2h", players: "32/64" },
-  { id: "t3", name: "Weekend Champions", format: "Knockout", entry: "10 Gems", prize: "50 Gems + Special Player", status: "Open", players: "47/64" },
+const fallbackTournaments = [
+  { id: "t1", name: "Neon Cup", tournament_type: "Knockout Cup", entry_type: "Free", entry_amount: 0, starts_at: new Date(Date.now()+86400000).toISOString(), ends_at: new Date(Date.now()+3*86400000).toISOString(), max_players: 16, players_count: 8 },
+  { id: "t2", name: "World Rivals", tournament_type: "Champions Cup", entry_type: "Free", entry_amount: 0, starts_at: new Date(Date.now()+2*86400000).toISOString(), ends_at: new Date(Date.now()+4*86400000).toISOString(), max_players: 64, players_count: 32 },
 ]
 
 const friends = [
@@ -32,8 +31,12 @@ export function CompetitionHub() {
   const [presence, setPresence] = useState<Record<string, string>>({})
   const [invite, setInvite] = useState<any>(null)
   const [friendRows, setFriendRows] = useState<any[]>([])
+  const [tournamentRows, setTournamentRows] = useState<any[]>(fallbackTournaments)
+  const [now, setNow] = useState(Date.now())
 
   useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000)
+    supabase.from("pitchside_tournaments").select("id,name,tournament_type,entry_type,entry_amount,starts_at,ends_at,max_players").in("status",["published","open","live"]).order("starts_at").then(({data}) => { if (data?.length) setTournamentRows(data.map((x:any)=>({...x,players_count:0}))) })
     let channel: any
     let inviteChannel: any
     let cancelled = false
@@ -55,7 +58,7 @@ export function CompetitionHub() {
       inviteChannel = supabase.channel(`pitchside-friend-invite:${data.user.id}`)
         .on("broadcast",{event:"friend-invite"},({payload}:any)=>setInvite(payload)).subscribe()
     })()
-    return () => { cancelled=true; if(channel) supabase.removeChannel(channel); if(inviteChannel) supabase.removeChannel(inviteChannel) }
+    return () => { cancelled=true; window.clearInterval(timer); if(channel) supabase.removeChannel(channel); if(inviteChannel) supabase.removeChannel(inviteChannel) }
   }, [])
 
   if (page === "league") return <div className="pb-4"><div className="px-5 pt-3"><Back onBack={() => setPage("home")} /></div><PrivateLeagues onBack={() => setPage("home")} /></div>
@@ -66,24 +69,25 @@ export function CompetitionHub() {
         <div className="px-5 pt-3"><Back onBack={() => setPage("home")} /></div>
         <ScreenHeader title="Tournaments" subtitle="Compete through rounds and chase the final" />
         <div className="space-y-3 px-5">
-          {tournaments.map((t) => (
+          {tournamentRows.map((t) => { const start=new Date(t.starts_at).getTime(); const end=new Date(t.ends_at).getTime(); const remaining=Math.max(0,(start-now)); const ending=Math.max(0,(end-now)); const active=now>=start&&now<end; const total=Math.floor(remaining/1000); const days=Math.floor(total/86400); const hours=Math.floor((total%86400)/3600); const mins=Math.floor((total%3600)/60); const secs=total%60; const countdown=active ? "LIVE NOW" : `${days}D ${hours}H ${mins}M ${secs}S`; return (
             <Card key={t.id} className="overflow-hidden p-4">
               <div className="flex items-start gap-3">
                 <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary"><Trophy className="h-6 w-6" /></span>
                 <div className="min-w-0 flex-1">
                   <p className="font-display text-base font-black">{t.name}</p>
-                  <p className="text-[10px] text-muted-foreground">{t.format} · {t.players}</p>
+                  <p className="text-[10px] text-muted-foreground">{t.tournament_type} · {t.players_count || 0}/{t.max_players}</p>
+                  <p className={`mt-1 text-[11px] font-black ${active ? "text-emerald-400" : "text-primary"}`}>{countdown}</p>
                   <div className="mt-2 grid grid-cols-2 gap-2 text-[9px]">
-                    <div className="rounded-lg bg-secondary p-2"><span className="text-muted-foreground">Prize</span><br/><b>{t.prize}</b></div>
-                    <div className="rounded-lg bg-secondary p-2"><span className="text-muted-foreground">Entry</span><br/><b>{t.entry}</b></div>
+                    <div className="rounded-lg bg-secondary p-2"><span className="text-muted-foreground">Prize</span><br/><b>{t.entry_type === "Free" ? "Free" : `${t.entry_amount} ${t.entry_type}`}</b></div>
+                    <div className="rounded-lg bg-secondary p-2"><span className="text-muted-foreground">Entry</span><br/><b>{active ? "Open now" : `Starts in ${days}d ${hours}h`}</b></div>
                   </div>
                 </div>
               </div>
               <Button className="mt-3 h-10 w-full rounded-xl" onClick={() => { window.localStorage.setItem("pitchside-tournament", t.id); window.dispatchEvent(new Event("pitchside-start-tournament")) }}>
-                <Play className="mr-2 h-4 w-4" /> {t.status === "Open" ? "Enter Tournament" : t.status}
+                <Play className="mr-2 h-4 w-4" /> {active ? "Enter Tournament" : "View Countdown"}
               </Button>
             </Card>
-          ))}
+          )})}
           <Card className="border-primary/20 p-4">
             <div className="flex items-center gap-2"><Medal className="h-4 w-4 text-primary" /><p className="text-xs font-black">Tournament path</p></div>
             <div className="mt-3 grid grid-cols-4 gap-1 text-center text-[8px]">
