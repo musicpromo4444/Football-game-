@@ -153,6 +153,23 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
             }
             apply(userTeam, userGoals, opponentGoals)
             apply(opponentTeam, opponentGoals, userGoals)
+            const leagues = JSON.parse(window.localStorage.getItem("pitchside-user-leagues") || "[]")
+            const meta = leagues.find((l:any) => l.id === leagueFixture.leagueId)
+            if (meta?.mode === "Knockout") {
+              const currentRound = Math.max(...(d.fixtures || []).map((f:any) => f.round || 1))
+              const roundFixtures = (d.fixtures || []).filter((f:any) => (f.round || 1) === currentRound)
+              if (roundFixtures.length && roundFixtures.every((f:any) => f.played)) {
+                const winners = roundFixtures.map((f:any) => f.homeGoals > f.awayGoals ? f.home : f.away).filter(Boolean)
+                if (winners.length > 1) {
+                  const nextRound = currentRound + 1
+                  for (let i=0;i+1<winners.length;i+=2) {
+                    d.fixtures.push({id:crypto.randomUUID(),round:nextRound,home:winners[i],away:winners[i+1],homeGoals:null,awayGoals:null,played:false})
+                  }
+                  if (winners.length === 1) meta.status = "completed"
+                  window.localStorage.setItem("pitchside-user-leagues", JSON.stringify(leagues))
+                }
+              }
+            }
             window.localStorage.setItem(key, JSON.stringify(all))
             window.dispatchEvent(new Event("pitchside-leagues-updated"))
           }
