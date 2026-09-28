@@ -624,7 +624,6 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
         const shooter = playerArchetypes[ballOwner]
         const shooterRole = shooter?.role
         const special = shooter?.specialStyle
-        const specialAbility = shooter?.attributes ? shooter.specialStyle : undefined
         const distance = Math.hypot(50 - (positions[ballOwner]?.x ?? 50), 4 - (positions[ballOwner]?.y ?? 50))
         let accuracy = 0.58
         let power = 0.65
