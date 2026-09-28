@@ -16,6 +16,7 @@ import { Shop } from "@/components/game/screens/shop"
 import { getCountry, readProfile } from "@/lib/locale"
 import { squad } from "@/components/game/data"
 import { StoreItemSpotlight } from "@/components/game/store-item-spotlight"
+import { FastMatchTutorial } from "@/components/game/fast-match-tutorial"
 
 export function AppShell() {
   const [tab, setTab] = useState<TabId>("play")
@@ -28,9 +29,12 @@ export function AppShell() {
   const [promoReason, setPromoReason] = useState<"daily"|"match"|null>("daily")
   const profile = readProfile()
   const country = getCountry(profile?.countryCode)
+  const [tutorialComplete, setTutorialComplete] = useState(() => typeof window !== "undefined" && localStorage.getItem("pitchside-fast-match-complete") === "true")
   useEffect(() => { const refresh = () => setAuctionDisplay(readAuctionDisplay()); window.addEventListener("storage", refresh); return () => window.removeEventListener("storage", refresh) }, [])
 
   useEffect(() => { const handler = () => setPromoReason("match"); window.addEventListener("pitchside-show-store-promo", handler); return () => window.removeEventListener("pitchside-show-store-promo", handler) }, [])
+
+  if (profile && !tutorialComplete) return <FastMatchTutorial onComplete={() => setTutorialComplete(true)} />
 
   return (
     <div className="app-bg min-h-screen">
