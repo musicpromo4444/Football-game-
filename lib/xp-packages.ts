@@ -40,8 +40,11 @@ export function getPackageContents(tier: PackageTier): PackageReward {
   return { tier, players, playerBoost: 1, bucks, gems, specialPlayer, rareBonus }
 }
 
-export function openPackage(tier: PackageTier) {
-  const reward = getPackageContents(tier)
+export function revealPackage(tier: PackageTier) {
+  return getPackageContents(tier)
+}
+
+export function equipPackage(reward: PackageReward) {
   const wallet = readWallet()
   saveWallet({ bucks: wallet.bucks + reward.bucks, gems: wallet.gems + reward.gems })
   for (const playerId of reward.players) grantTrainingBoost(playerId, "starter")
