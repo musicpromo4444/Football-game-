@@ -188,7 +188,7 @@ export function MatchCanvas({ onMatchComplete, onlineMatch, onMatchForfeit }: { 
 
   useEffect(() => {
     if (!onlineMatch) return
-    const channel = supabase.channel(`pitchside-friend-game:${onlineMatch.matchId}`)
+    const channel = supabase.channel(`pitchside-friend-game:${onlineMatch.matchId}`, { config: { private: true } })
     friendChannelRef.current = channel
     channel.on("broadcast", { event: "state" }, ({ payload }: any) => {
       if (!payload?.state) return
