@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { ArrowLeft, Plus, Save, Trash2 } from "lucide-react"
+import { ArrowLeft, Plus, Save, Trash2, LockKeyhole, ShieldCheck, CreditCard, Megaphone, ToggleLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, Pill, ScreenHeader } from "@/components/game/ui-bits"
 import { AdminShop } from "@/components/game/admin-shop"
@@ -16,6 +16,11 @@ export default function AdminPage() {
   const [generateAmount, setGenerateAmount] = useState(10)
   const [saved, setSaved] = useState(false)
   const [display, setDisplay] = useState<AuctionDisplaySettings>(DEFAULT_AUCTION_DISPLAY)
+  const [adminToken, setAdminToken] = useState("")
+  const [secretStatus, setSecretStatus] = useState<Record<string, boolean>>({})
+  const [secretValues, setSecretValues] = useState<Record<string, string>>({})
+  const [secretMessage, setSecretMessage] = useState("")
+  const [features, setFeatures] = useState({ onlineMatches: true, auctions: true, playerCards: true, ghostFormation: true, injuryShield: true, ads: true, purchases: true })
 
   useEffect(() => {
     const loaded = readAuctionPlayers()
@@ -30,6 +35,36 @@ export default function AdminPage() {
     setPlayers((current) => current.length >= next ? current.slice(0, next) : [...current, ...Array.from({ length: next - current.length }, emptyPlayer)])
   }
   const save = () => { saveAuctionPlayers(players.slice(0, count)); setSaved(true); window.setTimeout(() => setSaved(false), 1800) }
+
+  const secretKeys = [
+    ["pitchside.payment.provider", "Payment provider"],
+    ["pitchside.payment.public_key", "Payment public key"],
+    ["pitchside.payment.secret_key", "Payment secret key"],
+    ["pitchside.payment.webhook_secret", "Payment webhook secret"],
+    ["pitchside.ads.provider", "Ads provider"],
+    ["pitchside.ads.publisher_id", "Ads publisher ID"],
+    ["pitchside.ads.app_id", "Ads app ID"],
+    ["pitchside.ads.api_key", "Ads API key"],
+    ["pitchside.ads.api_secret", "Ads API secret"],
+  ] as const
+
+  const loadSecretStatus = async () => {
+    if (!adminToken) return
+    const res = await fetch("/api/admin/secrets", { headers: { "x-pitchside-admin-token": adminToken } })
+    const data = await res.json()
+    if (!res.ok) { setSecretMessage(data.error || "Admin access failed"); return }
+    setSecretStatus(Object.fromEntries((data.configured || []).map((x: { name: string; configured: boolean }) => [x.name, x.configured])))
+    setSecretMessage("Secure configuration loaded")
+  }
+
+  const saveSecrets = async () => {
+    if (!adminToken) { setSecretMessage("Enter the Admin Access Key first"); return }
+    const secrets = Object.entries(secretValues).filter(([, value]) => value.trim()).map(([name, value]) => ({ name, value }))
+    const res = await fetch("/api/admin/secrets", { method: "POST", headers: { "Content-Type": "application/json", "x-pitchside-admin-token": adminToken }, body: JSON.stringify({ secrets }) })
+    const data = await res.json()
+    setSecretMessage(res.ok ? "Saved securely" : (data.error || "Could not save"))
+    if (res.ok) { setSecretValues({}); await loadSecretStatus() }
+  }
 
   return (
     <main className="min-h-screen bg-background pb-8">
@@ -88,6 +123,37 @@ export default function AdminPage() {
         ))}
 
         <Button variant="outline" onClick={() => setPlayers((current) => [...current, emptyPlayer()])} className="w-full rounded-xl"><Plus className="mr-1 h-4 w-4" /> Add player</Button>
+        <Card glow="cyan" className="p-4">
+          <div className="flex items-center gap-2"><LockKeyhole className="h-5 w-5 text-cyan-300" /><div><p className="text-xs uppercase tracking-wide text-muted-foreground">Admin Security</p><p className="font-bold">Private configuration</p></div></div>
+          <p className="mt-2 text-xs text-muted-foreground">Payment and advertising credentials never enter the player frontend or local storage. They are sent only to the protected server endpoint and stored in Supabase Vault.</p>
+          <input type="password" value={adminToken} onChange={(e) => setAdminToken(e.target.value)} placeholder="Admin Access Key" className="mt-3 w-full rounded-xl border border-border bg-secondary/50 px-3 py-3 text-xs" />
+          <Button onClick={loadSecretStatus} variant="outline" className="mt-2 w-full rounded-xl"><ShieldCheck className="mr-1 h-4 w-4" />Verify Admin Access</Button>
+        </Card>
+
+        <Card glow="emerald" className="p-4">
+          <div className="flex items-center gap-2"><CreditCard className="h-5 w-5 text-emerald-300" /><div><p className="text-xs uppercase tracking-wide text-muted-foreground">Payments</p><p className="font-bold">Provider & private keys</p></div></div>
+          <div className="mt-3 space-y-2">
+            {secretKeys.slice(0, 4).map(([name, label]) => <label key={name} className="block text-[10px] font-bold text-muted-foreground">{label}{secretStatus[name] && !secretValues[name] ? <span className="ml-2 text-emerald-400">Configured</span> : null}<input type={name.includes("secret") || name.includes("key") ? "password" : "text"} value={secretValues[name] || ""} onChange={(e) => setSecretValues({ ...secretValues, [name]: e.target.value })} placeholder={secretStatus[name] ? "Leave blank to keep current" : label} className="mt-1 w-full rounded-lg border border-border bg-secondary/50 px-2 py-2 text-xs" /></label>)}
+          </div>
+        </Card>
+
+        <Card glow="cyan" className="p-4">
+          <div className="flex items-center gap-2"><Megaphone className="h-5 w-5 text-cyan-300" /><div><p className="text-xs uppercase tracking-wide text-muted-foreground">Advertising</p><p className="font-bold">Ad network configuration</p></div></div>
+          <div className="mt-3 space-y-2">
+            {secretKeys.slice(4).map(([name, label]) => <label key={name} className="block text-[10px] font-bold text-muted-foreground">{label}{secretStatus[name] && !secretValues[name] ? <span className="ml-2 text-emerald-400">Configured</span> : null}<input type={name.includes("secret") || name.includes("key") ? "password" : "text"} value={secretValues[name] || ""} onChange={(e) => setSecretValues({ ...secretValues, [name]: e.target.value })} placeholder={secretStatus[name] ? "Leave blank to keep current" : label} className="mt-1 w-full rounded-lg border border-border bg-secondary/50 px-2 py-2 text-xs" /></label>)}
+          </div>
+          <Button onClick={saveSecrets} className="mt-3 w-full rounded-xl"><Save className="mr-1 h-4 w-4" />Save secure keys</Button>
+          {secretMessage ? <p className="mt-2 text-center text-[10px] font-bold text-emerald-300">{secretMessage}</p> : null}
+        </Card>
+
+        <Card className="p-4">
+          <div className="flex items-center gap-2"><ToggleLeft className="h-5 w-5 text-amber-300" /><div><p className="text-xs uppercase tracking-wide text-muted-foreground">Game Controls</p><p className="font-bold">Feature switches</p></div></div>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            {(Object.keys(features) as (keyof typeof features)[]).map((key) => <label key={key} className="flex items-center gap-2 rounded-lg border border-border bg-secondary/30 p-2 text-[10px] font-bold"><input type="checkbox" checked={features[key]} onChange={(e) => setFeatures({ ...features, [key]: e.target.checked })} />{key.replace(/([A-Z])/g, " $1")}</label>)}
+          </div>
+          <p className="mt-2 text-[9px] text-muted-foreground">These controls are the admin UI layer; production-wide enforcement will use the same server-side settings.</p>
+        </Card>
+
         <AdminShop />
         <a href="/" className="flex items-center justify-center gap-2 py-3 text-xs font-bold text-muted-foreground"><ArrowLeft className="h-4 w-4" /> Back to PitchSide</a>
       </div>
