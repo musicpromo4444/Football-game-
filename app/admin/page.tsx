@@ -202,6 +202,8 @@ export default function AdminPage() {
           {analytics ? <><div className="mt-3 grid grid-cols-2 gap-2">
             {[
               ["Matches today", analytics.today.matches],
+              ["Completed today", analytics.today.completedMatches],
+              ["Unique players today", analytics.today.uniquePlayers],
               ["Tournament entries today", analytics.today.tournamentEntries],
               ["Sponsor impressions today", analytics.today.sponsorImpressions],
               ["Playable ads today", analytics.today.playableAds],
