@@ -7,6 +7,7 @@ import { loadClubSquad } from "@/lib/club-squad"
 import { readPlayerTrainingBoost } from "@/lib/training-boosts"
 import { consumeTeamBoostsAfterMatch, getTeamBoostModifiers } from "@/lib/team-boosts"
 import { awardMatchWin, awardMatchDraw } from "@/lib/economy"
+import { addMatchXp, calculateMatchXp, revealPackage, equipPackage, type PackageReward } from "@/lib/xp-packages"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -111,6 +112,9 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
   const pointerModeRef = useRef<"ball" | "player">("ball")
   const [score, setScore] = useState({ home: 2, away: 1 })
   const [matchReward, setMatchReward] = useState<{ result: "WIN" | "DRAW" | "LOSS"; bucks: number } | null>(null)
+  const [xpEarned, setXpEarned] = useState(0)
+  const [packageReward, setPackageReward] = useState<PackageReward | null>(null)
+  const [packageEquipped, setPackageEquipped] = useState(false)
   const [kit, setKit] = useState<{ design: string; colorA: string; colorB: string } | null>(null)
 
   useEffect(() => {
@@ -287,6 +291,11 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
       consumeTeamBoostsAfterMatch()
       const outcome = score.home > score.away ? "WIN" : score.home === score.away ? "DRAW" : "LOSS"
       const reward = outcome === "WIN" ? awardMatchWin("academy") : outcome === "DRAW" ? awardMatchDraw() : null
+      const earnedXp = calculateMatchXp(outcome, score.home, score.away === 0, false)
+      const progression = addMatchXp(earnedXp)
+      setXpEarned(earnedXp)
+      setPackageReward(progression.packageTier ? revealPackage(progression.packageTier) : null)
+      setPackageEquipped(false)
       setMatchReward({ result: outcome, bucks: reward?.reward ?? 0 })
       onMatchComplete?.(score)
     }
@@ -938,6 +947,9 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
     setTime(120)
     setRunning(false)
     setMatchReward(null)
+    setXpEarned(0)
+    setPackageReward(null)
+    setPackageEquipped(false)
     const center = { x: 50, y: 55 }
     lastBallRef.current = center
     setBall(center)
@@ -1158,6 +1170,21 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
           </div>
         ))}
 
+        {packageReward && !packageEquipped && (
+          <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 p-5">
+            <div className="w-full max-w-sm rounded-3xl border border-amber-300/30 bg-[#111416] p-5 text-center shadow-2xl">
+              <p className="text-[10px] font-black tracking-[0.25em] text-amber-300">XP PACKAGE</p>
+              <h2 className="mt-1 font-display text-3xl font-black uppercase">{packageReward.tier} PACKAGE</h2>
+              <p className="mt-2 text-sm font-bold">+{packageReward.bucks} Bux · +{packageReward.gems} Gems</p>
+              <div className="mt-4 space-y-2 text-left text-xs font-bold">
+                <p>{packageReward.players.length} player cards · +1 OVR each</p>
+                {packageReward.specialPlayer && <p className="text-amber-300">Special Ability Player!</p>}
+                {packageReward.rareBonus && <p className="text-cyan-300">RARE 1-MATCH BONUS: {packageReward.rareBonus}</p>}
+              </div>
+              <button type="button" onClick={() => { equipPackage(packageReward); setPackageEquipped(true) }} className="mt-5 w-full rounded-2xl bg-primary px-4 py-3 text-sm font-black">EQUIP & CLAIM</button>
+            </div>
+          </div>
+        )}
         {/* ball */}
         <span
           className={cn("absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300", ballFlight && "animate-pulse")}
