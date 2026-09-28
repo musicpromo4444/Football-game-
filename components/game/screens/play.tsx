@@ -63,8 +63,10 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
       setOnlineError(null)
       setInMatch(true)
     }
+    const startFriendMatch = (event: Event) => { const detail = (event as CustomEvent).detail || {}; setLeagueFixture(null); setMatchId(detail.matchId ? "friend-" + detail.matchId : "friend-match"); setMatchDone(false); setMatchReward(null); setMatchRewardLabel(null); setOnlineError(null); setInMatch(true) }
     window.addEventListener("pitchside-start-league-fixture", startLeagueFixture)
-    return () => window.removeEventListener("pitchside-start-league-fixture", startLeagueFixture)
+    window.addEventListener("pitchside-start-friend-match", startFriendMatch)
+    return () => { window.removeEventListener("pitchside-start-league-fixture", startLeagueFixture); window.removeEventListener("pitchside-start-friend-match", startFriendMatch) }
   }, [])
 
   useEffect(() => {
