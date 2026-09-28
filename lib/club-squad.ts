@@ -81,9 +81,6 @@ export function claimSpecialPlayer(templateId: string): { player: Player | null;
   const claims = readSpecialClaims()
   if (claims[templateId]) return { player: claims[templateId], alreadyClaimed: true, message: "Already claimed." }
 
-  const currentSquad = loadClubSquad([])
-  if (currentSquad.length >= getSquadCapacity()) return { player: null, alreadyClaimed: false, message: "Squad is full. Upgrade your squad first." }
-
   const usedNames = new Set(Object.values(claims).map((player) => player.name))
   const availableNames = SPECIAL_NAMES.filter((name) => !usedNames.has(name))
   const name = randomFrom(availableNames.length ? availableNames : SPECIAL_NAMES)
@@ -204,7 +201,7 @@ export function loadClubSquad(base: Player[]): Player[] {
         ? saved.auctionPlayers.filter((player: Player) => player && typeof player.id === "string")
         : []
 
-      return [...ownedBase, ...auctionPlayers, ...getSpecialPlayerClaims()].slice(0, getSquadCapacity())
+      return [...ownedBase, ...auctionPlayers].slice(0, getSquadCapacity()).concat(getSpecialPlayerClaims())
     }
 
     // Migrate the previous auction-only storage format without giving every
@@ -216,7 +213,7 @@ export function loadClubSquad(base: Player[]): Player[] {
         profileStorageKey(CLUB_SQUAD_KEY),
         JSON.stringify({ baseIds: starting.map((player) => player.id), auctionPlayers }),
       )
-      return [...starting, ...auctionPlayers, ...getSpecialPlayerClaims()].slice(0, getSquadCapacity())
+      return [...starting, ...auctionPlayers].slice(0, getSquadCapacity()).concat(getSpecialPlayerClaims())
     }
 
     return getSpecialPlayerClaims().slice(0, getSquadCapacity())
@@ -245,7 +242,8 @@ export function saveClubSquad(players: Player[]) {
 export function addAuctionPlayer(base: Player[], player: AuctionPlayer): { squad: Player[]; added: boolean } {
   const current = base.length ? base : loadClubSquad(base)
   if (current.some((p) => p.id === "auction-" + player.id)) return { squad: current, added: false }
-  if (current.length >= getSquadCapacity()) return { squad: current, added: false }
+  const normalCount = current.filter((p) => !p.id.startsWith("special-")).length
+  if (normalCount >= getSquadCapacity()) return { squad: current, added: false }
   const next = [...current, auctionToPlayer(player)]
   saveClubSquad(next)
   return { squad: next, added: true }
