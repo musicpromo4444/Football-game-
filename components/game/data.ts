@@ -160,7 +160,16 @@ export const playerRoles: { role: PlayerRole; behavior: string }[] = [
 
 export type SpecialPlayerStyle =
   | "Hammer" | "Free-Kick Specialist" | "Mezzala" | "Pressing Forward" | "Long-Range Sniper"
-  | "Dribble King" | "Maestro" | "Wall" | "Wingback Master" | "Guardian"
+  | "Dribble King" | "Maestro" | "Wall" | "Wingback Master" | "Guardian" | "Speed Demon" | "Power Finisher"
+
+export type SpecialPlayer = {
+  id: string
+  style: SpecialPlayerStyle
+  role: PlayerRole
+  rating: number
+  attributes: NonNullable<Player["attributes"]>
+  specialAbility: string
+}
 
 export const specialPlayerStyles: { style: SpecialPlayerStyle; behavior: string }[] = [
   { style: "Hammer", behavior: "dominates aerial duels and attacks crosses with elite headers" },
@@ -173,26 +182,23 @@ export const specialPlayerStyles: { style: SpecialPlayerStyle; behavior: string 
   { style: "Wall", behavior: "elite tackling, interception and defensive duels" },
   { style: "Wingback Master", behavior: "wins the ball, carries wide and delivers highly accurate crosses" },
   { style: "Guardian", behavior: "elite positioning, reactions and one-on-one saves" },
+  { style: "Speed Demon", behavior: "explodes into space with exceptional acceleration" },
+  { style: "Power Finisher", behavior: "converts high-power shots with exceptional consistency" },
 ]
 
-export type SpecialPlayer = {
-  id: string
-  name: string
-  style: SpecialPlayerStyle
-  role: PlayerRole
-}
-
 export const specialPlayers: SpecialPlayer[] = [
-  { id: "sp1", name: "The Anvil", style: "Hammer", role: "Target Forward" },
-  { id: "sp2", name: "Curve Saint", style: "Free-Kick Specialist", role: "Playmaker" },
-  { id: "sp3", name: "Silk Runner", style: "Mezzala", role: "Mezzala" },
-  { id: "sp4", name: "Hound", style: "Pressing Forward", role: "Pressing Forward" },
-  { id: "sp5", name: "The Cannon", style: "Long-Range Sniper", role: "Advanced Forward" },
-  { id: "sp6", name: "Velvet Feet", style: "Dribble King", role: "Inside Forward" },
-  { id: "sp7", name: "The Architect", style: "Maestro", role: "Playmaker" },
-  { id: "sp8", name: "Iron Wall", style: "Wall", role: "Ball-Playing Defender" },
-  { id: "sp9", name: "Wing Phantom", style: "Wingback Master", role: "Wingback" },
-  { id: "sp10", name: "The Guardian", style: "Guardian", role: "Sweeper Keeper" },
+  { id: "sp1", style: "Hammer", role: "Target Forward", rating: 90, specialAbility: "Aerial Hammer", attributes: { pace: 68, passing: 72, shooting: 91, defending: 18, stamina: 88, heading: 99, strength: 98 } },
+  { id: "sp2", style: "Free-Kick Specialist", role: "Playmaker", rating: 91, specialAbility: "Dead-Ball Master", attributes: { pace: 78, passing: 98, shooting: 92, defending: 42, stamina: 86, heading: 45, strength: 58 } },
+  { id: "sp3", style: "Mezzala", role: "Mezzala", rating: 92, specialAbility: "Half-Space Overload", attributes: { pace: 87, passing: 94, shooting: 88, defending: 58, stamina: 96, heading: 51, strength: 70 } },
+  { id: "sp4", style: "Pressing Forward", role: "Pressing Forward", rating: 89, specialAbility: "Relentless Press", attributes: { pace: 91, passing: 74, shooting: 84, defending: 67, stamina: 99, heading: 58, strength: 78 } },
+  { id: "sp5", style: "Long-Range Sniper", role: "Advanced Forward", rating: 93, specialAbility: "Sniper Strike", attributes: { pace: 89, passing: 78, shooting: 99, defending: 15, stamina: 84, heading: 73, strength: 76 } },
+  { id: "sp6", style: "Dribble King", role: "Inside Forward", rating: 94, specialAbility: "Ankle Breaker", attributes: { pace: 98, passing: 88, shooting: 90, defending: 22, stamina: 92, heading: 44, strength: 63 } },
+  { id: "sp7", style: "Maestro", role: "Playmaker", rating: 94, specialAbility: "Threaded Needle", attributes: { pace: 82, passing: 99, shooting: 84, defending: 46, stamina: 90, heading: 39, strength: 55 } },
+  { id: "sp8", style: "Wall", role: "Ball-Playing Defender", rating: 92, specialAbility: "Lockdown", attributes: { pace: 78, passing: 87, shooting: 20, defending: 99, stamina: 94, heading: 94, strength: 97 } },
+  { id: "sp9", style: "Wingback Master", role: "Wingback", rating: 90, specialAbility: "Endless Overlap", attributes: { pace: 96, passing: 91, shooting: 48, defending: 88, stamina: 99, heading: 52, strength: 75 } },
+  { id: "sp10", style: "Guardian", role: "Sweeper Keeper", rating: 95, specialAbility: "Impossible Save", attributes: { pace: 72, passing: 89, shooting: 12, defending: 99, stamina: 96, heading: 62, strength: 91 } },
+  { id: "sp11", style: "Speed Demon", role: "Winger", rating: 91, specialAbility: "Afterburner", attributes: { pace: 99, passing: 86, shooting: 82, defending: 27, stamina: 94, heading: 43, strength: 65 } },
+  { id: "sp12", style: "Power Finisher", role: "Complete Forward", rating: 92, specialAbility: "Thunder Shot", attributes: { pace: 86, passing: 79, shooting: 98, defending: 19, stamina: 90, heading: 91, strength: 94 } },
 ]
 
 export type Player = {
@@ -217,6 +223,9 @@ export type Player = {
   }
   specialStyle?: SpecialPlayerStyle
   specialName?: string
+  specialAbility?: string
+  specialColor?: string
+  specialTemplateId?: string
 }
 
 
