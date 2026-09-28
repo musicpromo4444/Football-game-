@@ -632,17 +632,20 @@ export function MatchCanvas({ onMatchComplete, onlineMatch, onMatchForfeit, chal
             const homeDefender = positions[selectedDefenderRef.current ?? 0]
             const pressureDistance = homeDefender ? Math.hypot(homeDefender.x - p.x, homeDefender.y - p.y) : 99
             const danger = Math.max(0, 1 - pressureDistance / 20)
-            const challengeBoost = challenge ? Math.max(1, challenge.rating / 84) : 1
+            const challengeBoost = challenge
+              ? challenge.rating >= 100 ? 2.25 : challenge.rating >= 95 ? 1.85 : challenge.rating >= 88 ? 1.55 : Math.max(1, challenge.rating / 84)
+              : 1
             const skill = Math.min(1, (style.skill / 100) * challengeBoost)
+            const elitePressure = challenge ? (challenge.rating >= 100 ? 0.92 : challenge.rating >= 95 ? 0.78 : challenge.rating >= 88 ? 0.62 : 0) : 0
 
-            if (pressureDistance < 18) {
+            if (pressureDistance < 22) {
               if (style.decision === "dribble") {
                 // Dribbler takes the ball away from the defender, with better
                 // escape movement at higher skill.
                 const escapeX = p.x - (homeDefender?.x ?? p.x)
                 const escapeY = p.y - (homeDefender?.y ?? p.y)
-                x += escapeX * (0.18 + skill * 0.12)
-                y += escapeY * (0.18 + skill * 0.12)
+                x += escapeX * (0.18 + skill * 0.12 + elitePressure * 0.12)
+                y += escapeY * (0.18 + skill * 0.12 + elitePressure * 0.12)
                 x += Math.sin(t * 4 + i) * 1.5
                 y += Math.cos(t * 4 + i) * 1.0
               } else if (style.decision === "pass") {
@@ -661,17 +664,17 @@ export function MatchCanvas({ onMatchComplete, onlineMatch, onMatchForfeit, chal
                 }
               } else if (style.decision === "run") {
                 // Direct runners attack the defender and try to break through.
-                x += toGoalX * (0.06 + skill * 0.04)
-                y += toGoalY * (0.06 + skill * 0.04)
+                x += toGoalX * (0.06 + skill * 0.04 + elitePressure * 0.05)
+                y += toGoalY * (0.06 + skill * 0.04 + elitePressure * 0.05)
               } else {
                 // Goal-focused players keep attacking the goal rather than
                 // automatically avoiding the defender.
-                x += toGoalX * 0.08
-                y += toGoalY * 0.1
+                x += toGoalX * (0.08 + elitePressure * 0.04)
+                y += toGoalY * (0.1 + elitePressure * 0.05)
               }
             } else {
-              x += toGoalX * 0.025
-              y += toGoalY * 0.035
+              x += toGoalX * (0.025 + elitePressure * 0.02)
+              y += toGoalY * (0.035 + elitePressure * 0.025)
             }
           } else {
             // Off-ball opponents make supporting runs into useful passing areas.
