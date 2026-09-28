@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils"
 import type { TabId } from "@/components/game/data"
 
 const items: { id: TabId; label: string; icon: typeof User }[] = [
-  { id: "private", label: "Private", icon: User },
+  { id: "private", label: "Friends", icon: User },
   { id: "league", label: "League", icon: Trophy },
   { id: "play", label: "Play", icon: Gamepad2 },
   { id: "squad", label: "Tactics", icon: Shield },
