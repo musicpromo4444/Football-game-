@@ -20,7 +20,7 @@ export function getPitchSideXp() {
 function saveXp(xp: number) { if (typeof window !== "undefined") localStorage.setItem(XP_KEY, String(Math.max(0, Math.floor(xp)))) }
 
 export function calculateMatchXp(result: "WIN" | "DRAW" | "LOSS", goals: number, cleanSheet: boolean) {
-  return (result === "WIN" ? 100 : result === "DRAW" ? 50 : 0) + Math.max(0, goals) * 0 + (cleanSheet ? 0 : 0)
+  return (result === "WIN" ? 100 : result === "DRAW" ? 50 : 0) + Math.max(0, goals) * 10 + (cleanSheet ? 25 : 0)
 }
 
 function readPlayerCards(): PlayerCardReward[] {
