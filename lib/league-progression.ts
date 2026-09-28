@@ -16,7 +16,7 @@ export const LEAGUE_LEVELS: MatchWinLevel[] = [
 
 /** Cumulative points required to enter each division. */
 export const LEAGUE_QUALIFICATION_POINTS = [
-  3, 60, 114, 165, 240, 450, 867, 1380, 2700, 3900, null,
+  60, 114, 165, 240, 450, 867, 1380, 2700, 3900, 6000, null,
 ] as const
 
 /** Straight-win equivalents requested for each promotion step. */
