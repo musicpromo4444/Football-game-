@@ -1,7 +1,7 @@
 "use client"
 
 import type { Player } from "@/components/game/data"
-import { playerPool } from "@/components/game/data"
+import { playerPool, specialPlayers } from "@/components/game/data"
 import type { AuctionPlayer } from "@/lib/auction"
 import { readWallet, saveWallet } from "@/lib/economy"
 
@@ -29,6 +29,91 @@ export function getPlayerProfileId(): string {
 
 function profileStorageKey(key: string): string {
   return `${key}:${getPlayerProfileId()}`
+}
+
+const SPECIAL_CLAIMS_KEY = "pitchside-special-player-claims"
+
+const SPECIAL_NAMES = [
+  "Bruno", "Bellingham", "Kairo", "Milan", "Dario", "Malik", "Thiago", "Rafael",
+  "Jonas", "Amari", "Nico", "Soren", "Mateo", "Luka", "Andre", "Isaac",
+  "Tariq", "Elian", "Marco", "Leon", "Kenji", "Adrian", "Noah", "Samir",
+]
+
+const SPECIAL_COLOURS = [
+  "Crimson", "Royal Blue", "Emerald", "Gold", "Violet", "Ice", "Orange", "Obsidian",
+  "Silver", "Neon Green", "Sky Blue", "Magenta",
+]
+
+const SPECIAL_FACE_IDS = [4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60, 64]
+
+function randomFrom<T>(items: T[]): T {
+  return items[Math.floor(Math.random() * items.length)]
+}
+
+function randomHeight(role: Player["pos"]): number {
+  if (role === "GK") return 186 + Math.floor(Math.random() * 13)
+  if (role === "DEF") return 180 + Math.floor(Math.random() * 15)
+  if (role === "MID") return 172 + Math.floor(Math.random() * 14)
+  return 175 + Math.floor(Math.random() * 18)
+}
+
+function readSpecialClaims(): Record<string, Player> {
+  if (typeof window === "undefined") return {}
+  try {
+    const parsed = JSON.parse(localStorage.getItem(profileStorageKey(SPECIAL_CLAIMS_KEY)) || "{}")
+    return parsed && typeof parsed === "object" ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+function saveSpecialClaims(claims: Record<string, Player>) {
+  localStorage.setItem(profileStorageKey(SPECIAL_CLAIMS_KEY), JSON.stringify(claims))
+}
+
+/** Claims one fixed special template and gives this profile a unique identity for it. */
+export function claimSpecialPlayer(templateId: string): { player: Player | null; alreadyClaimed: boolean; message: string } {
+  if (typeof window === "undefined") return { player: null, alreadyClaimed: false, message: "Open the game first." }
+
+  const template = specialPlayers.find((item) => item.id === templateId)
+  if (!template) return { player: null, alreadyClaimed: false, message: "Special player not found." }
+
+  const claims = readSpecialClaims()
+  if (claims[templateId]) return { player: claims[templateId], alreadyClaimed: true, message: "Already claimed." }
+
+  const usedNames = new Set(Object.values(claims).map((player) => player.name))
+  const availableNames = SPECIAL_NAMES.filter((name) => !usedNames.has(name))
+  const name = randomFrom(availableNames.length ? availableNames : SPECIAL_NAMES)
+  const colour = randomFrom(SPECIAL_COLOURS)
+  const faceId = randomFrom(SPECIAL_FACE_IDS)
+  const pos = template.role === "Sweeper Keeper" ? "GK" : template.role === "Wingback" || template.role === "Ball-Playing Defender" ? "DEF" : template.role === "Mezzala" || template.role === "Playmaker" || template.role === "Pressing Forward" ? "MID" : "FWD"
+
+  const player: Player = {
+    id: `special-${template.id}-${getPlayerProfileId()}`,
+    name,
+    pos,
+    rating: template.rating,
+    stamina: template.attributes.stamina,
+    style: template.role,
+    number: 7 + Math.floor(Math.random() * 89),
+    face: `https://i.pravatar.cc/240?img=${faceId}`,
+    look: `${colour} Edition`,
+    height: randomHeight(pos),
+    attributes: { ...template.attributes },
+    specialStyle: template.style,
+    specialName: name,
+    specialAbility: template.specialAbility,
+    specialColor: colour,
+    specialTemplateId: template.id,
+  }
+
+  claims[templateId] = player
+  saveSpecialClaims(claims)
+  return { player, alreadyClaimed: false, message: `${name} claimed — ${template.specialAbility}.` }
+}
+
+export function getSpecialPlayerClaims(): Player[] {
+  return Object.values(readSpecialClaims())
 }
 
 function allStarterPlayers(base: Player[]): Player[] {
