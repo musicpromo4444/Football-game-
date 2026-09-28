@@ -246,7 +246,7 @@ export function MatchCanvas({ onMatchComplete, onlineMatch, onMatchForfeit }: { 
     }
     const checkId = window.setInterval(check, 1000)
     return () => { cancelled = true; window.clearInterval(heartbeatId); window.clearInterval(checkId) }
-  }, [onlineMatch?.matchId, onlineMatch?.role, onMatchForfeit])
+  }, [onlineMatch?.matchId, onlineMatch?.role, onlineMatch?.kind])
 
   useEffect(() => {
     if (trainingBlocked) { setRunning(false); return }
