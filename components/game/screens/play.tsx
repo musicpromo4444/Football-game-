@@ -67,7 +67,7 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
       setInMatch(true)
     }
     const startTournament = async () => { const id = window.localStorage.getItem("pitchside-tournament"); if (!id) return; const {data,error}=await supabase.rpc("pitchside_join_tournament",{p_tournament_id:id}); if(error){setOnlineError(error.message);return} setTournamentId(id); setLeagueFixture(null); setFriendMatchId(null); setMatchId("tournament-"+id); setMatchDone(false); setMatchReward(null); setMatchRewardLabel(null); setOnlineError(null); setInMatch(true) }
-    const startFriendMatch = (event: Event) => { const detail = (event as CustomEvent).detail || {}; setTournamentId(null); setLeagueFixture(null); setFriendMatchId(detail.matchId || null); setMatchId(detail.matchId ? "friend-" + detail.matchId : "friend-match"); setMatchDone(false); setMatchReward(null); setMatchRewardLabel(null); setOnlineError(null); setInMatch(true) }
+    const startFriendMatch = (event: Event) => { const detail = (event as CustomEvent).detail || {}; setTournamentId(null); setLeagueFixture(null); setFriendMatchId(detail.matchId || null); setFriendRole(detail.role || null); setMatchId(detail.matchId ? "friend-" + detail.matchId : "friend-match"); setMatchDone(false); setMatchReward(null); setMatchRewardLabel(null); setOnlineError(null); setInMatch(true) }
     window.addEventListener("pitchside-start-league-fixture", startLeagueFixture)
     window.addEventListener("pitchside-start-tournament", startTournament)
     window.addEventListener("pitchside-start-friend-match", startFriendMatch)
