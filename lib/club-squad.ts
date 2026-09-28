@@ -221,7 +221,7 @@ export function loadClubSquad(base: Player[]): Player[] {
     const starting = shufflePlayers(starterPool).slice(0, Math.min(24, getSquadCapacity()))
     try {
       localStorage.setItem(
-        CLUB_SQUAD_KEY,
+        profileStorageKey(CLUB_SQUAD_KEY),
         JSON.stringify({ baseIds: starting.map((player) => player.id), auctionPlayers: [] }),
       )
     } catch {}
@@ -232,7 +232,7 @@ export function loadClubSquad(base: Player[]): Player[] {
 export function saveClubSquad(players: Player[]) {
   if (typeof window !== "undefined") {
     const baseIds = players
-      .filter((p) => !p.id.startsWith("auction-"))
+      .filter((p) => !p.id.startsWith("auction-") && !p.id.startsWith("special-"))
       .map((p) => p.id)
     const auctionPlayers = players.filter((p) => p.id.startsWith("auction-"))
     localStorage.setItem(profileStorageKey(CLUB_SQUAD_KEY), JSON.stringify({ baseIds, auctionPlayers }))
