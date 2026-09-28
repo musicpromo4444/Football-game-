@@ -8,6 +8,7 @@ export type ActiveTeamBoost = {
   activatedAt: number
   expiresAt: number | null
   matchesRemaining: number | null
+  leagueIndex?: number | null
 }
 
 export const TEAM_BOOSTS: Record<TeamBoostType, {
@@ -70,7 +71,19 @@ function writeAll(value: ActiveTeamBoost[]) {
 
 export function readActiveTeamBoosts(): ActiveTeamBoost[] {
   const now = Date.now()
-  const active = readAll().filter((boost) => boost.expiresAt === null || boost.expiresAt > now)
+  const saved = readAll()
+  let currentLeagueIndex: number | null = null
+  if (typeof window !== "undefined") {
+    try {
+      const progress = JSON.parse(localStorage.getItem("pitchside-league-progress") || "null")
+      if (progress && Number.isInteger(progress.leagueIndex)) currentLeagueIndex = progress.leagueIndex
+    } catch {}
+  }
+  const active = saved.filter((boost) => {
+    if (boost.expiresAt !== null && boost.expiresAt <= now) return false
+    if (boost.type === "ghost-formation" && boost.leagueIndex != null && currentLeagueIndex != null && boost.leagueIndex !== currentLeagueIndex) return false
+    return true
+  })
   if (active.length !== readAll().length) writeAll(active)
   return active
 }
@@ -82,12 +95,20 @@ export function hasTeamBoost(type: TeamBoostType): boolean {
 export function activateTeamBoost(type: TeamBoostType, duration: TeamBoostDuration): ActiveTeamBoost {
   const now = Date.now()
   const matches = duration === "1-match" ? 1 : duration === "2-matches" ? 2 : duration === "10-matches" ? 10 : 20
+  let leagueIndex: number | null = null
+  if (type === "ghost-formation" && typeof window !== "undefined") {
+    try {
+      const progress = JSON.parse(localStorage.getItem("pitchside-league-progress") || "null")
+      if (progress && Number.isInteger(progress.leagueIndex)) leagueIndex = progress.leagueIndex
+    } catch {}
+  }
   const boost: ActiveTeamBoost = {
     type,
     duration,
     activatedAt: now,
     expiresAt: null,
     matchesRemaining: matches,
+    leagueIndex,
   }
   const current = readActiveTeamBoosts().filter((entry) => entry.type !== type)
   current.push(boost)
