@@ -31,3 +31,16 @@ export function consumeInjuryShield(): InjuryShieldState | null {
   localStorage.setItem(INJURY_SHIELD_KEY, JSON.stringify(updated))
   return updated
 }
+
+
+/**
+ * Applies the persistent match-wide injury protection. The shield is not
+ * consumed until a real injury would otherwise be applied, so harmless
+ * tackles never spend a charge. A zero-charge result means the caller may
+ * continue with its normal injury/substitution flow.
+ */
+export function protectInjury(): { shielded: boolean; remaining: number } {
+  const shield = consumeInjuryShield()
+  if (!shield) return { shielded: false, remaining: 0 }
+  return { shielded: true, remaining: shield.remaining }
+}
