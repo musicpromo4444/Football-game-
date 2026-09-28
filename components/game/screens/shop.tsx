@@ -8,11 +8,10 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, Pill, ScreenHeader } from "@/components/game/ui-bits"
-import { readWallet, saveWallet, purchaseShopItem, readShopItems, type Wallet } from "@/lib/economy"
+import { readWallet, saveWallet, type Wallet } from "@/lib/economy"
 import { formatRealMoney, getCountry, readProfile } from "@/lib/locale"
 import { readRealMoneyPacks } from "@/lib/shop-pricing"
-import { claimSpecialPlayer, getSpecialPlayerClaims, loadClubSquad } from "@/lib/club-squad"
-import { readPlayerTrainingBoost, getTrainingState, startTraining, completeTraining, purchaseTrainingSlots, TRAINING_CONFIG, type TrainingMode } from "@/lib/training-boosts"
+import { claimSpecialPlayer, getSpecialPlayerClaims } from "@/lib/club-squad"
 import { activateTeamBoost, TEAM_BOOSTS, type TeamBoostDuration, type TeamBoostType } from "@/lib/team-boosts"
 import { specialPlayers, squad } from "@/components/game/data"
 import { KitEditor } from "@/components/game/screens/kit-editor"
@@ -109,7 +108,6 @@ export function Shop() {
   const [specialClaims, setSpecialClaims] = useState(() => getSpecialPlayerClaims())
   const [revealedSpecial, setRevealedSpecial] = useState<ReturnType<typeof getSpecialPlayerClaims>[number] | null>(null)
   const [claims, setClaims] = useState<Record<string, number>>({})
-  const [selectedPlayerId, setSelectedPlayerId] = useState<string>(() => loadClubSquad(squad)[0]?.id || "")
   const [trainingAd, setTrainingAd] = useState<{ mode: TrainingMode; seconds: number } | null>(null)
   const [kitEditorOpen, setKitEditorOpen] = useState(false)
   const [selectedDuration, setSelectedDuration] = useState<Record<TeamBoostType, TeamBoostDuration>>({
@@ -122,10 +120,7 @@ export function Shop() {
   const [, setTick] = useState(0)
   const profile = readProfile()
   const country = getCountry(profile?.countryCode)
-  const items = readShopItems().filter((item) => item.enabled)
   const realMoneyPacks = readRealMoneyPacks().filter((pack) => pack.enabled)
-  const club = loadClubSquad(squad)
-  const selectedPlayer = club.find((p) => p.id === selectedPlayerId)
 
   useEffect(() => {
     setClaims(readClaims())
@@ -191,17 +186,6 @@ export function Shop() {
     flash(TRAINING_CONFIG[mode].slotUpgrade + " training slots permanently unlocked.")
   }
 
-  useEffect(() => {
-    if (!trainingAd) return
-    if (trainingAd.seconds <= 0) {
-      const result = completeTraining(trainingAd.mode)
-      setTrainingAd(null)
-      flash(result.message)
-      return
-    }
-    const id = window.setTimeout(() => setTrainingAd((v) => v ? { ...v, seconds: v.seconds - 1 } : null), 1000)
-    return () => window.clearTimeout(id)
-  }, [trainingAd])
   const claimFreeTeamBoost = (type: TeamBoostType) => {
     const now = Date.now()
     const id = `free-team-${type}`
@@ -224,12 +208,6 @@ export function Shop() {
     saveWallet(next); setWallet(next)
     activateTeamBoost(type, duration)
     flash(`${TEAM_BOOSTS[type].name} activated for ${durationLabel(duration)}.`)
-  }
-
-  const buy = (id: string) => {
-    const result = purchaseShopItem(id)
-    setWallet(result.wallet)
-    flash(result.message)
   }
 
   const spend = (currency: "bucks" | "gems", amount: number, reward: { bucks?: number; gems?: number }, label: string) => {
@@ -349,27 +327,6 @@ export function Shop() {
       </section>
 
       <section className="mt-6">
-        <SectionTitle icon={<Zap className="h-3.5 w-3.5" />} title="PERMANENT PLAYER TRAINING" meta="Choose a player" />
-        <Card className="border-primary/20 bg-primary/5 p-3">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-secondary font-black">{selectedPlayer?.rating ?? "--"}</div>
-            <div className="min-w-0 flex-1"><p className="truncate font-black">{selectedPlayer?.name ?? "Select a player"}</p><p className="text-[8px] text-muted-foreground">Permanent upgrades apply instantly.</p></div>
-            <Crown className="h-5 w-5 text-amber-300" />
-          </div>
-          <div className="mt-2 flex gap-2 overflow-x-auto pb-1">{club.map((player) => {
-            const active = player.id === selectedPlayerId
-            const boost = readPlayerTrainingBoost(player.id)
-            return <button key={player.id} type="button" onClick={() => setSelectedPlayerId(player.id)} className={`min-w-[92px] rounded-xl border px-2 py-2 text-left ${active ? "border-primary bg-primary/15" : "border-border bg-card/60"}`}><p className="truncate text-[9px] font-black">{player.name}</p><p className="text-[8px] text-muted-foreground">{player.pos} · OVR {player.rating + boost.ovr}</p></button>
-          })}</div>
-        </Card>
-        <div className="mt-2.5 grid grid-cols-3 gap-2.5">
-          <ProductCard kind="item" icon={<Zap className="h-7 w-7 text-yellow-200" />} title="Starter Boost" subtitle="+1 OVR · 3 stats" price={<><Play className="mr-1 inline h-3 w-3" />WATCH AD</>} onBuy={() => buyTrainingBoost("starter")} accent="gold" />
-          <ProductCard kind="item" icon={<Gem className="h-7 w-7 fill-cyan-300 text-cyan-100" />} title="Power Boost" subtitle="+2 OVR · 3 stats" price="30 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => buyTrainingBoost("power")} accent="cyan" />
-          <ProductCard kind="item" icon={<Crown className="h-7 w-7 text-amber-200" />} title="Elite Boost" subtitle="+4 OVR · 4 stats" price="$1.25" onBuy={() => flash("Payment will open when store billing is connected.")} accent="gold" />
-        </div>
-      </section>
-
-      <section className="mt-6">
         <SectionTitle icon={<CircleDollarSign className="h-3.5 w-3.5" />} title="PREMIUM STORE" meta="Real-money packs" />
         <div className="grid grid-cols-2 gap-2.5">
           {realMoneyPacks.map((pack) => (
@@ -420,32 +377,4 @@ function SectionTitle({ icon, title, meta }: { icon: ReactNode; title: string; m
       {meta && <span className="ml-auto text-[7px] font-black text-emerald-300">{meta}</span>}
     </div>
   )
-}      <section className="mt-6">
-        <SectionTitle icon={<Zap className="h-3.5 w-3.5" />} title="PLAYER TRAINING" meta="24h training · 7-day player lock" />
-        <Card className="border-primary/20 bg-primary/5 p-3">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-secondary font-black">{selectedPlayer?.rating ?? "--"}</div>
-            <div className="min-w-0 flex-1"><p className="truncate font-black">{selectedPlayer?.name ?? "Select a player"}</p><p className="text-[8px] text-muted-foreground">Training completes after 24 hours. The same player can train again after 7 days.</p></div>
-            <Crown className="h-5 w-5 text-amber-300" />
-          </div>
-          <div className="mt-2 flex gap-2 overflow-x-auto pb-1">{club.map((player) => {
-            const active = player.id === selectedPlayerId
-            const boost = readPlayerTrainingBoost(player.id)
-            const dev = Object.values(boost.stats).reduce((sum, value) => sum + Number(value || 0), 0)
-            return <button key={player.id} type="button" onClick={() => setSelectedPlayerId(player.id)} className={`min-w-[92px] rounded-xl border px-2 py-2 text-left ${active ? "border-primary bg-primary/15" : "border-border bg-card/60"}`}><p className="truncate text-[9px] font-black">{player.name}</p><p className="text-[8px] text-muted-foreground">{player.pos} · OVR {player.rating + Math.floor(dev / 6)}</p></button>
-          })}</div>
-        </Card>
-        <div className="mt-2.5 grid grid-cols-2 gap-2.5">
-          <ProductCard kind="item" icon={<Zap className="h-7 w-7 text-yellow-200" />} title="Regular Training" subtitle="3 players · +3 to 1 random attribute each · 30s ad" price={<><Play className="mr-1 inline h-3 w-3" />TRAIN 3 PLAYERS</>} onBuy={() => runTraining("regular")} accent="gold" badge={trainingState.regular.slots + " SLOTS"} />
-          <ProductCard kind="item" icon={<Crown className="h-7 w-7 text-amber-200" />} title="Super Training" subtitle="1 player · +3 to 2 random attributes · up to 60s ads" price={<><Play className="mr-1 inline h-3 w-3" />TRAIN 1 PLAYER</>} onBuy={() => runTraining("super")} accent="pink" badge={trainingState.super.slots + " SLOT"} />
-        </div>
-        <div className="mt-2.5 grid grid-cols-2 gap-2.5">
-          <ProductCard kind="item" icon={<Zap className="h-7 w-7 text-emerald-200" />} title="Regular +3 Slots" subtitle={"Permanent capacity: " + trainingState.regular.slots + " → " + (trainingState.regular.slots + 3)} price="$1.20" onBuy={() => buyTrainingSlots("regular")} accent="green" />
-          <ProductCard kind="item" icon={<Crown className="h-7 w-7 text-cyan-200" />} title="Super +4 Slots" subtitle={"Permanent capacity: " + trainingState.super.slots + " → " + (trainingState.super.slots + 4)} price="$2.99" onBuy={() => buyTrainingSlots("super")} accent="cyan" />
-        </div>
-        <div className="mt-2.5 grid grid-cols-2 gap-2.5">
-          <ProductCard kind="item" icon={<Trophy className="h-7 w-7 text-emerald-200" />} title="Regular Full Team" subtitle="All 11 players · +3 to 1 random attribute each · $4.10" price="$4.10" onBuy={() => runTraining("regular-team")} accent="green" badge="11 PLAYERS" />
-          <ProductCard kind="item" icon={<Crown className="h-7 w-7 text-amber-200" />} title="Super Full Team" subtitle="All 11 players · +3 to 2 random attributes each · $9.99" price="$9.99" onBuy={() => runTraining("super-team")} accent="gold" badge="11 PLAYERS" />
-        </div>
-      </section>
-
+}
