@@ -58,6 +58,23 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
   const [impossibleChallenge, setImpossibleChallenge] = useState<ImpossibleChallengeState | null>(null)
   const [challengeAdSeconds, setChallengeAdSeconds] = useState<number | null>(null)
   const [challengeMessage, setChallengeMessage] = useState<string | null>(null)
+  const [preMatchAd, setPreMatchAd] = useState<{title:string; writeUp:string; creative:string; format:string; seconds:number; playable:boolean} | null>(null)
+  const [preMatchAdSeconds, setPreMatchAdSeconds] = useState(0)
+  const logAnalytics = async (eventType: string, metadata: Record<string, unknown> = {}, tournamentId?: string | null) => {
+    try { const { data } = await supabase.auth.getUser(); if (!data.user) return; await supabase.from("pitchside_analytics_events").insert({ user_id: data.user.id, tournament_id: tournamentId || null, event_type: eventType, metadata }) } catch {}
+  }
+  const showPreMatchAd = (tournamentId?: string | null) => {
+    let campaign: any = null
+    try { campaign = JSON.parse(window.localStorage.getItem("pitchside-ad-campaigns") || "null")?.find((x: any) => x.id === "match-start" && x.enabled) } catch {}
+    if (!campaign) return
+    const format = String(campaign.format || "image/video")
+    const playable = format.toLowerCase().includes("playable")
+    const seconds = playable ? Math.max(1, Number(campaign.duration || 15)) : Math.max(5, Number(campaign.duration || 5))
+    setPreMatchAd({ title: campaign.writeUp || "Sponsored Match", writeUp: campaign.writeUp || "Sponsored by our direct partner", creative: campaign.creative || "", format, seconds, playable })
+    setPreMatchAdSeconds(seconds)
+    void logAnalytics("pre_match_sponsor_impression", { format, duration: seconds, playable }, tournamentId)
+    if (playable) void logAnalytics("playable_ad_started", { placement: "before_match", duration: seconds }, tournamentId)
+  }
 
   useEffect(() => {
     const startLeagueFixture = (event: Event) => {
@@ -71,7 +88,7 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
       setOnlineError(null)
       setInMatch(true)
     }
-    const startTournament = async () => { const id = window.localStorage.getItem("pitchside-tournament"); if (!id) return; const {data,error}=await supabase.rpc("pitchside_join_tournament",{p_tournament_id:id}); if(error){setOnlineError(error.message);return} setTournamentId(id); setLeagueFixture(null); setFriendMatchId(null); setMatchId("tournament-"+id); setMatchDone(false); setMatchReward(null); setMatchRewardLabel(null); setOnlineError(null); setInMatch(true) }
+    const startTournament = async () => { const id = window.localStorage.getItem("pitchside-tournament"); if (!id) return; const {data,error}=await supabase.rpc("pitchside_join_tournament",{p_tournament_id:id}); if(error){setOnlineError(error.message);return} setTournamentId(id); setLeagueFixture(null); setFriendMatchId(null); setMatchId("tournament-"+id); setMatchDone(false); setMatchReward(null); setMatchRewardLabel(null); setOnlineError(null); showPreMatchAd(id); setInMatch(true) }
     const startFriendMatch = (event: Event) => { const detail = (event as CustomEvent).detail || {}; setTournamentId(null); setLeagueFixture(null); setFriendMatchId(detail.matchId || null); setFriendRole(detail.role || null); setMatchId(detail.matchId ? "friend-" + detail.matchId : "friend-match"); setMatchDone(false); setMatchReward(null); setMatchRewardLabel(null); setOnlineError(null); setInMatch(true) }
     window.addEventListener("pitchside-start-league-fixture", startLeagueFixture)
     const startImpossible = () => { const state=readImpossibleChallenge(); setImpossibleChallenge(state); setChallengeMessage(null); setChallengeAdSeconds(null); setMatchDone(false); setTournamentId(null); setLeagueFixture(null); setFriendMatchId(null); setMatchId("impossible-"+state.stage+"-"+state.retriesUsed); setOnlineError(null); setInMatch(true) }
@@ -165,6 +182,16 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
     setFriendMatchId(null)
     setFriendRole(null)
   }
+
+  useEffect(() => {
+    if (preMatchAdSeconds <= 0 || !preMatchAd) return
+    const id = window.setTimeout(() => setPreMatchAdSeconds((n) => Math.max(0, n - 1)), 1000)
+    return () => window.clearTimeout(id)
+  }, [preMatchAdSeconds, preMatchAd])
+
+  useEffect(() => {
+    if (preMatchAd && preMatchAdSeconds <= 0) setPreMatchAd(null)
+  }, [preMatchAd, preMatchAdSeconds])
 
   useEffect(() => {
     if (challengeAdSeconds === null) return
@@ -369,6 +396,13 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
             <p className="text-xs text-muted-foreground">Online Ranked · Sudden Death</p>
           </div>
         </div>
+        {preMatchAd ? <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-5">
+          <div className="w-full max-w-md overflow-hidden rounded-2xl border border-cyan-400/30 bg-card shadow-2xl">
+            <div className="px-4 pt-4 text-center"><p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">Sponsored Match</p><p className="mt-1 text-lg font-black">{preMatchAd.title}</p></div>
+            {preMatchAd.creative ? <img src={preMatchAd.creative} alt={preMatchAd.title} className="mt-3 aspect-[16/7] w-full object-cover" /> : <div className="mx-4 mt-3 flex aspect-[16/7] items-center justify-center rounded-xl bg-secondary text-sm font-black">DIRECT SPONSOR BANNER</div>}
+            <div className="p-4 text-center"><p className="text-xs text-muted-foreground">{preMatchAd.writeUp}</p><p className="mt-3 text-xs font-bold text-cyan-200">{preMatchAd.playable ? `Playable sponsor · ${preMatchAdSeconds}s remaining` : `Match starts in ${preMatchAdSeconds}s`}</p></div>
+          </div>
+        </div> : null}
         <MatchCanvas key={impossibleChallenge ? `impossible-${impossibleChallenge.stage}-${impossibleChallenge.retriesUsed}` : undefined} onMatchComplete={finishOnlineMatch} onMatchForfeit={handleFriendForfeit} challenge={impossibleChallenge ? IMPOSSIBLE_CHALLENGE_TEAMS[impossibleChallenge.stage - 1] : undefined} onlineMatch={friendMatchId && friendRole ? { matchId: friendMatchId, role: friendRole, kind: "friend" as const } : rankedRole && matchId ? { matchId, role: rankedRole, kind: "ranked" as const } : undefined} />
         {leagueOutcome ? <div className="mx-5 mt-3 rounded-2xl border border-cyan-500/35 bg-cyan-500/10 px-4 py-3 text-center"><p className="text-[10px] font-black uppercase tracking-widest text-cyan-300">League Update</p><p className="mt-1 text-sm font-black text-cyan-100">{leagueOutcome}</p></div> : null}
         {matchReward !== null ? (
