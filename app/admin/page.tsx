@@ -22,6 +22,17 @@ export default function AdminPage() {
   const [secretValues, setSecretValues] = useState<Record<string, string>>({})
   const [secretMessage, setSecretMessage] = useState("")
   const [features, setFeatures] = useState({ onlineMatches: true, auctions: true, playerCards: true, ghostFormation: true, injuryShield: true, ads: true, purchases: true })
+  const [analytics, setAnalytics] = useState<any>(null)
+  const [analyticsLoading, setAnalyticsLoading] = useState(false)
+  const loadAnalytics = async () => {
+    if (!adminToken) return
+    setAnalyticsLoading(true)
+    try {
+      const res = await fetch("/api/admin/analytics", { headers: { "x-pitchside-admin-token": adminToken } })
+      const data = await res.json()
+      if (res.ok) setAnalytics(data)
+    } finally { setAnalyticsLoading(false) }
+  }
   const [adCampaigns, setAdCampaigns] = useState([
     { id: "match-start", title: "Smart Match-Start Sponsor", enabled: true, format: "image/video", placements: ["Before match"], countries: "All countries", duration: 5, frequency: "Every eligible match", creative: "", writeUp: "" },
     { id: "after-match", title: "After-Match Ad", enabled: true, format: "interstitial/video/playable", placements: ["After completed match"], countries: "All countries", duration: 5, frequency: "Once per completed match", creative: "", writeUp: "" },
@@ -184,6 +195,21 @@ export default function AdminPage() {
             </div>)}
           </div>
           <Button onClick={() => { try { localStorage.setItem("pitchside-ad-campaigns", JSON.stringify(adCampaigns)); setSecretMessage("Ad campaign settings saved") } catch {} }} className="mt-3 w-full rounded-xl"><Save className="mr-1 h-4 w-4" />Save ad campaign settings</Button>
+        </Card>
+
+        <Card glow="cyan" className="p-4">
+          <div className="flex items-center justify-between gap-2"><div><p className="text-xs uppercase tracking-wide text-muted-foreground">Analytics</p><p className="font-bold">Game & sponsor performance</p></div><Button variant="outline" className="rounded-xl" onClick={() => void loadAnalytics()}>{analyticsLoading ? "Loading…" : "Refresh"}</Button></div>
+          {analytics ? <><div className="mt-3 grid grid-cols-2 gap-2">
+            {[
+              ["Matches today", analytics.today.matches],
+              ["Tournament entries today", analytics.today.tournamentEntries],
+              ["Sponsor impressions today", analytics.today.sponsorImpressions],
+              ["Playable ads today", analytics.today.playableAds],
+            ].map(([label,value]) => <div key={String(label)} className="rounded-xl border border-border bg-secondary/30 p-3"><p className="text-[9px] uppercase tracking-wide text-muted-foreground">{label}</p><p className="mt-1 text-xl font-black">{Number(value).toLocaleString()}</p></div>)}
+          </div>
+          <div className="mt-3 space-y-2"><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Tournament participation</p>
+            {analytics.tournaments.map((t:any) => <div key={t.id} className="flex items-center justify-between rounded-xl border border-border bg-secondary/20 p-3"><div><p className="text-xs font-black">{t.name}</p><p className="text-[9px] text-muted-foreground">{t.status} · {t.participants} participants</p></div><span className="text-xs font-black">{t.max_players ? `${t.participants}/${t.max_players}` : t.participants}</span></div>)}
+          </div></> : <p className="mt-3 text-xs text-muted-foreground">Enter the Admin Access Key above, then refresh to load live analytics.</p>}
         </Card>
 
         <AdminTournaments adminToken={adminToken} />
