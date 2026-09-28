@@ -158,6 +158,11 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
           }
         }
       } catch {}
+      if (supabase) {
+        await supabase.from("pitchside_private_league_fixtures").update({
+          home_goals: outcome.home, away_goals: outcome.away, status: "completed", played_at: new Date().toISOString()
+        }).eq("id", leagueFixture.fixtureId)
+      }
       setLeagueFixture(null)
       setMatchReward(outcome.home === outcome.away ? 0 : Math.max(1, outcome.home > outcome.away ? 1 : 0))
       setMatchRewardLabel(outcome.home === outcome.away ? "DRAW" : "WIN")
