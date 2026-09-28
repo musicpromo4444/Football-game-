@@ -128,9 +128,12 @@ function getPlayerCardStats(player: Player, trainingBoost = 0, shopStats: Partia
 
 function PlayerCard({ player, compact = false, trainingBoost = 0, shopStats = {}, shopOvr = 0 }: { player: Player; compact?: boolean; trainingBoost?: number; shopStats?: Partial<Record<TrainingStatKey, number>>; shopOvr?: number }) {
   const stats = getPlayerCardStats(player, trainingBoost, shopStats)
-  const statItems: [keyof typeof stats, string][] = [
-    ["SPE", "SPE"], ["ACC", "ACC"], ["STA", "STA"], ["STR", "STR"],
-    ["CON", "CON"], ["PAS", "PAS"], ["SHO", "SHO"], ["TAC", "TAC"],
+  const dribbling = Math.round((stats.SPE + stats.PAS) / 2)
+  const accumulatedAttributePoints = trainingBoost * 8 + Object.values(shopStats).reduce((sum, value) => sum + Number(value || 0), 0)
+  const calculatedOvr = player.rating + Math.floor(accumulatedAttributePoints / 6)
+  const statItems: Array<[string, number]> = [
+    ["SPEED", stats.SPE], ["DRIB", dribbling], ["PASS", stats.PAS],
+    ["SHOOT", stats.SHO], ["STRENGTH", stats.STR], ["DEF", stats.TAC],
   ]
   const face = player.face || playerFaceImages[player.id]
   return (
@@ -141,7 +144,7 @@ function PlayerCard({ player, compact = false, trainingBoost = 0, shopStats = {}
       <div className="absolute inset-x-0 top-0 h-1 bg-primary/70" />
       <div className="absolute right-2 top-3 z-10 flex flex-col items-center rounded-xl border border-primary/30 bg-background/85 px-2 py-1.5 backdrop-blur">
         <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">OVR</span>
-        <span className="font-display text-xl font-black leading-none text-primary">{player.rating + shopOvr}</span>
+        <span className="font-display text-xl font-black leading-none text-primary">{calculatedOvr}</span>
       </div>
 
       <div className="relative mt-1 overflow-hidden rounded-xl border border-white/10 bg-gradient-to-b from-primary/10 to-background">
@@ -168,10 +171,10 @@ function PlayerCard({ player, compact = false, trainingBoost = 0, shopStats = {}
       {!compact && (
         <>
           <div className="mt-3 grid grid-cols-4 gap-1.5">
-            {statItems.map(([key, label]) => (
-              <div key={key} className="rounded-lg border border-white/10 bg-background/60 px-1 py-1.5 text-center">
+            {statItems.map(([label, value]) => (
+              <div key={label} className="rounded-lg border border-white/10 bg-background/60 px-1 py-1.5 text-center">
                 <p className="text-[7px] font-black tracking-wide text-muted-foreground">{label}</p>
-                <p className="font-display text-sm font-black leading-tight">{stats[key]}</p>
+                <p className="font-display text-sm font-black leading-tight">{value}</p>
               </div>
             ))}
           </div>
