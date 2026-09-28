@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Play, Pause, RotateCcw, Hand, Star } from "lucide-react"
+import { Play, Pause, RotateCcw, Hand, Star, Shield } from "lucide-react"
 import { squad, type PlayerRole } from "@/components/game/data"
 import { loadClubSquad } from "@/lib/club-squad"
 import { readPlayerTrainingBoost } from "@/lib/training-boosts"
@@ -10,6 +10,7 @@ import { awardMatchWin, awardMatchDraw } from "@/lib/economy"
 import { addMatchXp, calculateMatchXp, revealPackage, equipPackage, type PackageReward } from "@/lib/xp-packages"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { consumeInjuryShield, readInjuryShield } from "@/lib/injury-shield"
 
 type Point = { x: number; y: number }
 type Formation = "4-3-3" | "4-4-2" | "3-5-2" | "4-2-3-1" | "4-1-4-1"
@@ -116,6 +117,8 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
   const [packageReward, setPackageReward] = useState<PackageReward | null>(null)
   const [packageEquipped, setPackageEquipped] = useState(false)
   const [kit, setKit] = useState<{ design: string; colorA: string; colorB: string } | null>(null)
+  const [injuryShield, setInjuryShield] = useState(() => readInjuryShield())
+  const [shieldPulse, setShieldPulse] = useState<number | null>(null)
 
   useEffect(() => {
     try {
@@ -144,6 +147,7 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
       trainingActive: !!training[p!.id] && now < training[p!.id].completesAt,
     }))
   }, [])
+  useEffect(() => { const refresh = () => setInjuryShield(readInjuryShield()); const id = window.setInterval(refresh, 1000); return () => window.clearInterval(id) }, [])
   const trainingUnavailable = playerArchetypes.filter((p) => p.trainingActive)
   const trainingBlocked = trainingUnavailable.length > 0
   const [positions, setPositions] = useState(() => formationSlots[loadTactics().formation].map((p) => ({ ...p })))
@@ -494,12 +498,20 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
               const severity = injuryRoll > 0.78 ? "heavy" : "light"
               setMessage(injury ? `HARD TACKLE — ${severity} injury` : "Tackle missed — attacker keeps the ball")
               if (injury) {
-                setInjuredOpponent(carrierIndex)
-                setOpponentInjuries((current) => ({ ...current, [carrierIndex]: severity }))
-                if (severity === "heavy") {
-                  setRunning(false)
-                  setSubstitutionPending(carrierIndex)
-                  setSubstitutionCountdown(8)
+                const shield = consumeInjuryShield()
+                if (shield) {
+                  setInjuryShield(shield.remaining > 0 ? shield : null)
+                  setShieldPulse(carrierIndex)
+                  setMessage("INJURY SHIELDED — " + shield.remaining + " shield" + (shield.remaining === 1 ? "" : "s") + " remaining")
+                  window.setTimeout(() => setShieldPulse(null), 1000)
+                } else {
+                  setInjuredOpponent(carrierIndex)
+                  setOpponentInjuries((current) => ({ ...current, [carrierIndex]: severity }))
+                  if (severity === "heavy") {
+                    setRunning(false)
+                    setSubstitutionPending(carrierIndex)
+                    setSubstitutionCountdown(8)
+                  }
                 }
               }
             }
@@ -1011,7 +1023,8 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
       </div>
 
       {/* Scoreboard */}
-      <div className="flex items-center justify-between pt-6">
+      <div className="flex items-center justify-between pt-4">
+        <div className="rounded-full border border-amber-300/30 bg-amber-300/10 px-2.5 py-1 text-[9px] font-black text-amber-200"><Shield className="mr-1 inline h-3 w-3" />{injuryShield?.remaining ?? 0}</div>
         <div className="text-center">
           <p className="font-display text-sm font-bold">AUR</p>
           <p className="font-display text-3xl font-black tabular-nums text-glow-cyan">{score.home}</p>
@@ -1123,6 +1136,7 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
             className={cn("absolute -translate-x-1/2 -translate-y-1/2 text-center", injuredOpponent === i && "opacity-50")}
             style={{ left: `${p.x}%`, top: `${p.y}%` }}
           >
+            {shieldPulse === i ? <div className="absolute -top-8 left-1/2 z-30 -translate-x-1/2 animate-pulse"><Shield className="h-7 w-7 fill-amber-300/30 text-amber-300 drop-shadow-[0_0_10px_rgba(251,191,36,.9)]" /></div> : null}
             {opponentInjuries[i] ? <span className="absolute -top-4 left-1/2 -translate-x-1/2 whitespace-nowrap text-[7px] font-black text-destructive">{opponentInjuries[i] === "heavy" ? "⚠ HEAVY" : "⚠ LIGHT"}</span> : null}
             <div className={cn("relative mx-auto h-7 w-5", running && "animate-[bounce_0.55s_ease-in-out_infinite]", opponentCarrierRef.current === i && "scale-110")}>
               <span className="absolute left-1/2 top-0 h-2.5 w-2.5 -translate-x-1/2 rounded-full border border-white/60 bg-amber-200" />
