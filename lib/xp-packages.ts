@@ -4,7 +4,12 @@ import { readWallet, saveWallet } from "@/lib/economy"
 export type PackageTier = "silver" | "gold" | "platinum"
 export type PackageReward = { tier: PackageTier; players: string[]; bucks: number; gems: number; rareBonus?: "captain-boost" | "ghost-summon"; specialPlayer?: string }
 
+export type PlayerCardAttribute = "SPE" | "ACC" | "STA" | "STR" | "CON" | "PAS" | "SHO" | "TAC"
+export type PlayerCardReward = { id: string; attribute: PlayerCardAttribute; amount: 2; claimedAt: number }
+
 const XP_KEY = "pitchside-xp"
+const PLAYER_CARDS_KEY = "pitchside-player-cards"
+const XP_PER_PLAYER_CARD = 400
 const THRESHOLDS = { silver: 600, gold: 800, platinum: 1000 }
 
 export function getPitchSideXp() {
@@ -14,16 +19,51 @@ export function getPitchSideXp() {
 }
 function saveXp(xp: number) { if (typeof window !== "undefined") localStorage.setItem(XP_KEY, String(Math.max(0, Math.floor(xp)))) }
 
-export function calculateMatchXp(result: "WIN" | "DRAW" | "LOSS", goals: number, cleanSheet: boolean, beatHigherSide = false) {
-  return (result === "WIN" ? 200 : result === "DRAW" ? 150 : 50) + Math.max(0, goals) * 50 + (cleanSheet ? 25 : 0) + (beatHigherSide ? 50 : 0)
+export function calculateMatchXp(result: "WIN" | "DRAW" | "LOSS", goals: number, cleanSheet: boolean) {
+  return (result === "WIN" ? 100 : result === "DRAW" ? 50 : 0) + Math.max(0, goals) * 0 + (cleanSheet ? 0 : 0)
+}
+
+function readPlayerCards(): PlayerCardReward[] {
+  if (typeof window === "undefined") return []
+  try {
+    const parsed = JSON.parse(localStorage.getItem(PLAYER_CARDS_KEY) || "[]")
+    return Array.isArray(parsed) ? parsed : []
+  } catch { return [] }
+}
+
+function savePlayerCards(cards: PlayerCardReward[]) {
+  if (typeof window !== "undefined") localStorage.setItem(PLAYER_CARDS_KEY, JSON.stringify(cards))
+}
+
+function randomAttribute(): PlayerCardAttribute {
+  const stats: PlayerCardAttribute[] = ["SPE", "ACC", "STA", "STR", "CON", "PAS", "SHO", "TAC"]
+  return stats[Math.floor(Math.random() * stats.length)]
+}
+
+export function getPlayerCards() {
+  return readPlayerCards()
+}
+
+export function claimPlayerCard() {
+  const card: PlayerCardReward = { id: "pc-" + Date.now() + "-" + Math.floor(Math.random() * 10000), attribute: randomAttribute(), amount: 2, claimedAt: Date.now() }
+  const cards = readPlayerCards()
+  savePlayerCards([...cards, card])
+  return card
 }
 
 export function addMatchXp(amount: number) {
-  const next = getPitchSideXp() + Math.max(0, Math.floor(amount))
-  if (next >= THRESHOLDS.platinum) { saveXp(next - 1000); return { xp: next - 1000, packageTier: "platinum" as PackageTier } }
-  if (next >= THRESHOLDS.gold) { saveXp(next - 800); return { xp: next - 800, packageTier: "gold" as PackageTier } }
-  if (next >= THRESHOLDS.silver) { saveXp(next - 600); return { xp: next - 600, packageTier: "silver" as PackageTier } }
-  saveXp(next); return { xp: next, packageTier: null }
+  const safeAmount = Math.max(0, Math.floor(amount))
+  let xp = getPitchSideXp() + safeAmount
+  let playerCardsEarned = 0
+
+  while (xp >= XP_PER_PLAYER_CARD) {
+    xp -= XP_PER_PLAYER_CARD
+    claimPlayerCard()
+    playerCardsEarned += 1
+  }
+
+  saveXp(xp)
+  return { xp, playerCardsEarned, packageTier: null as PackageTier | null }
 }
 
 export function getPackageContents(tier: PackageTier): PackageReward {
@@ -51,3 +91,4 @@ export function equipPackage(reward: PackageReward) {
 }
 
 export const XP_PACKAGE_THRESHOLDS = THRESHOLDS
+export const PLAYER_CARD_XP = XP_PER_PLAYER_CARD
