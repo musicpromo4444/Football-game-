@@ -22,18 +22,21 @@ export async function GET(req: Request) {
     const start = new Date()
     start.setHours(0, 0, 0, 0)
     const iso = start.toISOString()
-    const [{ count: matchesToday }, { count: participantsToday }, { count: impressionsToday }, { count: playableToday }, { data: tournaments }] = await Promise.all([
+    const [{ count: matchesToday }, { count: completedMatchesToday }, { count: participantsToday }, { count: impressionsToday }, { count: playableToday }, { data: todayEvents }, { data: tournaments }] = await Promise.all([
       supabase.from("matches").select("*", { count: "exact", head: true }).gte("created_at", iso),
+      supabase.from("matches").select("*", { count: "exact", head: true }).eq("status", "completed").gte("created_at", iso),
       supabase.from("pitchside_tournament_entries").select("*", { count: "exact", head: true }).gte("created_at", iso),
       supabase.from("pitchside_analytics_events").select("*", { count: "exact", head: true }).eq("event_type", "pre_match_sponsor_impression").gte("created_at", iso),
       supabase.from("pitchside_analytics_events").select("*", { count: "exact", head: true }).eq("event_type", "playable_ad_started").gte("created_at", iso),
+      supabase.from("pitchside_analytics_events").select("user_id,event_type,tournament_id").gte("created_at", iso),
       supabase.from("pitchside_tournaments").select("id,name,status,starts_at,ends_at,max_players"),
     ])
     const { data: tournamentRows } = await supabase.from("pitchside_tournament_entries").select("tournament_id")
+    const uniquePlayers = new Set((todayEvents || []).map((x) => x.user_id).filter(Boolean)).size
     const counts: Record<string, number> = {}
     for (const row of tournamentRows || []) counts[row.tournament_id] = (counts[row.tournament_id] || 0) + 1
     return NextResponse.json({
-      today: { matches: matchesToday || 0, tournamentEntries: participantsToday || 0, sponsorImpressions: impressionsToday || 0, playableAds: playableToday || 0 },
+      today: { matches: matchesToday || 0, completedMatches: completedMatchesToday || 0, uniquePlayers, tournamentEntries: participantsToday || 0, sponsorImpressions: impressionsToday || 0, playableAds: playableToday || 0 },
       tournaments: (tournaments || []).map((t) => ({ ...t, participants: counts[t.id] || 0 })),
     })
   } catch (error) {
