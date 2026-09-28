@@ -50,6 +50,7 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
   const [matchReward, setMatchReward] = useState<number | null>(null)
   const [matchRewardLabel, setMatchRewardLabel] = useState<"WIN" | "DRAW" | null>(null)
   const [leagueFixture, setLeagueFixture] = useState<{ leagueId: string; fixtureId: string; userIsHome: boolean } | null>(null)
+  const [friendMatchId, setFriendMatchId] = useState<string | null>(null)
 
   useEffect(() => {
     const startLeagueFixture = (event: Event) => {
@@ -63,7 +64,7 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
       setOnlineError(null)
       setInMatch(true)
     }
-    const startFriendMatch = (event: Event) => { const detail = (event as CustomEvent).detail || {}; setLeagueFixture(null); setMatchId(detail.matchId ? "friend-" + detail.matchId : "friend-match"); setMatchDone(false); setMatchReward(null); setMatchRewardLabel(null); setOnlineError(null); setInMatch(true) }
+    const startFriendMatch = (event: Event) => { const detail = (event as CustomEvent).detail || {}; setLeagueFixture(null); setFriendMatchId(detail.matchId || null); setMatchId(detail.matchId ? "friend-" + detail.matchId : "friend-match"); setMatchDone(false); setMatchReward(null); setMatchRewardLabel(null); setOnlineError(null); setInMatch(true) }
     window.addEventListener("pitchside-start-league-fixture", startLeagueFixture)
     window.addEventListener("pitchside-start-friend-match", startFriendMatch)
     return () => { window.removeEventListener("pitchside-start-league-fixture", startLeagueFixture); window.removeEventListener("pitchside-start-friend-match", startFriendMatch) }
@@ -128,6 +129,21 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
   const finishOnlineMatch = async (outcome: { home: number; away: number }) => {
     if (!matchId || matchDone) return
     setMatchDone(true)
+
+    if (friendMatchId) {
+      const isDraw = outcome.home === outcome.away
+      const userWon = outcome.home > outcome.away
+      try {
+        const { readWallet, saveWallet } = await import("@/lib/economy")
+        const current = readWallet()
+        if (isDraw) { saveWallet({ ...current, bucks: current.bucks + 100 }); setMatchReward(100); setMatchRewardLabel("DRAW") }
+        else if (userWon) { saveWallet({ ...current, bucks: current.bucks + 180 }); setMatchReward(180); setMatchRewardLabel("WIN") }
+        else { setMatchReward(0); setMatchRewardLabel("WIN") }
+        await supabase.from("pitchside_friend_matches").update({ challenger_score: outcome.home, opponent_score: outcome.away, status: "completed", completed_at: new Date().toISOString(), stake_status: isDraw ? "refunded" : "settled" }).eq("id", friendMatchId)
+      } catch {}
+      setFriendMatchId(null)
+      return
+    }
 
     if (leagueFixture) {
       const key = "pitchside-league-details"
