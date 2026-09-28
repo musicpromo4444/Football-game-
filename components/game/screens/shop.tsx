@@ -18,6 +18,7 @@ import { KitEditor } from "@/components/game/screens/kit-editor"
 import { cn } from "@/lib/utils"
 import { readLeagueProgress, LEAGUE_LEVELS } from "@/lib/league-progression"
 import { getStorePackageContents, getStorePlayer, type StorePackageReward } from "@/lib/xp-packages"
+import { activateInjuryShield as saveInjuryShield } from "@/lib/injury-shield"
 
 const FREE_CLAIMS_KEY = "pitchside-free-store-claims"
 const FREE_COOLDOWN = 30 * 60 * 1000
@@ -32,7 +33,6 @@ const BOOST_TYPES: TeamBoostType[] = ["ghost-formation", "team-boost", "captain-
 const BOOST_DURATIONS: TeamBoostDuration[] = ["1-match", "2-matches", "10-matches", "20-matches"]
 const GHOST_FORMATION_PRICES = [4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9] as const
 const GHOST_FORMATION_KEY = "pitchside-ghost-formation-league"
-const INJURY_SHIELD_KEY = "pitchside-injury-shield"
 
 type ArtKind = "card" | "gems" | "bux" | "item" | "package"
 
@@ -171,7 +171,7 @@ export function Shop() {
     const next = { ...wallet, bucks: wallet.bucks - price }
     saveWallet(next)
     setWallet(next)
-    localStorage.setItem(INJURY_SHIELD_KEY, JSON.stringify({ matches, activatedAt: Date.now() }))
+    saveInjuryShield(matches)
     flash("Injury Shield active for " + matches + " matches.")
   }
 
