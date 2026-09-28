@@ -9,15 +9,12 @@ import { formatAuctionTime, readAuctionPlayers, saveAuctionPlayers, renameAuctio
 import { cn } from "@/lib/utils"
 import { readWallet, saveWallet } from "@/lib/economy"
 import { MAX_SQUAD_SIZE, SQUAD_CAPACITIES, SQUAD_UPGRADE_GEMS, addAuctionPlayer, getSquadCapacity, loadClubSquad, saveClubSquad, upgradeSquadCapacity } from "@/lib/club-squad"
-import { readPlayerTrainingBoost, type TrainingStatKey } from "@/lib/training-boosts"
+import { getTrainingState, readPlayerTrainingBoost, startTraining, TRAINING_CONFIG, type TrainingMode, type TrainingStatKey } from "@/lib/training-boosts"
 
 type View = "squad" | "styles" | "training" | "market"
 type Formation = "4-3-3" | "4-4-2" | "3-5-2" | "4-2-3-1" | "4-1-4-1"
 type TacticalPresetId = "possession" | "tiki-taka" | "gegenpress" | "counter-attack" | "direct-play" | "wing-play" | "long-ball" | "high-press" | "low-block" | "balanced"
 type TacticalPreset = { id: TacticalPresetId; name: string; formation: Formation; instruction: "Possession" | "Gegenpress" | "Counter Attack" | "Low Block" | "Direct Play"; description: string; motion: string }
-type TrainingTier = "light" | "heavy" | "super"
-type TrainingRecord = { playerId: string; tier: TrainingTier; boost: number; startedAt: number; completesAt: number; weeklyUnlockAt: number }
-type TrainingLedger = { completedKeys: string[]; lockedUntil: number }
 
 const tacticalPresets: TacticalPreset[] = [
   { id: "possession", name: "Possession", formation: "4-3-3", instruction: "Possession", description: "Short passes, close support and patient buildup.", motion: "pass" },
@@ -33,20 +30,6 @@ const tacticalPresets: TacticalPreset[] = [
 ]
 
 const formations: Formation[] = ["4-3-3", "4-4-2", "3-5-2", "4-2-3-1", "4-1-4-1"]
-const TRAINING_MS = 24 * 60 * 60 * 1000
-const WEEK_MS = 7 * 24 * 60 * 60 * 1000
-const SUPER_GEMS = 50
-const SUPER_BUCKS = 10000
-const MAX_CONCURRENT_TRAINING = 3
-const TRAINING_CYCLE_LIMIT = 10
-function loadTrainingState(): Record<string, TrainingRecord> {
-  if (typeof window === "undefined") return {}
-  try { return JSON.parse(localStorage.getItem("pitchside-training") || "{}") || {} } catch { return {} }
-}
-function loadTrainingLedger(): TrainingLedger {
-  if (typeof window === "undefined") return { completedKeys: [], lockedUntil: 0 }
-  try { return JSON.parse(localStorage.getItem("pitchside-training-ledger") || "") || { completedKeys: [], lockedUntil: 0 } } catch { return { completedKeys: [], lockedUntil: 0 } }
-}
 function formatRemaining(ms: number) {
   const total = Math.max(0, Math.ceil(ms / 1000)); const d = Math.floor(total / 86400); const h = Math.floor((total % 86400) / 3600); const m = Math.floor((total % 3600) / 60); const s = total % 60
   if (d > 0) return d + "d " + h + "h " + m + "m"
@@ -54,9 +37,9 @@ function formatRemaining(ms: number) {
 }
 
 const tabs: { id: View; label: string; icon: typeof Users }[] = [
+  { id: "squad", label: "Substitution", icon: Users },
+  { id: "styles", label: "Tactics", icon: SlidersHorizontal },
   { id: "training", label: "Training", icon: Dumbbell },
-  { id: "styles", label: "Formation", icon: Layers },
-  { id: "squad", label: "Tactics", icon: SlidersHorizontal },
 ]
 
 const posColor: Record<string, string> = {
@@ -202,7 +185,7 @@ function PlayerCard({ player, compact = false, trainingBoost = 0, shopStats = {}
 }
 
 export function SquadManager() {
-  const [view, setView] = useState<View>("squad")
+  const [view, setView] = useState<View>("styles")
   const [previewTick, setPreviewTick] = useState(0)
   useEffect(() => { const id = window.setInterval(() => setPreviewTick((v) => v + 1), 500); return () => window.clearInterval(id) }, [])
   useEffect(() => { if (typeof window === "undefined") return; if (localStorage.getItem("pitchside-open-market") === "1") { setView("market"); localStorage.removeItem("pitchside-open-market") } }, [])
@@ -222,26 +205,24 @@ export function SquadManager() {
     } catch { return defaults }
   })
   const [trainingNow, setTrainingNow] = useState(() => Date.now())
-  const [trainingState, setTrainingState] = useState<Record<string, TrainingRecord>>(loadTrainingState)
-  const [trainingLedger, setTrainingLedger] = useState<TrainingLedger>(loadTrainingLedger)
-  const [adTraining, setAdTraining] = useState<{ playerId: string; tier: TrainingTier; seconds: number } | null>(null)
-  const [superPlayerId, setSuperPlayerId] = useState<string | null>(null)
+  const [trainingState, setTrainingState] = useState(() => getTrainingState())
+  const [trainingSelection, setTrainingSelection] = useState<string[]>([])
+  const [trainingMode, setTrainingMode] = useState<TrainingMode | null>(null)
+  const [trainingAdSeconds, setTrainingAdSeconds] = useState(0)
+  const [trainingMessage, setTrainingMessage] = useState("")
   const [auctionNow, setAuctionNow] = useState(() => Date.now())
   const [auctionPlayers, setAuctionPlayers] = useState<AuctionPlayer[]>(() => readAuctionPlayers())
   const [currency, setCurrency] = useState<{ bucks: number; gems: number }>(() => {
     if (typeof window === "undefined") return wallet
     try { return JSON.parse(localStorage.getItem("pitchside-wallet") || "") || wallet } catch { return wallet }
   })
-  const activeTrainingCount = useMemo(() => Object.values(trainingState).filter((record) => trainingNow < record.completesAt).length, [trainingState, trainingNow])
-  const trainingCycleLocked = trainingNow < trainingLedger.lockedUntil
-  const trainingLockRemaining = Math.max(0, trainingLedger.lockedUntil - trainingNow)
+  const activeTrainingCount = useMemo(() => trainingState.active.filter((session) => session.completesAt > trainingNow).length, [trainingState, trainingNow])
 
   useEffect(() => {
     const id = window.setInterval(() => { setTrainingNow(Date.now()); setAuctionNow(Date.now()) }, 1000)
     return () => window.clearInterval(id)
   }, [])
-  useEffect(() => { localStorage.setItem("pitchside-training", JSON.stringify(trainingState)) }, [trainingState])
-  useEffect(() => { localStorage.setItem("pitchside-training-ledger", JSON.stringify(trainingLedger)) }, [trainingLedger])
+  useEffect(() => { setTrainingState(getTrainingState(trainingNow)) }, [trainingNow])
   useEffect(() => { saveWallet(currency) }, [currency])
   useEffect(() => {
     const expired = auctionPlayers.filter((lot) => lot.enabled && lot.endsAt <= auctionNow)
@@ -275,23 +256,6 @@ export function SquadManager() {
   }, [auctionNow, auctionPlayers, currency.bucks, currency.gems, squadCapacity, teamPlayers])
 
 
-  useEffect(() => {
-    const completedNow = Object.values(trainingState).filter((record) => trainingNow >= record.completesAt)
-    const unseen = completedNow.filter((record) => !trainingLedger.completedKeys.includes(record.playerId + ":" + record.startedAt))
-    if (!unseen.length) return
-    setTrainingLedger((current) => {
-      const completedKeys = [...current.completedKeys, ...unseen.map((record) => record.playerId + ":" + record.startedAt)]
-      const latest = unseen.reduce((max, record) => Math.max(max, record.weeklyUnlockAt), current.lockedUntil)
-      return completedKeys.length >= TRAINING_CYCLE_LIMIT ? { completedKeys, lockedUntil: latest } : { ...current, completedKeys }
-    })
-  }, [trainingNow, trainingState, trainingLedger.completedKeys])
-
-  useEffect(() => {
-    if (trainingLedger.lockedUntil > 0 && trainingNow >= trainingLedger.lockedUntil) {
-      setTrainingLedger({ completedKeys: [], lockedUntil: 0 })
-    }
-  }, [trainingNow, trainingLedger.lockedUntil])
-
   useEffect(() => { setSquadCapacity(getSquadCapacity()); saveClubSquad(teamPlayers) }, [teamPlayers])
 
   useEffect(() => {
@@ -316,34 +280,32 @@ export function SquadManager() {
   }, [auctionNow, auctionPlayers, teamPlayers])
 
   const selectedPlayer = useMemo(() => teamPlayers.find((p) => p.id === selectedPlayerId) || null, [teamPlayers, selectedPlayerId])
-  const beginTraining = (playerId: string, tier: TrainingTier) => {
-    const existing = trainingState[playerId]
-    if (trainingCycleLocked || activeTrainingCount >= MAX_CONCURRENT_TRAINING) return
-    if (existing && trainingNow < existing.completesAt) return
-    if (existing && trainingNow < existing.weeklyUnlockAt) return
-    if (tier === "super") { setSuperPlayerId(playerId); return }
-    setAdTraining({ playerId, tier, seconds: 5 })
+  const requestTraining = (mode: TrainingMode, ids: string[]) => {
+    const result = startTraining(ids, mode, Date.now())
+    if (!result.ok) { setTrainingMessage(result.error); return }
+    setTrainingState(getTrainingState())
+    setTrainingSelection([])
+    setTrainingMessage("Training started. It runs for 24 hours; this player is locked from retraining for 14 days.")
+  }
+  const beginTraining = (mode: TrainingMode) => {
+    const ids = mode === "regular-team" || mode === "super-team" ? teamPlayers.slice(0, 11).map((p) => p.id) : trainingSelection
+    if (mode === "regular" && (ids.length < 1 || ids.length > 3)) { setTrainingMessage("Regular Training allows up to 3 players."); return }
+    if (mode === "super" && ids.length !== 1) { setTrainingMessage("Super Training allows exactly 1 player."); return }
+    setTrainingMode(mode)
+    setTrainingAdSeconds(TRAINING_CONFIG[mode].adSeconds)
   }
   useEffect(() => {
-    if (!adTraining) return
-    if (adTraining.seconds <= 0) {
-      const now = Date.now(); const boost = adTraining.tier === "heavy" ? 3 : 1
-      setTrainingState((current) => ({ ...current, [adTraining.playerId]: { playerId: adTraining.playerId, tier: adTraining.tier, boost, startedAt: now, completesAt: now + TRAINING_MS, weeklyUnlockAt: now + WEEK_MS } }))
-      setAdTraining(null); return
-    }
-    const id = window.setTimeout(() => setAdTraining((current) => current ? { ...current, seconds: current.seconds - 1 } : null), 1000); return () => window.clearTimeout(id)
-  }, [adTraining])
-  const confirmSuperTraining = (useGems: boolean) => {
-    if (!superPlayerId) return
-    if (trainingCycleLocked || activeTrainingCount >= MAX_CONCURRENT_TRAINING) return
-    const existing = trainingState[superPlayerId]; if (existing && trainingNow < existing.completesAt) return
-    if (existing && trainingNow < existing.weeklyUnlockAt) return
-    const cost = useGems ? SUPER_GEMS : SUPER_BUCKS; if ((useGems ? currency.gems : currency.bucks) < cost) return
-    const now = Date.now()
-    setTrainingState((current) => ({ ...current, [superPlayerId]: { playerId: superPlayerId, tier: "super", boost: 5, startedAt: now, completesAt: now + TRAINING_MS, weeklyUnlockAt: now + WEEK_MS } }))
-    setCurrency((current: { bucks: number; gems: number }) => ({ ...current, [useGems ? "gems" : "bucks"]: current[useGems ? "gems" : "bucks"] - cost }))
-    setSuperPlayerId(null)
-  }
+    if (!trainingMode || trainingAdSeconds <= 0) return
+    const id = window.setTimeout(() => setTrainingAdSeconds((s) => s - 1), 1000)
+    return () => window.clearTimeout(id)
+  }, [trainingMode, trainingAdSeconds])
+  useEffect(() => {
+    if (!trainingMode || trainingAdSeconds > 0) return
+    const mode = trainingMode
+    setTrainingMode(null)
+    const ids = mode === "regular-team" || mode === "super-team" ? teamPlayers.slice(0, 11).map((p) => p.id) : trainingSelection
+    requestTraining(mode, ids)
+  }, [trainingMode, trainingAdSeconds])
   const swapPlayer = (targetId: string) => {
     if (!selectedPlayerId || selectedPlayerId === targetId) return
     setLineup((current) => {
@@ -688,25 +650,31 @@ export function SquadManager() {
           <div className="space-y-3">
             <Card glow="cyan" className="p-4">
               <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Player Training</p>
-              <p className="mt-1 font-display text-xl font-black text-glow-cyan">3 players at a time</p>
-              <p className="mt-2 text-xs text-muted-foreground">Training takes 24 hours. A player cannot train again for 7 days. After 10 completed trainings, the training room locks until the cycle resets.</p>
-              <div className="mt-3 grid grid-cols-2 gap-2 text-center text-[10px]">
-                <div className="rounded-xl border border-border p-2"><b>{activeTrainingCount}/3</b><span className="mt-1 block text-muted-foreground">Active sessions</span></div>
-                <div className={cn("rounded-xl border p-2", trainingCycleLocked ? "border-amber-400/40 bg-amber-400/5" : "border-border")}><b>{trainingCycleLocked ? "LOCKED" : `${Math.min(trainingLedger.completedKeys.length, TRAINING_CYCLE_LIMIT)}/10`}</b><span className="mt-1 block text-muted-foreground">{trainingCycleLocked ? `Unlocks in ${formatRemaining(trainingLockRemaining)}` : "Completed this cycle"}</span></div>
-              </div>
-              <div className="mt-3 grid grid-cols-3 gap-2 text-center text-[10px]"><div className="rounded-xl border border-border p-2"><b>Light</b><span className="mt-1 block text-muted-foreground">Ad · +1 all</span></div><div className="rounded-xl border border-border p-2"><b>Heavy</b><span className="mt-1 block text-muted-foreground">Ad · +3 all</span></div><div className="rounded-xl border border-primary/30 bg-primary/10 p-2"><b>Super</b><span className="mt-1 block text-muted-foreground">Paid · +5 all</span></div></div>
+              <p className="mt-1 font-display text-xl font-black">Regular +3 · Super +3 × 2</p>
+              <p className="mt-2 text-xs text-muted-foreground">Regular trains 3 players at once with +3 to 1 random attribute after a 30-second ad. Super trains 1 player with +3 to 2 random attributes after up to 60 seconds of ads. Training lasts 24 hours and the same player is locked for 14 days.</p>
             </Card>
-            {teamPlayers.map((p) => {
-              const record = trainingState[p.id]; const active = !!record && trainingNow < record.completesAt; const locked = !!record && trainingNow < record.weeklyUnlockAt; const complete = !!record && trainingNow >= record.completesAt
-              return (
-                <Card key={p.id} className={cn("p-3", active && "border-amber-400/40 bg-amber-400/5")}>
-                  <div className="flex items-center gap-3"><PlayerFace player={p}/><div className="min-w-0 flex-1"><div className="flex items-center gap-2"><p className="truncate text-sm font-black">{p.name}</p>{complete ? <span className="text-[10px] font-black text-primary">+{record!.boost}</span> : null}</div><p className="truncate text-[10px] text-muted-foreground">{p.style} · {p.specialName || "Standard"}</p>{active ? <p className="mt-1 text-[10px] font-bold text-amber-300">Training {record!.tier} · available in {formatRemaining(record!.completesAt-trainingNow)}</p> : locked ? <p className="mt-1 text-[10px] font-bold text-muted-foreground">Next training in {formatRemaining(record!.weeklyUnlockAt-trainingNow)}</p> : complete ? <p className="mt-1 text-[10px] font-bold text-emerald-400">+{record!.boost} all attributes · weekly training locked</p> : <p className="mt-1 text-[10px] text-emerald-400">Ready for this week's training</p>}</div></div>
-                  {!locked && !trainingCycleLocked && activeTrainingCount < MAX_CONCURRENT_TRAINING ? <div className="mt-3 grid grid-cols-3 gap-2"><Button size="sm" onClick={() => beginTraining(p.id,"light")} className="h-9 rounded-lg text-[10px] font-bold">Light · Ad</Button><Button size="sm" onClick={() => beginTraining(p.id,"heavy")} className="h-9 rounded-lg bg-accent text-accent-foreground text-[10px] font-bold">Heavy · Ad</Button><Button size="sm" onClick={() => beginTraining(p.id,"super")} className="h-9 rounded-lg border border-primary/40 bg-primary/10 text-primary text-[10px] font-bold">Super · +5</Button></div> : <p className="mt-3 rounded-lg border border-border bg-secondary/40 px-2 py-2 text-center text-[9px] font-bold text-muted-foreground">{trainingCycleLocked ? `Training room locked · ${formatRemaining(trainingLockRemaining)} remaining` : active ? "Training in progress" : activeTrainingCount >= MAX_CONCURRENT_TRAINING ? "3 training slots are full" : "Weekly cooldown active"}</p>}
-                </Card>
-              )
-            })}
-            {adTraining ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-6"><Card glow="cyan" className="relative w-full max-w-sm p-5 text-center"><button onClick={() => setAdTraining(null)} className="absolute right-4 top-4"><X className="h-4 w-4"/></button><p className="text-xs uppercase tracking-widest text-muted-foreground">Sponsored Training</p><p className="mt-2 font-display text-xl font-black">Watch ad to start {adTraining.tier} training</p><p className="mt-2 text-sm text-muted-foreground">Ad finishes in {adTraining.seconds}s. Training then runs for 24 hours.</p></Card></div> : null}
-            {superPlayerId ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-6"><Card glow="cyan" className="w-full max-w-sm p-5"><div className="flex items-center justify-between"><p className="font-display text-lg font-black">Super Training</p><button onClick={() => setSuperPlayerId(null)}><X className="h-4 w-4"/></button></div><p className="mt-2 text-xs text-muted-foreground">Train {teamPlayers.find((p) => p.id === superPlayerId)?.name} for 24 hours and add +5 to every attribute.</p><div className="mt-4 grid grid-cols-2 gap-2"><Button onClick={() => confirmSuperTraining(true)} disabled={currency.gems < SUPER_GEMS} className="h-12 rounded-xl"><Gem className="mr-1 h-4 w-4"/>{SUPER_GEMS} Gems</Button><Button onClick={() => confirmSuperTraining(false)} disabled={currency.bucks < SUPER_BUCKS} variant="outline" className="h-12 rounded-xl"><Banknote className="mr-1 h-4 w-4"/>{SUPER_BUCKS.toLocaleString()} Bucks</Button></div></Card></div> : null}
+            <Card className="p-3">
+              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Select players</p>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                {teamPlayers.map((p) => {
+                  const selected = trainingSelection.includes(p.id)
+                  const session = trainingState.active.find((s) => s.playerIds.includes(p.id))
+                  const locked = !!session && session.lockUntil > trainingNow
+                  const dev = readPlayerTrainingBoost(p.id)
+                  const total = Object.values(dev.stats).reduce((sum, value) => sum + Number(value || 0), 0)
+                  return <button key={p.id} type="button" disabled={locked} onClick={() => setTrainingSelection((cur) => selected ? cur.filter((id) => id !== p.id) : cur.length < 3 ? [...cur, p.id] : cur)} className={cn("rounded-xl border p-2 text-left", selected ? "border-primary bg-primary/15" : "border-border bg-card/70", locked && "opacity-60")}><div className="flex items-center gap-2"><PlayerFace player={p}/><div className="min-w-0"><p className="truncate text-[10px] font-black">{p.name}</p><p className="text-[8px] text-muted-foreground">OVR {p.rating + Math.floor(total / 6)}</p><p className="text-[8px] text-muted-foreground">{locked ? "Locked 14d" : "Ready"}</p></div></div></button>
+                })
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2"><Button disabled={trainingSelection.length < 1 || trainingSelection.length > 3} onClick={() => beginTraining("regular")} className="h-11 rounded-xl text-[10px] font-black">Regular · 30s Ad</Button><Button disabled={trainingSelection.length !== 1} onClick={() => beginTraining("super")} variant="outline" className="h-11 rounded-xl text-[10px] font-black">Super · 60s Ads</Button></div>
+              <p className="mt-2 text-center text-[9px] text-muted-foreground">{trainingSelection.length} selected</p>
+            </Card>
+            <Card className="p-3">
+              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Full-team training</p>
+              <p className="mt-1 text-[9px] text-muted-foreground">All 11 players: Regular +3 to 1 random attribute for $4.10. Super +3 to 2 random attributes for $9.99.</p>
+              <div className="mt-3 grid grid-cols-2 gap-2"><Button variant="outline" onClick={() => beginTraining("regular-team")} className="h-10 text-[9px] font-black">Regular Team · $4.10</Button><Button variant="outline" onClick={() => beginTraining("super-team")} className="h-10 text-[9px] font-black">Super Team · $9.99</Button></div>
+            </Card>
+            {trainingMessage ? <p className="rounded-xl border border-border bg-card/70 p-3 text-center text-[10px] font-bold text-muted-foreground">{trainingMessage}</p> : null}
+            {trainingMode && trainingAdSeconds > 0 ? <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-6"><Card glow="cyan" className="w-full max-w-sm p-5 text-center"><p className="text-xs uppercase tracking-widest text-muted-foreground">Sponsored Training</p><p className="mt-2 font-display text-xl font-black">Watch ad</p><p className="mt-2 text-sm text-muted-foreground">Required ad time: {trainingAdSeconds}s</p></Card></div> : null}
           </div>
         )}
 
