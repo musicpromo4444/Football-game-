@@ -172,14 +172,6 @@ export function PrivateLeagues({ onBack }: { onBack?: () => void }) {
     setMessage("League started.")
   }
 
-  const addDemoOpponent = () => {
-    if (!selected) return
-    const d = details[selected] || { teams: [], fixtures: [] }
-    if (d.teams.length >= (leagues.find(x => x.id === selected)?.maxUsers || 8)) return
-    const n = d.teams.length + 1
-    const team: Team = { id: selected + "-t" + n, name: "Opponent " + n, played: 0, wins: 0, draws: 0, losses: 0, gf: 0, ga: 0 }
-    const next = { ...details, [selected]: { ...d, teams: [...d.teams, team] } }; setDetails(next); saveDetails(next)
-  }
 
   const selectedLeague = leagues.find(l => l.id === selected)
   const selectedDetail = selected ? details[selected] : null
