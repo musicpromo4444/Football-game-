@@ -11,10 +11,10 @@ import { Card, Pill, ScreenHeader } from "@/components/game/ui-bits"
 import { readWallet, saveWallet, purchaseShopItem, readShopItems, type Wallet } from "@/lib/economy"
 import { formatRealMoney, getCountry, readProfile } from "@/lib/locale"
 import { readRealMoneyPacks } from "@/lib/shop-pricing"
-import { loadClubSquad } from "@/lib/club-squad"
+import { claimSpecialPlayer, getSpecialPlayerClaims, loadClubSquad } from "@/lib/club-squad"
 import { grantTrainingBoost, readPlayerTrainingBoost, TRAINING_BOOST_PACKAGES, type TrainingBoostTier } from "@/lib/training-boosts"
 import { activateTeamBoost, TEAM_BOOSTS, type TeamBoostDuration, type TeamBoostType } from "@/lib/team-boosts"
-import { squad } from "@/components/game/data"
+import { specialPlayers, squad } from "@/components/game/data"
 import { KitEditor } from "@/components/game/screens/kit-editor"
 
 const FREE_CLAIMS_KEY = "pitchside-free-store-claims"
@@ -106,6 +106,7 @@ function durationLabel(duration: TeamBoostDuration) {
 export function Shop() {
   const [wallet, setWallet] = useState<Wallet>(() => readWallet())
   const [message, setMessage] = useState("")
+  const [specialClaims, setSpecialClaims] = useState(() => getSpecialPlayerClaims())
   const [claims, setClaims] = useState<Record<string, number>>({})
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>(() => loadClubSquad(squad)[0]?.id || "")
   const [boostAd, setBoostAd] = useState<{ tier: TrainingBoostTier; seconds: number } | null>(null)
