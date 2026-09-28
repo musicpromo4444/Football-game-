@@ -86,12 +86,13 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
       setMatchReward(null)
       setMatchRewardLabel(null)
       setOnlineError(null)
+      showPreMatchAd()
       setInMatch(true)
     }
     const startTournament = async () => { const id = window.localStorage.getItem("pitchside-tournament"); if (!id) return; const {data,error}=await supabase.rpc("pitchside_join_tournament",{p_tournament_id:id}); if(error){setOnlineError(error.message);return} setTournamentId(id); setLeagueFixture(null); setFriendMatchId(null); setMatchId("tournament-"+id); setMatchDone(false); setMatchReward(null); setMatchRewardLabel(null); setOnlineError(null); showPreMatchAd(id); setInMatch(true) }
-    const startFriendMatch = (event: Event) => { const detail = (event as CustomEvent).detail || {}; setTournamentId(null); setLeagueFixture(null); setFriendMatchId(detail.matchId || null); setFriendRole(detail.role || null); setMatchId(detail.matchId ? "friend-" + detail.matchId : "friend-match"); setMatchDone(false); setMatchReward(null); setMatchRewardLabel(null); setOnlineError(null); setInMatch(true) }
+    const startFriendMatch = (event: Event) => { const detail = (event as CustomEvent).detail || {}; setTournamentId(null); setLeagueFixture(null); setFriendMatchId(detail.matchId || null); setFriendRole(detail.role || null); setMatchId(detail.matchId ? "friend-" + detail.matchId : "friend-match"); setMatchDone(false); setMatchReward(null); setMatchRewardLabel(null); setOnlineError(null); showPreMatchAd(); setInMatch(true) }
     window.addEventListener("pitchside-start-league-fixture", startLeagueFixture)
-    const startImpossible = () => { const state=readImpossibleChallenge(); setImpossibleChallenge(state); setChallengeMessage(null); setChallengeAdSeconds(null); setMatchDone(false); setTournamentId(null); setLeagueFixture(null); setFriendMatchId(null); setMatchId("impossible-"+state.stage+"-"+state.retriesUsed); setOnlineError(null); setInMatch(true) }
+    const startImpossible = () => { const state=readImpossibleChallenge(); setImpossibleChallenge(state); setChallengeMessage(null); setChallengeAdSeconds(null); setMatchDone(false); setTournamentId(null); setLeagueFixture(null); setFriendMatchId(null); setMatchId("impossible-"+state.stage+"-"+state.retriesUsed); setOnlineError(null); showPreMatchAd(); setInMatch(true) }
     window.addEventListener("pitchside-start-tournament", startTournament)
     window.addEventListener("pitchside-start-impossible-challenge", startImpossible)
     window.addEventListener("pitchside-start-friend-match", startFriendMatch)
@@ -113,6 +114,7 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
           const row = payload.new as any
           if (row.player_a === userId || row.player_b === userId) {
             setMatchId(row.id)
+            showPreMatchAd()
             setRankedRole(row.player_a === userId ? "challenger" : "opponent")
             setFriendMatchId(null)
             setFriendRole(null)
@@ -403,6 +405,7 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
             <div className="p-4 text-center"><p className="text-xs text-muted-foreground">{preMatchAd.writeUp}</p><p className="mt-3 text-xs font-bold text-cyan-200">{preMatchAd.playable ? `Playable sponsor · ${preMatchAdSeconds}s remaining` : `Match starts in ${preMatchAdSeconds}s`}</p></div>
           </div>
         </div> : null}
+        {preMatchAd ? <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-5"><div className="w-full max-w-md overflow-hidden rounded-2xl border border-cyan-400/30 bg-card shadow-2xl"><div className="px-4 pt-4 text-center"><p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">Sponsored Match</p><p className="mt-1 text-lg font-black">{preMatchAd.title}</p></div>{preMatchAd.creative ? <img src={preMatchAd.creative} alt={preMatchAd.title} className="mt-3 aspect-[16/7] w-full object-cover" /> : <div className="mx-4 mt-3 flex aspect-[16/7] items-center justify-center rounded-xl bg-secondary text-sm font-black">DIRECT SPONSOR BANNER</div>}<div className="p-4 text-center"><p className="text-xs text-muted-foreground">{preMatchAd.writeUp}</p><p className="mt-3 text-xs font-bold text-cyan-200">{preMatchAd.playable ? "Playable sponsor · " + preMatchAdSeconds + "s remaining" : "Match starts in " + preMatchAdSeconds + "s"}</p></div></div></div> : null}
         <MatchCanvas key={impossibleChallenge ? `impossible-${impossibleChallenge.stage}-${impossibleChallenge.retriesUsed}` : undefined} onMatchComplete={finishOnlineMatch} onMatchForfeit={handleFriendForfeit} challenge={impossibleChallenge ? IMPOSSIBLE_CHALLENGE_TEAMS[impossibleChallenge.stage - 1] : undefined} onlineMatch={friendMatchId && friendRole ? { matchId: friendMatchId, role: friendRole, kind: "friend" as const } : rankedRole && matchId ? { matchId, role: rankedRole, kind: "ranked" as const } : undefined} />
         {leagueOutcome ? <div className="mx-5 mt-3 rounded-2xl border border-cyan-500/35 bg-cyan-500/10 px-4 py-3 text-center"><p className="text-[10px] font-black uppercase tracking-widest text-cyan-300">League Update</p><p className="mt-1 text-sm font-black text-cyan-100">{leagueOutcome}</p></div> : null}
         {matchReward !== null ? (
