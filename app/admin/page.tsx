@@ -21,6 +21,12 @@ export default function AdminPage() {
   const [secretValues, setSecretValues] = useState<Record<string, string>>({})
   const [secretMessage, setSecretMessage] = useState("")
   const [features, setFeatures] = useState({ onlineMatches: true, auctions: true, playerCards: true, ghostFormation: true, injuryShield: true, ads: true, purchases: true })
+  const [adCampaigns, setAdCampaigns] = useState([
+    { id: "match-start", title: "Smart Match-Start Sponsor", enabled: true, format: "image/video", placements: ["Before match"], countries: "All countries", duration: 5, frequency: "Every eligible match", creative: "", writeUp: "" },
+    { id: "after-match", title: "After-Match Ad", enabled: true, format: "interstitial/video/playable", placements: ["After completed match"], countries: "All countries", duration: 5, frequency: "Once per completed match", creative: "", writeUp: "" },
+    { id: "rewarded", title: "Rewarded Ad", enabled: true, format: "rewarded video", placements: ["Reward offers"], countries: "All countries", duration: 30, frequency: "User initiated", creative: "", writeUp: "" },
+    { id: "playable", title: "Playable Ad", enabled: true, format: "playable", placements: ["After match / selected screens"], countries: "All countries", duration: 15, frequency: "Admin controlled", creative: "", writeUp: "" },
+  ])
 
   useEffect(() => {
     const loaded = readAuctionPlayers()
@@ -152,6 +158,31 @@ export default function AdminPage() {
             {(Object.keys(features) as (keyof typeof features)[]).map((key) => <label key={key} className="flex items-center gap-2 rounded-lg border border-border bg-secondary/30 p-2 text-[10px] font-bold"><input type="checkbox" checked={features[key]} onChange={(e) => setFeatures({ ...features, [key]: e.target.checked })} />{key.replace(/([A-Z])/g, " $1")}</label>)}
           </div>
           <p className="mt-2 text-[9px] text-muted-foreground">These controls are the admin UI layer; production-wide enforcement will use the same server-side settings.</p>
+        </Card>
+
+        <Card glow="cyan" className="p-4">
+          <div className="flex items-center gap-2"><Megaphone className="h-5 w-5 text-cyan-300" /><div><p className="text-xs uppercase tracking-wide text-muted-foreground">Smart Ads</p><p className="font-bold">Targeted sponsor campaigns</p></div></div>
+          <p className="mt-2 text-xs text-muted-foreground">No top or bottom banners. Create campaigns by format, then target them by the country saved on the player's account. Different players can receive different sponsors in the same match.</p>
+          <div className="mt-3 space-y-3">
+            {adCampaigns.map((campaign, index) => <div key={campaign.id} className="rounded-xl border border-border bg-secondary/20 p-3">
+              <div className="flex items-center justify-between gap-2">
+                <div><p className="text-xs font-black">{campaign.title}</p><p className="text-[9px] text-muted-foreground">{campaign.format} • {campaign.placements.join(" / ")}</p></div>
+                <label className="flex items-center gap-1 text-[9px] font-bold"><input type="checkbox" checked={campaign.enabled} onChange={(e) => setAdCampaigns((x) => x.map((a,i) => i===index ? {...a, enabled:e.target.checked} : a))} /> ON</label>
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <label className="text-[9px] font-bold text-muted-foreground">Sponsor / campaign<input value={campaign.writeUp} onChange={(e) => setAdCampaigns((x) => x.map((a,i) => i===index ? {...a, writeUp:e.target.value} : a))} placeholder="e.g. MTN Nigeria" className="mt-1 w-full rounded-lg border border-border bg-secondary/50 px-2 py-2 text-xs" /></label>
+                <label className="text-[9px] font-bold text-muted-foreground">Creative URL<input value={campaign.creative} onChange={(e) => setAdCampaigns((x) => x.map((a,i) => i===index ? {...a, creative:e.target.value} : a))} placeholder="Image / video / playable URL" className="mt-1 w-full rounded-lg border border-border bg-secondary/50 px-2 py-2 text-xs" /></label>
+                <label className="text-[9px] font-bold text-muted-foreground">Target countries<input value={campaign.countries} onChange={(e) => setAdCampaigns((x) => x.map((a,i) => i===index ? {...a, countries:e.target.value} : a))} placeholder="Nigeria, Germany, Jamaica or All" className="mt-1 w-full rounded-lg border border-border bg-secondary/50 px-2 py-2 text-xs" /></label>
+                <label className="text-[9px] font-bold text-muted-foreground">Placement<select value={campaign.placements[0]} onChange={(e) => setAdCampaigns((x) => x.map((a,i) => i===index ? {...a, placements:[e.target.value]} : a))} className="mt-1 w-full rounded-lg border border-border bg-secondary/50 px-2 py-2 text-xs"><option>Before match</option><option>After completed match</option><option>Reward offer</option><option>Selected screens</option></select></label>
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <label className="text-[9px] font-bold text-muted-foreground">Duration (seconds)<input type="number" min={1} max={60} value={campaign.duration} onChange={(e) => setAdCampaigns((x) => x.map((a,i) => i===index ? {...a, duration:Number(e.target.value)} : a))} className="mt-1 w-full rounded-lg border border-border bg-secondary/50 px-2 py-2 text-xs" /></label>
+                <label className="text-[9px] font-bold text-muted-foreground">Frequency<input value={campaign.frequency} onChange={(e) => setAdCampaigns((x) => x.map((a,i) => i===index ? {...a, frequency:e.target.value} : a))} className="mt-1 w-full rounded-lg border border-border bg-secondary/50 px-2 py-2 text-xs" /></label>
+              </div>
+              {campaign.id === "match-start" ? <p className="mt-2 rounded-lg bg-cyan-500/10 p-2 text-[9px] font-bold text-cyan-200">Smart targeting: Nigeria can see MTN while Germany sees Nike during the same match. Country comes from the player's saved signup country.</p> : null}
+            </div>)}
+          </div>
+          <Button onClick={() => { try { localStorage.setItem("pitchside-ad-campaigns", JSON.stringify(adCampaigns)); setSecretMessage("Ad campaign settings saved") } catch {} }} className="mt-3 w-full rounded-xl"><Save className="mr-1 h-4 w-4" />Save ad campaign settings</Button>
         </Card>
 
         <AdminShop />
