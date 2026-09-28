@@ -26,6 +26,7 @@ export const TRAINING_CONFIG = {
 } as const
 
 export const TRAINING_SLOT_PRICES = { regular: 1.20, super: 2.99 } as const
+export const TRAINING_SLOT_CAPACITY = { regular: 6, super: 5 } as const
 export const TRAINING_TEAM_PRICES = { regular: 4.10, super: 9.99 } as const
 
 const KEY = "pitchside-player-training-v2"
@@ -92,8 +93,12 @@ export function startTraining(playerIds: string[], mode: TrainingMode, now = Dat
 }
 export function purchaseTrainingSlots(kind: "regular" | "super") {
   const state = getTrainingState()
-  if (kind === "regular") state.regularSlots += TRAINING_CONFIG.regular.slotUpgrade
-  else state.superSlots += TRAINING_CONFIG.super.slotUpgrade
+  const current = kind === "regular" ? state.regularSlots : state.superSlots
+  const cap = TRAINING_SLOT_CAPACITY[kind]
+  if (current >= cap) return { ok: false as const, message: kind === "regular" ? "Regular training is already at its 6-player maximum." : "Super training is already at its 5-player maximum.", slots: current }
+  const next = Math.min(cap, current + TRAINING_CONFIG[kind].slotUpgrade)
+  if (kind === "regular") state.regularSlots = next
+  else state.superSlots = next
   writeState(state)
-  return { ok: true as const, slots: kind === "regular" ? state.regularSlots : state.superSlots }
+  return { ok: true as const, slots: next }
 }
