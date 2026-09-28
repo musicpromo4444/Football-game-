@@ -1,4 +1,4 @@
-import { loadClubSquad } from "@/lib/club-squad"
+import { loadClubSquad, claimSpecialPlayer } from "@/lib/club-squad"
 import { grantTrainingBoost } from "@/lib/training-boosts"
 import { readWallet, saveWallet } from "@/lib/economy"
 
@@ -34,7 +34,7 @@ export function getPackageContents(tier: PackageTier): PackageReward {
   const gems = tier === "silver" ? 2 : tier === "gold" ? 3 + Math.floor(Math.random() * 2) : 6
   const bucks = tier === "silver" ? 100 : tier === "gold" ? 200 : 300
   let specialPlayer: string | undefined
-  if (tier === "platinum" && Math.random() < 0.15) specialPlayer = "special"
+  if (tier === "platinum" && Math.random() < 0.15) specialPlayer = "sp" + (1 + Math.floor(Math.random() * 12))
   let rareBonus: PackageReward["rareBonus"]
   if (tier === "platinum" && Math.floor(Math.random() * 2000) === 0) rareBonus = Math.random() < 0.5 ? "captain-boost" : "ghost-summon"
   return { tier, players, playerBoost: 1, bucks, gems, specialPlayer, rareBonus }
@@ -48,6 +48,7 @@ export function equipPackage(reward: PackageReward) {
   const wallet = readWallet()
   saveWallet({ bucks: wallet.bucks + reward.bucks, gems: wallet.gems + reward.gems })
   for (const playerId of reward.players) grantTrainingBoost(playerId, "starter")
+  if (reward.specialPlayer) claimSpecialPlayer(reward.specialPlayer)
   return reward
 }
 
