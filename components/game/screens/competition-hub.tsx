@@ -5,6 +5,7 @@ import { ArrowLeft, Trophy, Users, Swords, Medal, Shield, UserPlus, Play, Clock3
 import { Button } from "@/components/ui/button"
 import { Card, ScreenHeader } from "@/components/game/ui-bits"
 import { PrivateLeagues } from "@/components/game/screens/private-leagues"
+import { supabase } from "@/lib/supabase"
 
 type Page = "home" | "tournaments" | "league" | "friends"
 
@@ -26,6 +27,8 @@ function Back({ onBack }: { onBack: () => void }) {
 
 export function CompetitionHub() {
   const [page, setPage] = useState<Page>("home")
+  const [friendCode, setFriendCode] = useState("")
+  const [notice, setNotice] = useState("")
 
   if (page === "league") return <div className="pb-4"><div className="px-5 pt-3"><Back onBack={() => setPage("home")} /></div><PrivateLeagues onBack={() => setPage("home")} /></div>
 
@@ -71,8 +74,8 @@ export function CompetitionHub() {
         <div className="px-5 pt-3"><Back onBack={() => setPage("home")} /></div>
         <ScreenHeader title="Friends" subtitle="Challenge friends and build your football circle" />
         <div className="space-y-3 px-5">
-          <Card className="p-4"><div className="flex gap-2"><input placeholder="Friend code or manager name" className="h-10 flex-1 rounded-xl border border-border bg-secondary px-3 text-xs outline-none" /><Button className="h-10 rounded-xl"><UserPlus className="mr-1 h-4 w-4"/> Add</Button></div></Card>
-          {friends.map(f => <Card key={f.name} className="flex items-center gap-3 p-4"><span className={`h-3 w-3 rounded-full ${f.online ? "bg-emerald-400" : "bg-muted-foreground"}`}/><div className="flex-1"><p className="text-sm font-bold">{f.name}</p><p className="text-[9px] text-muted-foreground">{f.club} · {f.online ? "Online" : "Offline"}</p></div><Button variant="outline" className="h-9 rounded-xl text-[10px]"><Swords className="mr-1 h-3.5 w-3.5"/> Challenge</Button></Card>)}
+          <Card className="p-4"><div className="flex gap-2"><input value={friendCode} onChange={e=>setFriendCode(e.target.value)} placeholder="Friend code or manager name" className="h-10 flex-1 rounded-xl border border-border bg-secondary px-3 text-xs outline-none" /><Button onClick={async()=>{ if(!friendCode.trim()) return; if(supabase){const {data:u}=await supabase.auth.getUser(); if(u.user){const {data}=await supabase.from("pitchside_friendships").select("id").eq("friend_code",friendCode.trim()).maybeSingle(); setNotice(data?"Friend found.":"Friend code not found.")}} else setNotice("Enter a friend code.")}} className="h-10 rounded-xl"><UserPlus className="mr-1 h-4 w-4"/> Add</Button></div></Card>
+          {friends.map(f => <Card key={f.name} className="flex items-center gap-3 p-4"><span className={`h-3 w-3 rounded-full ${f.online ? "bg-emerald-400" : "bg-muted-foreground"}`}/><div className="flex-1"><p className="text-sm font-bold">{f.name}</p><p className="text-[9px] text-muted-foreground">{f.club} · {f.online ? "Online" : "Offline"}</p></div><Button onClick={()=>{window.localStorage.setItem("pitchside-friend-challenge",f.name);window.dispatchEvent(new Event("pitchside-start-friend-match"));setNotice("Challenge sent.")}} variant="outline" className="h-9 rounded-xl text-[10px]"><Swords className="mr-1 h-3.5 w-3.5"/> Challenge</Button></Card>)}
         </div>
       </div>
     )
