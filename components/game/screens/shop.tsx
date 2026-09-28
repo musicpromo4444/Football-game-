@@ -15,6 +15,7 @@ import { claimSpecialPlayer, getSpecialPlayerClaims } from "@/lib/club-squad"
 import { activateTeamBoost, TEAM_BOOSTS, type TeamBoostDuration, type TeamBoostType } from "@/lib/team-boosts"
 import { specialPlayers, squad } from "@/components/game/data"
 import { KitEditor } from "@/components/game/screens/kit-editor"
+import { readLeagueProgress, LEAGUE_LEVELS } from "@/lib/league-progression"
 
 const FREE_CLAIMS_KEY = "pitchside-free-store-claims"
 const FREE_COOLDOWN = 30 * 60 * 1000
@@ -27,6 +28,8 @@ const FREE_REWARDS = [
 
 const BOOST_TYPES: TeamBoostType[] = ["ghost-formation", "team-boost", "captain-boost", "defense-shield", "goalkeeper-boost"]
 const BOOST_DURATIONS: TeamBoostDuration[] = ["1-match", "2-matches", "10-matches", "20-matches"]
+const GHOST_FORMATION_PRICES = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7] as const
+const GHOST_FORMATION_KEY = "pitchside-ghost-formation-league"
 
 type ArtKind = "card" | "gems" | "bux" | "item" | "package"
 
@@ -118,6 +121,9 @@ export function Shop() {
   })
   const [, setTick] = useState(0)
   const profile = readProfile()
+  const leagueProgress = readLeagueProgress()
+  const currentLeague = LEAGUE_LEVELS[leagueProgress.leagueIndex] || "academy"
+  const ghostPrice = GHOST_FORMATION_PRICES[leagueProgress.leagueIndex] ?? 7
   const country = getCountry(profile?.countryCode)
   const realMoneyPacks = readRealMoneyPacks().filter((pack) => pack.enabled)
 
@@ -253,24 +259,24 @@ export function Shop() {
       <section className="mt-6">
         <SectionTitle icon={<Gem className="h-3.5 w-3.5 fill-current" />} title="GEMS STORE" meta="Instant Delivery" />
         <div className="grid grid-cols-3 gap-2.5">
-          <ProductCard kind="gems" icon={<Gem className="h-8 w-8 fill-pink-300 text-pink-100" />} title="Free Gems" subtitle="Grants 5–10 free gems" price={<><Play className="mr-1 inline h-3 w-3" />WATCH AD</>} onBuy={() => claimTimed("free-gems", 0, 10, "10 Gems claimed.")} accent="pink" badge="AD" />
+          <ProductCard kind="gems" icon={<Gem className="h-8 w-8 fill-pink-300 text-pink-100" />} title="Free Gems" subtitle="3–5 Gems per ad · 30-min cooldown" price={<><Play className="mr-1 inline h-3 w-3" />WATCH AD</>} onBuy={() => { const gems = 3 + Math.floor(Math.random() * 3); claimTimed("free-gems", 0, gems, `${gems} Gems claimed.`) }} accent="pink" badge="AD" />
           <ProductCard kind="gems" icon={<Gem className="h-8 w-8 fill-pink-300 text-pink-100" />} title="80 Gems" subtitle="Handful of Gems" price="₦650" onBuy={() => flash("Payment will open when store billing is connected.")} accent="pink" />
-          <ProductCard kind="gems" icon={<Gem className="h-9 w-9 fill-pink-300 text-pink-100" />} title="500 Gems" subtitle="+10% Bonus" price="₦2,900" onBuy={() => flash("Payment will open when store billing is connected.")} accent="pink" />
-          <ProductCard kind="gems" icon={<Gem className="h-9 w-9 fill-pink-300 text-pink-100" />} title="1,200 Gems" subtitle="Best Value" price="₦6,500" onBuy={() => flash("Payment will open when store billing is connected.")} accent="pink" />
-          <ProductCard kind="gems" icon={<Gem className="h-9 w-9 fill-pink-300 text-pink-100" />} title="2,500 Gems" subtitle="+35% Bonus" price="₦12,500" onBuy={() => flash("Payment will open when store billing is connected.")} accent="pink" />
-          <ProductCard kind="gems" icon={<Gem className="h-9 w-9 fill-pink-300 text-pink-100" />} title="6,500 Gems" subtitle="+50% Value" price="₦29,000" onBuy={() => flash("Payment will open when store billing is connected.")} accent="pink" />
+          <ProductCard kind="gems" icon={<Gem className="h-9 w-9 fill-pink-300 text-pink-100" />} title="200 Gems" subtitle="+10% Bonus" price="₦2,900" onBuy={() => flash("Payment will open when store billing is connected.")} accent="pink" />
+          <ProductCard kind="gems" icon={<Gem className="h-9 w-9 fill-pink-300 text-pink-100" />} title="1,200 Gems" subtitle="Best Value" price="₦9,000" onBuy={() => flash("Payment will open when store billing is connected.")} accent="pink" />
+          <ProductCard kind="gems" icon={<Gem className="h-9 w-9 fill-pink-300 text-pink-100" />} title="2,500 Gems" subtitle="+35% Bonus" price="₦15,000" onBuy={() => flash("Payment will open when store billing is connected.")} accent="pink" />
+          <ProductCard kind="gems" icon={<Gem className="h-9 w-9 fill-pink-300 text-pink-100" />} title="6,500 Gems" subtitle="+50% Value" price="$20.00" onBuy={() => flash("Payment will open when store billing is connected.")} accent="pink" />
         </div>
       </section>
 
       <section className="mt-6">
         <SectionTitle icon={<CircleDollarSign className="h-3.5 w-3.5" />} title="BUX STORE" meta="Club Currency" />
         <div className="grid grid-cols-3 gap-2.5">
-          <ProductCard kind="bux" icon={<Banknote className="h-8 w-8 text-emerald-200" />} title="Free Bux" subtitle="Grants 250 to 500 Bux" price={<><Play className="mr-1 inline h-3 w-3" />WATCH AD</>} onBuy={() => claimTimed("free-bux", 350, 0, "350 Bux claimed.")} accent="green" badge="AD" />
+          <ProductCard kind="bux" icon={<Banknote className="h-8 w-8 text-emerald-200" />} title="Free Bux" subtitle="100 Bux per ad · 30-min cooldown" price={<><Play className="mr-1 inline h-3 w-3" />WATCH AD</>} onBuy={() => claimTimed("free-bux", 100, 0, "100 Bux claimed.")} accent="green" badge="AD" />
           <ProductCard kind="bux" icon={<Banknote className="h-8 w-8 text-emerald-200" />} title="1,500 Bux" subtitle="Pile of Bux" price="30 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 30, { bucks: wallet.bucks + 1500 }, "1,500 Bux added.")} accent="green" />
-          <ProductCard kind="bux" icon={<Banknote className="h-8 w-8 text-emerald-200" />} title="3,500 Bux" subtitle="+15% Bonus" price="60 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 60, { bucks: wallet.bucks + 3500 }, "3,500 Bux added.")} accent="green" />
-          <ProductCard kind="bux" icon={<Banknote className="h-8 w-8 text-emerald-200" />} title="8,000 Bux" subtitle="+30% Best Deal" price="130 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 130, { bucks: wallet.bucks + 8000 }, "8,000 Bux added.")} accent="green" />
+          <ProductCard kind="bux" icon={<Banknote className="h-8 w-8 text-emerald-200" />} title="3,500 Bux" subtitle="+15% Bonus" price="100 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 60, { bucks: wallet.bucks + 3500 }, "3,500 Bux added.")} accent="green" />
+          <ProductCard kind="bux" icon={<Banknote className="h-8 w-8 text-emerald-200" />} title="8,000 Bux" subtitle="+30% Best Deal" price="160 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 130, { bucks: wallet.bucks + 8000 }, "8,000 Bux added.")} accent="green" />
           <ProductCard kind="bux" icon={<Banknote className="h-8 w-8 text-emerald-200" />} title="20,000 Bux" subtitle="+50% Value" price="350 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 350, { bucks: wallet.bucks + 20000 }, "20,000 Bux added.")} accent="green" />
-          <ProductCard kind="bux" icon={<Banknote className="h-8 w-8 text-emerald-200" />} title="50,000 Bux" subtitle="Treasury Pallet" price="₦6,500" onBuy={() => flash("Payment will open when store billing is connected.")} accent="green" />
+          <ProductCard kind="bux" icon={<Banknote className="h-8 w-8 text-emerald-200" />} title="50,000 Bux" subtitle="Treasury Pallet" price="₦8,000" onBuy={() => flash("Payment will open when store billing is connected.")} accent="green" />
         </div>
       </section>
 
@@ -278,20 +284,19 @@ export function Shop() {
         <SectionTitle icon={<Crown className="h-3.5 w-3.5" />} title="ITEM STORE" meta="Team Boosts & Gear" />
         <div className="grid grid-cols-3 gap-2.5">
           <ProductCard kind="item" icon={<Crown className="h-8 w-8 text-amber-200" />} title="Captain Boost" subtitle="Boosts your captain" price={<><Play className="mr-1 inline h-3 w-3" />WATCH AD</>} onBuy={() => claimFreeTeamBoost("captain-boost")} accent="gold" badge="FREE" />
-          <ProductCard kind="item" icon={<Zap className="h-8 w-8 text-cyan-200" />} title="Ghost Formation" subtitle="Unlocks Ghost Formation" price="$2.00" onBuy={() => flash("Ghost Formation purchase will open when store billing is connected.")} accent="cyan" />
+          <ProductCard kind="item" icon={<Zap className="h-8 w-8 text-cyan-200" />} title="Ghost Formation" subtitle={`League subscription · ${currentLeague.replace("-", " ")} · all matches in league`} price={`${ghostPrice.toFixed(2)}`} onBuy={() => flash(`Ghost Formation · ${currentLeague.replace("-", " ")} · ${ghostPrice.toFixed(2)}. Purchase opens when billing is connected.`)} accent="cyan" />
           <ProductCard kind="item" icon={<Shirt className="h-8 w-8 text-emerald-200" />} title="Kit Editor" subtitle="Normal · Pro · Legendary · Special Event" price="OPEN" onBuy={() => setKitEditorOpen(true)} accent="green" badge="CUSTOMIZE" />
           <ProductCard kind="item" icon={<Footprints className="h-8 w-8 text-orange-200" />} title="Speed Boots" subtitle="+2% speed per match" price="40 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 40, {}, "Speed Boots activated.")} accent="pink" />
-          <ProductCard kind="item" icon={<HeartPulse className="h-8 w-8 text-rose-200" />} title="Injury Shield" subtitle="20 matches guard" price="8,000 Bux" priceIcon={<Banknote className="mr-1 inline h-3 w-3" />} onBuy={() => spend("bucks", 8000, {}, "Injury Shield activated.")} accent="gold" />
-          <ProductCard kind="item" icon={<Crown className="h-8 w-8 text-yellow-200" />} title="Extra Sub Slot" subtitle="+1 squad slot" price="80 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 80, {}, "Extra Sub Slot unlocked.")} accent="pink" />
+          <ProductCard kind="item" icon={<HeartPulse className="h-8 w-8 text-rose-200" />} title="Injury Shield" subtitle="10 matches guard" price="8,000 Bux" priceIcon={<Banknote className="mr-1 inline h-3 w-3" />} onBuy={() => spend("bucks", 8000, {}, "Injury Shield activated.")} accent="gold" />
         </div>
       </section>
 
       <section className="mt-6">
         <SectionTitle icon={<Package className="h-3.5 w-3.5" />} title="PACKAGE STORE" meta="Limited Bundles" />
         <div className="grid grid-cols-3 gap-2.5">
-          <ProductCard kind="package" icon={<Package className="h-8 w-8 text-amber-200" />} title="Starter Box" subtitle="20 Cards · 500 Bux · 3 Boosts" price="$2.00" onBuy={() => flash("Payment will open when store billing is connected.")} accent="gold" />
-          <ProductCard kind="package" icon={<Trophy className="h-8 w-8 text-orange-200" />} title="Arena Special" subtitle="45 Cards · 2,000 Bux" price="$4.00" onBuy={() => flash("Payment will open when store billing is connected.")} accent="gold" />
-          <ProductCard kind="package" icon={<Package className="h-8 w-8 text-cyan-200" />} title="Mega Bundle" subtitle="100 Cards · 60,000 Bux" price="$10.00" onBuy={() => flash("Payment will open when store billing is connected.")} accent="cyan" badge="BEST VALUE" />
+          <ProductCard kind="package" icon={<Package className="h-8 w-8 text-amber-200" />} title="Starter Box" subtitle="8 player cards · 500 Bux · 3 Gems · probability-based player pool" price="$2.30" onBuy={() => flash("Payment will open when store billing is connected.")} accent="gold" />
+          <ProductCard kind="package" icon={<Trophy className="h-8 w-8 text-orange-200" />} title="Arena Special" subtitle="15 player cards · 2,000 Bux · 2 boosts" price="$4.00" onBuy={() => flash("Payment will open when store billing is connected.")} accent="gold" />
+          <ProductCard kind="package" icon={<Package className="h-8 w-8 text-cyan-200" />} title="Mega Bundle" subtitle="20 player cards · 60,000 Bux · 3 boosts · 20 Gems" price="$10.00" onBuy={() => flash("Payment will open when store billing is connected.")} accent="cyan" badge="BEST VALUE" />
         </div>
       </section>
 
