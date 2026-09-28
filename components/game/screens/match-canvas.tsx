@@ -109,7 +109,7 @@ function format(t: number) {
 
 export type MatchOutcome = { home: number; away: number }
 
-export function MatchCanvas({ onMatchComplete }: { onMatchComplete?: (outcome: MatchOutcome) => void }) {
+export function MatchCanvas({ onMatchComplete, onlineMatch, onMatchForfeit }: { onMatchComplete?: (outcome: MatchOutcome) => void; onlineMatch?: { matchId: string; role: "challenger" | "opponent" }; onMatchForfeit?: (forfeitUserId: string) => void }) {
   const [time, setTime] = useState(120)
   const [running, setRunning] = useState(false)
   const [ball, setBall] = useState<Point>({ x: 50, y: 55 })
@@ -180,6 +180,70 @@ export function MatchCanvas({ onMatchComplete }: { onMatchComplete?: (outcome: M
   const selectedDefenderRef = useRef<number | null>(2)
   const opponentCarrierRef = useRef(0)
   const completionSentRef = useRef(false)
+  const remoteApplyingRef = useRef(false)
+  const friendChannelRef = useRef<any>(null)
+  const [disconnectSeconds, setDisconnectSeconds] = useState<number | null>(null)
+  const [onlineNotice, setOnlineNotice] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!onlineMatch) return
+    const channel = supabase.channel(`pitchside-friend-game:${onlineMatch.matchId}`)
+    friendChannelRef.current = channel
+    channel.on("broadcast", { event: "state" }, ({ payload }: any) => {
+      if (!payload?.state) return
+      remoteApplyingRef.current = true
+      const s = payload.state
+      if (s.time !== undefined) setTime(s.time)
+      if (s.running !== undefined) setRunning(s.running)
+      if (s.ball) { lastBallRef.current = s.ball; setBall(s.ball) }
+      if (s.score) setScore(s.score)
+      if (s.positions) setPositions(s.positions)
+      if (s.opponentPositions) setOpponentPositions(s.opponentPositions)
+      if (s.ballOwner !== undefined) setBallOwner(s.ballOwner)
+      if (s.opponentBallCarrier !== undefined) { opponentCarrierRef.current = s.opponentBallCarrier; setOpponentBallCarrier(s.opponentBallCarrier) }
+      setTimeout(() => { remoteApplyingRef.current = false }, 0)
+    })
+    channel.subscribe(async (status: string) => {
+      if (status === "SUBSCRIBED") await channel.track({ role: onlineMatch.role, matchId: onlineMatch.matchId })
+    })
+    return () => { supabase.removeChannel(channel); friendChannelRef.current = null }
+  }, [onlineMatch?.matchId, onlineMatch?.role])
+
+  useEffect(() => {
+    if (!onlineMatch || !friendChannelRef.current || remoteApplyingRef.current) return
+    friendChannelRef.current.send({ type: "broadcast", event: "state", payload: { state: { time, running, ball, score, positions, opponentPositions, ballOwner, opponentBallCarrier } } })
+  }, [onlineMatch?.matchId, time, running, ball, score, positions, opponentPositions, ballOwner, opponentBallCarrier])
+
+  useEffect(() => {
+    if (!onlineMatch) return
+    let cancelled = false
+    const heartbeat = async () => {
+      const { data, error } = await supabase.rpc("pitchside_friend_heartbeat", { p_match_id: onlineMatch.matchId })
+      if (error) setOnlineNotice(error.message)
+      else if (data?.status === "ok") setOnlineNotice(null)
+    }
+    heartbeat()
+    const heartbeatId = window.setInterval(heartbeat, 5000)
+    const check = async () => {
+      if (cancelled) return
+      const { data, error } = await supabase.rpc("pitchside_friend_check_disconnect", { p_match_id: onlineMatch.matchId })
+      if (error) return
+      if (data?.status === "grace") {
+        setDisconnectSeconds(Math.max(0, Number(data.seconds_remaining ?? 20)))
+        setOnlineNotice("Opponent disconnected. Reconnect within 20 seconds or the match is forfeited.")
+      } else if (data?.status === "forfeit") {
+        setDisconnectSeconds(0)
+        setOnlineNotice("Opponent forfeited after disconnecting for 20 seconds.")
+        onMatchForfeit?.(data.forfeit_user_id)
+        setRunning(false)
+      } else {
+        setDisconnectSeconds(null)
+        if (data?.status === "connected") setOnlineNotice(null)
+      }
+    }
+    const checkId = window.setInterval(check, 1000)
+    return () => { cancelled = true; window.clearInterval(heartbeatId); window.clearInterval(checkId) }
+  }, [onlineMatch?.matchId, onlineMatch?.role, onMatchForfeit])
 
   useEffect(() => {
     if (trainingBlocked) { setRunning(false); return }
@@ -1287,6 +1351,8 @@ export function MatchCanvas({ onMatchComplete }: { onMatchComplete?: (outcome: M
         </div>
         <p className="mt-2 text-[9px] text-muted-foreground">Fatigue reduces movement. Light injuries reduce attributes by 30%; heavy injuries reduce them by 60% and can be replaced.</p>
       </div>
+
+      {onlineMatch && (onlineNotice || disconnectSeconds !== null) ? <div className="mt-3 rounded-xl border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-center text-[10px] font-black text-amber-200">{disconnectSeconds !== null ? `DISCONNECT GRACE: ${disconnectSeconds}s` : onlineNotice}</div> : null}
 
       {/* controls */}
       <div className="mt-4 flex gap-2">
