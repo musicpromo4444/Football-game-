@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils"
 import { readWallet, saveWallet } from "@/lib/economy"
 import { MAX_SQUAD_SIZE, SQUAD_CAPACITIES, SQUAD_UPGRADE_GEMS, addAuctionPlayer, getSquadCapacity, loadClubSquad, saveClubSquad, upgradeSquadCapacity } from "@/lib/club-squad"
 import { getTrainingState, readPlayerTrainingBoost, startTraining, TRAINING_CONFIG, type TrainingMode, type TrainingStatKey } from "@/lib/training-boosts"
+import { readPlayerCardBoosts } from "@/lib/xp-packages"
 
 type View = "squad" | "styles" | "training" | "market"
 type Formation = "4-3-3" | "4-4-2" | "3-5-2" | "4-2-3-1" | "4-1-4-1"
@@ -662,7 +663,9 @@ export function SquadManager() {
                   const locked = !!session && session.lockUntil > trainingNow
                   const dev = readPlayerTrainingBoost(p.id)
                   const total = Object.values(dev.stats).reduce((sum, value) => sum + Number(value || 0), 0)
-                  return <button key={p.id} type="button" disabled={locked} onClick={() => setTrainingSelection((cur) => selected ? cur.filter((id) => id !== p.id) : cur.length < 3 ? [...cur, p.id] : cur)} className={cn("rounded-xl border p-2 text-left", selected ? "border-primary bg-primary/15" : "border-border bg-card/70", locked && "opacity-60")}><div className="flex items-center gap-2"><PlayerFace player={p}/><div className="min-w-0"><p className="truncate text-[10px] font-black">{p.name}</p><p className="text-[8px] text-muted-foreground">OVR {p.rating + Math.floor(total / 6)}</p><p className="text-[8px] text-muted-foreground">{locked ? "Locked 14d" : "Ready"}</p></div></div></button>
+                  const cardBoosts = readPlayerCardBoosts(p.id)
+                  const cardTotal = Object.values(cardBoosts).reduce((sum, value) => sum + Number(value || 0), 0)
+                  return <button key={p.id} type="button" disabled={locked} onClick={() => setTrainingSelection((cur) => selected ? cur.filter((id) => id !== p.id) : cur.length < 3 ? [...cur, p.id] : cur)} className={cn("rounded-xl border p-2 text-left", selected ? "border-primary bg-primary/15" : "border-border bg-card/70", locked && "opacity-60")}><div className="flex items-center gap-2"><PlayerFace player={p}/><div className="min-w-0"><p className="truncate text-[10px] font-black">{p.name}</p><p className="text-[8px] text-muted-foreground">OVR {p.rating + Math.floor((total + cardTotal) / 6)}</p><p className="text-[8px] text-muted-foreground">{locked ? "Locked 14d" : "Ready"}</p></div></div></button>
                 })
               </div>
               <div className="mt-3 grid grid-cols-2 gap-2"><Button disabled={trainingSelection.length < 1 || trainingSelection.length > 3} onClick={() => beginTraining("regular")} className="h-11 rounded-xl text-[10px] font-black">Regular · 30s Ad</Button><Button disabled={trainingSelection.length !== 1} onClick={() => beginTraining("super")} variant="outline" className="h-11 rounded-xl text-[10px] font-black">Super · 60s Ads</Button></div>
