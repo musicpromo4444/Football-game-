@@ -134,7 +134,7 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
     setMatchDone(true)
 
     if (tournamentId) {
-      try { const outcomeResult = outcome.home > outcome.away ? "win" : outcome.home === outcome.away ? "draw" : "loss"; await supabase.from("pitchside_tournament_entries").update({games_played:1,wins:outcomeResult==="win"?1:0,draws:outcomeResult==="draw"?1:0,losses:outcomeResult==="loss"?1:0,consecutive_wins:outcomeResult==="win"?1:0,goals:outcome.home,clean_sheets:outcome.away===0?1:0,updated_at:new Date().toISOString()}).eq("tournament_id",tournamentId).eq("status","active"); } catch {} setMatchReward(null); setMatchRewardLabel(null); setTournamentId(null); return
+      try { const {error}=await supabase.rpc("pitchside_record_tournament_result",{p_tournament_id:tournamentId,p_goals:outcome.home,p_opponent_goals:outcome.away}); if(error) throw error; } catch(error) { setOnlineError(error instanceof Error ? error.message : "Could not save tournament result."); } setMatchReward(null); setMatchRewardLabel(null); setTournamentId(null); return
     }
 
     if (friendMatchId) {
