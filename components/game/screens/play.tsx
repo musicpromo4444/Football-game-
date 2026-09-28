@@ -51,6 +51,7 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
   const [matchRewardLabel, setMatchRewardLabel] = useState<"WIN" | "DRAW" | null>(null)
   const [leagueFixture, setLeagueFixture] = useState<{ leagueId: string; fixtureId: string; userIsHome: boolean } | null>(null)
   const [friendMatchId, setFriendMatchId] = useState<string | null>(null)
+  const [tournamentId, setTournamentId] = useState<string | null>(null)
 
   useEffect(() => {
     const startLeagueFixture = (event: Event) => {
@@ -64,10 +65,12 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
       setOnlineError(null)
       setInMatch(true)
     }
-    const startFriendMatch = (event: Event) => { const detail = (event as CustomEvent).detail || {}; setLeagueFixture(null); setFriendMatchId(detail.matchId || null); setMatchId(detail.matchId ? "friend-" + detail.matchId : "friend-match"); setMatchDone(false); setMatchReward(null); setMatchRewardLabel(null); setOnlineError(null); setInMatch(true) }
+    const startTournament = async () => { const id = window.localStorage.getItem("pitchside-tournament"); if (!id) return; const {data,error}=await supabase.rpc("pitchside_join_tournament",{p_tournament_id:id}); if(error){setOnlineError(error.message);return} setTournamentId(id); setLeagueFixture(null); setFriendMatchId(null); setMatchId("tournament-"+id); setMatchDone(false); setMatchReward(null); setMatchRewardLabel(null); setOnlineError(null); setInMatch(true) }
+    const startFriendMatch = (event: Event) => { const detail = (event as CustomEvent).detail || {}; setTournamentId(null); setLeagueFixture(null); setFriendMatchId(detail.matchId || null); setMatchId(detail.matchId ? "friend-" + detail.matchId : "friend-match"); setMatchDone(false); setMatchReward(null); setMatchRewardLabel(null); setOnlineError(null); setInMatch(true) }
     window.addEventListener("pitchside-start-league-fixture", startLeagueFixture)
+    window.addEventListener("pitchside-start-tournament", startTournament)
     window.addEventListener("pitchside-start-friend-match", startFriendMatch)
-    return () => { window.removeEventListener("pitchside-start-league-fixture", startLeagueFixture); window.removeEventListener("pitchside-start-friend-match", startFriendMatch) }
+    return () => { window.removeEventListener("pitchside-start-league-fixture", startLeagueFixture); window.removeEventListener("pitchside-start-friend-match", startFriendMatch); window.removeEventListener("pitchside-start-tournament", startTournament) }
   }, [])
 
   useEffect(() => {
@@ -129,6 +132,10 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
   const finishOnlineMatch = async (outcome: { home: number; away: number }) => {
     if (!matchId || matchDone) return
     setMatchDone(true)
+
+    if (tournamentId) {
+      try { const outcomeResult = outcome.home > outcome.away ? "win" : outcome.home === outcome.away ? "draw" : "loss"; await supabase.from("pitchside_tournament_entries").update({games_played:1,wins:outcomeResult==="win"?1:0,draws:outcomeResult==="draw"?1:0,losses:outcomeResult==="loss"?1:0,consecutive_wins:outcomeResult==="win"?1:0,goals:outcome.home,clean_sheets:outcome.away===0?1:0,updated_at:new Date().toISOString()}).eq("tournament_id",tournamentId).eq("status","active"); } catch {} setMatchReward(null); setMatchRewardLabel(null); setTournamentId(null); return
+    }
 
     if (friendMatchId) {
       try {
