@@ -1132,6 +1132,16 @@ export function MatchCanvas({ onMatchComplete, onlineMatch, onMatchForfeit, chal
             <div className="text-[10px] font-black uppercase tracking-[0.25em] text-primary">MATCH COMPLETE</div>
             <div className="mt-2 text-4xl font-black">{matchReward.result}</div>
             <div className="mt-2 text-sm text-muted-foreground">Final score {score.home} — {score.away}</div>
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              <div className="rounded-xl bg-primary/5 p-2"><div className="text-[8px] font-black uppercase text-muted-foreground">Result</div><div className="mt-1 text-sm font-black">{matchReward.result}</div></div>
+              <div className="rounded-xl bg-primary/5 p-2"><div className="text-[8px] font-black uppercase text-muted-foreground">Goals</div><div className="mt-1 text-sm font-black">{score.home}</div></div>
+              <div className="rounded-xl bg-primary/5 p-2"><div className="text-[8px] font-black uppercase text-muted-foreground">Clean Sheet</div><div className="mt-1 text-sm font-black">{score.away === 0 ? "YES" : "NO"}</div></div>
+            </div>
+            <div className="mt-3 rounded-2xl border border-cyan-400/20 bg-cyan-400/5 p-4">
+              <div className="text-[9px] font-black uppercase tracking-wider text-cyan-300">MATCH XP</div>
+              <div className="mt-1 text-3xl font-black text-cyan-200">+{xpEarned} XP</div>
+              <div className="mt-1 text-[9px] text-muted-foreground">Win 100 · Draw 50 · Loss 0</div>
+            </div>
             <div className="mt-5 rounded-2xl border border-primary/20 bg-primary/5 p-4">
               <div className="text-[9px] font-black uppercase tracking-wider text-muted-foreground">MATCH REWARD</div>
               <div className="mt-1 text-3xl font-black text-primary">+{matchReward.bucks.toLocaleString()} BUX</div>
