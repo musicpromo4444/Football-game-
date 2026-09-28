@@ -341,6 +341,10 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
         const side = i % 2 === 0 ? -1 : 1
         let x = anchor.x
         let y = anchor.y
+        if (teamBoosts.ghostFormation) {
+          const attacker = player?.pos === "FWD" || ["Advanced Forward", "Complete Forward", "Poacher", "Target Forward", "Inside Forward", "Winger"].includes(player?.role || "")
+          if (attacker) { y -= 7; x += (50 - x) * 0.08 }
+        }
 
         // Start from the chosen formation, then add role-specific movement.
         if (tactics.preset === "possession" || tactics.preset === "tiki-taka") {
