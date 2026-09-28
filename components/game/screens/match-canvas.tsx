@@ -291,7 +291,7 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
       consumeTeamBoostsAfterMatch()
       const outcome = score.home > score.away ? "WIN" : score.home === score.away ? "DRAW" : "LOSS"
       const reward = outcome === "WIN" ? awardMatchWin("academy") : outcome === "DRAW" ? awardMatchDraw() : null
-      const earnedXp = calculateMatchXp(outcome, score.home, score.away === 0, false)
+      const earnedXp = calculateMatchXp(outcome, score.home, score.away === 0)
       const progression = addMatchXp(earnedXp)
       setXpEarned(earnedXp)
       setPackageReward(progression.packageTier ? revealPackage(progression.packageTier) : null)
