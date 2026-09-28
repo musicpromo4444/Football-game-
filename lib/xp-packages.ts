@@ -6,9 +6,11 @@ export type PackageReward = { tier: PackageTier; players: string[]; bucks: numbe
 
 export type PlayerCardAttribute = "SPE" | "ACC" | "STA" | "STR" | "CON" | "PAS" | "SHO" | "TAC"
 export type PlayerCardReward = { id: string; attribute: PlayerCardAttribute; amount: 2; claimedAt: number }
+export type PlayerCardBoosts = Partial<Record<PlayerCardAttribute, number>>
 
 const XP_KEY = "pitchside-xp"
 const PLAYER_CARDS_KEY = "pitchside-player-cards"
+const PLAYER_CARD_BOOSTS_KEY = "pitchside-player-card-boosts"
 const XP_PER_PLAYER_CARD = 400
 const THRESHOLDS = { silver: 600, gold: 800, platinum: 1000 }
 
@@ -42,6 +44,27 @@ function randomAttribute(): PlayerCardAttribute {
 
 export function getPlayerCards() {
   return readPlayerCards()
+}
+
+export function readPlayerCardBoosts(playerId: string): PlayerCardBoosts {
+  if (typeof window === "undefined") return {}
+  try {
+    const all = JSON.parse(localStorage.getItem(PLAYER_CARD_BOOSTS_KEY) || "{}")
+    return all && typeof all[playerId] === "object" ? all[playerId] : {}
+  } catch { return {} }
+}
+
+export function applyPlayerCard(cardId: string, playerId: string) {
+  const cards = readPlayerCards()
+  const card = cards.find((item) => item.id === cardId)
+  if (!card) return { ok: false as const, message: "Player Card not found." }
+  if (!playerId) return { ok: false as const, message: "Choose a player." }
+  const boosts = typeof window !== "undefined" ? JSON.parse(localStorage.getItem(PLAYER_CARD_BOOSTS_KEY) || "{}") : {}
+  const current = boosts[playerId] && typeof boosts[playerId] === "object" ? boosts[playerId] : {}
+  boosts[playerId] = { ...current, [card.attribute]: Number(current[card.attribute] || 0) + card.amount }
+  if (typeof window !== "undefined") localStorage.setItem(PLAYER_CARD_BOOSTS_KEY, JSON.stringify(boosts))
+  savePlayerCards(cards.filter((item) => item.id !== cardId))
+  return { ok: true as const, card }
 }
 
 export function claimPlayerCard() {
