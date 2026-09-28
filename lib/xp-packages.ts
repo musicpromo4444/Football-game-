@@ -1,9 +1,8 @@
 import { loadClubSquad, claimSpecialPlayer } from "@/lib/club-squad"
-import { grantTrainingBoost } from "@/lib/training-boosts"
 import { readWallet, saveWallet } from "@/lib/economy"
 
 export type PackageTier = "silver" | "gold" | "platinum"
-export type PackageReward = { tier: PackageTier; players: string[]; playerBoost: 1; bucks: number; gems: number; rareBonus?: "captain-boost" | "ghost-summon"; specialPlayer?: string }
+export type PackageReward = { tier: PackageTier; players: string[]; bucks: number; gems: number; rareBonus?: "captain-boost" | "ghost-summon"; specialPlayer?: string }
 
 const XP_KEY = "pitchside-xp"
 const THRESHOLDS = { silver: 600, gold: 800, platinum: 1000 }
@@ -37,7 +36,7 @@ export function getPackageContents(tier: PackageTier): PackageReward {
   if (tier === "platinum" && Math.random() < 0.15) specialPlayer = "sp" + (1 + Math.floor(Math.random() * 12))
   let rareBonus: PackageReward["rareBonus"]
   if (tier === "platinum" && Math.floor(Math.random() * 2000) === 0) rareBonus = Math.random() < 0.5 ? "captain-boost" : "ghost-summon"
-  return { tier, players, playerBoost: 1, bucks, gems, specialPlayer, rareBonus }
+  return { tier, players, bucks, gems, specialPlayer, rareBonus }
 }
 
 export function revealPackage(tier: PackageTier) {
@@ -47,7 +46,6 @@ export function revealPackage(tier: PackageTier) {
 export function equipPackage(reward: PackageReward) {
   const wallet = readWallet()
   saveWallet({ bucks: wallet.bucks + reward.bucks, gems: wallet.gems + reward.gems })
-  for (const playerId of reward.players) grantTrainingBoost(playerId, "starter")
   if (reward.specialPlayer) claimSpecialPlayer(reward.specialPlayer)
   return reward
 }
