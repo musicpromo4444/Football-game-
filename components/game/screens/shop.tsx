@@ -22,8 +22,7 @@ const FREE_COOLDOWN = 30 * 60 * 1000
 const FREE_REWARDS = [
   { id: "coin-small", name: "Bucks Boost", icon: "💰", bucks: 2500, gems: 0, text: "2,500 Bucks" },
   { id: "coin-medium", name: "Gem Boost", icon: "💎", bucks: 0, gems: 10, text: "10 Gems" },
-  { id: "gem-small", name: "Training Boost", icon: "⚡", bucks: 1200, gems: 5, text: "1,200 Bucks + 5 Gems" },
-  { id: "stamina-boost", name: "Stamina Boost", icon: "🔥", bucks: 1800, gems: 0, text: "1,800 Bucks" },
+
 ]
 
 const BOOST_TYPES: TeamBoostType[] = ["ghost-formation", "team-boost", "captain-boost", "defense-shield", "goalkeeper-boost"]
