@@ -10,6 +10,26 @@ export const SQUAD_UPGRADE_GEMS = [0, 250, 600] as const
 export const MAX_SQUAD_SIZE = 50
 export const CLUB_SQUAD_KEY = "pitchside-club-squad"
 export const SQUAD_CAPACITY_KEY = "pitchside-squad-capacity"
+export const PLAYER_PROFILE_KEY = "pitchside-anonymous-profile"
+
+// Login is intentionally disabled during testing. This creates a stable local
+// profile ID now, so the collection is already isolated per player. When the
+// real Google/Apple account system is added, this ID can be replaced by the
+// authenticated account ID without changing the squad format.
+export function getPlayerProfileId(): string {
+  if (typeof window === "undefined") return "anonymous"
+  const existing = localStorage.getItem(PLAYER_PROFILE_KEY)
+  if (existing) return existing
+  const generated = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID()
+    : `profile-${Date.now()}-${Math.random().toString(36).slice(2)}`
+  localStorage.setItem(PLAYER_PROFILE_KEY, generated)
+  return generated
+}
+
+function profileStorageKey(key: string): string {
+  return `${key}:${getPlayerProfileId()}`
+}
 
 function allStarterPlayers(base: Player[]): Player[] {
   const combined = [...base, ...playerPool]
@@ -27,7 +47,7 @@ function shufflePlayers(players: Player[]): Player[] {
 
 export function getSquadCapacity(): number {
   if (typeof window === "undefined") return 24
-  const saved = Number(localStorage.getItem(SQUAD_CAPACITY_KEY) || 24)
+  const saved = Number(localStorage.getItem(profileStorageKey(SQUAD_CAPACITY_KEY)) || 24)
   return SQUAD_CAPACITIES.includes(saved as 24 | 32 | 50) ? saved : 24
 }
 
@@ -41,7 +61,7 @@ export function upgradeSquadCapacity(): { success: boolean; capacity: number; co
   const wallet = readWallet()
   if (wallet.gems < cost) return { success: false, capacity: current, cost }
   saveWallet({ ...wallet, gems: wallet.gems - cost })
-  localStorage.setItem(SQUAD_CAPACITY_KEY, String(next))
+  localStorage.setItem(profileStorageKey(SQUAD_CAPACITY_KEY), String(next))
   return { success: true, capacity: next, cost }
 }
 
@@ -72,14 +92,14 @@ export function loadClubSquad(base: Player[]): Player[] {
   const starterPool = allStarterPlayers(base)
 
   try {
-    const saved = JSON.parse(localStorage.getItem(CLUB_SQUAD_KEY) || "null")
+    const saved = JSON.parse(localStorage.getItem(profileStorageKey(CLUB_SQUAD_KEY)) || "null")
 
     // First launch: give this user their own random 24-player collection
     // from the 48-player master pool, then persist that exact collection.
     if (!saved || !Array.isArray(saved) && !Array.isArray(saved.baseIds)) {
       const starting = shufflePlayers(starterPool).slice(0, Math.min(24, getSquadCapacity()))
       localStorage.setItem(
-        CLUB_SQUAD_KEY,
+        profileStorageKey(CLUB_SQUAD_KEY),
         JSON.stringify({ baseIds: starting.map((player) => player.id), auctionPlayers: [] }),
       )
       return starting
@@ -105,7 +125,7 @@ export function loadClubSquad(base: Player[]): Player[] {
       const starting = shufflePlayers(starterPool).slice(0, Math.min(24, getSquadCapacity()))
       const auctionPlayers = saved.filter((p) => p && typeof p.id === "string" && p.id.startsWith("auction-"))
       localStorage.setItem(
-        CLUB_SQUAD_KEY,
+        profileStorageKey(CLUB_SQUAD_KEY),
         JSON.stringify({ baseIds: starting.map((player) => player.id), auctionPlayers }),
       )
       return [...starting, ...auctionPlayers].slice(0, getSquadCapacity())
@@ -130,7 +150,7 @@ export function saveClubSquad(players: Player[]) {
       .filter((p) => !p.id.startsWith("auction-"))
       .map((p) => p.id)
     const auctionPlayers = players.filter((p) => p.id.startsWith("auction-"))
-    localStorage.setItem(CLUB_SQUAD_KEY, JSON.stringify({ baseIds, auctionPlayers }))
+    localStorage.setItem(profileStorageKey(CLUB_SQUAD_KEY), JSON.stringify({ baseIds, auctionPlayers }))
   }
 }
 
