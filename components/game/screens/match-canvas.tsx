@@ -110,13 +110,13 @@ function format(t: number) {
 
 export type MatchOutcome = { home: number; away: number }
 
-export function MatchCanvas({ onMatchComplete, onlineMatch, onMatchForfeit }: { onMatchComplete?: (outcome: MatchOutcome) => void; onlineMatch?: { matchId: string; role: "challenger" | "opponent"; kind?: "friend" | "ranked" }; onMatchForfeit?: (forfeitUserId: string) => void }) {
+export function MatchCanvas({ onMatchComplete, onlineMatch, onMatchForfeit, challenge }: { onMatchComplete?: (outcome: MatchOutcome) => void; onlineMatch?: { matchId: string; role: "challenger" | "opponent"; kind?: "friend" | "ranked" }; onMatchForfeit?: (forfeitUserId: string) => void; challenge?: { stage: number; teamName: string; rating: number } }) {
   const [time, setTime] = useState(120)
   const [running, setRunning] = useState(false)
   const [ball, setBall] = useState<Point>({ x: 50, y: 55 })
   const [drag, setDrag] = useState<{ start: Point; current: Point } | null>(null)
   const pointerModeRef = useRef<"ball" | "player">("ball")
-  const [score, setScore] = useState({ home: 2, away: 1 })
+  const [score, setScore] = useState({ home: 0, away: 0 })
   const [matchReward, setMatchReward] = useState<{ result: "WIN" | "DRAW" | "LOSS"; bucks: number } | null>(null)
   const [xpEarned, setXpEarned] = useState(0)
   const [packageReward, setPackageReward] = useState<PackageReward | null>(null)
@@ -632,7 +632,8 @@ export function MatchCanvas({ onMatchComplete, onlineMatch, onMatchForfeit }: { 
             const homeDefender = positions[selectedDefenderRef.current ?? 0]
             const pressureDistance = homeDefender ? Math.hypot(homeDefender.x - p.x, homeDefender.y - p.y) : 99
             const danger = Math.max(0, 1 - pressureDistance / 20)
-            const skill = style.skill / 100
+            const challengeBoost = challenge ? Math.max(1, challenge.rating / 84) : 1
+            const skill = Math.min(1, (style.skill / 100) * challengeBoost)
 
             if (pressureDistance < 18) {
               if (style.decision === "dribble") {
@@ -684,7 +685,7 @@ export function MatchCanvas({ onMatchComplete, onlineMatch, onMatchForfeit }: { 
       }
     }, 180)
     return () => clearInterval(id)
-  }, [running, tactics, ballOwner, passDecisionOpen])
+  }, [running, tactics, ballOwner, passDecisionOpen, challenge])
 
   const toPct = useCallback((clientX: number, clientY: number): Point => {
     const rect = pitchRef.current?.getBoundingClientRect()
@@ -1106,6 +1107,7 @@ export function MatchCanvas({ onMatchComplete, onlineMatch, onMatchForfeit }: { 
       </div>
 
       {/* Scoreboard */}
+      {challenge ? <div className="mb-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2"><div className="flex items-center justify-between"><span className="text-[9px] font-black uppercase tracking-widest text-primary">Impossible Challenge · Match {challenge.stage}/5</span><span className="text-[10px] font-black">AI OVR {challenge.rating}</span></div><p className="mt-1 text-xs font-black">{challenge.teamName}</p></div> : null}
       <div className="flex items-center justify-between pt-4">
         <div className="rounded-full border border-amber-300/30 bg-amber-300/10 px-2.5 py-1 text-[9px] font-black text-amber-200"><Shield className="mr-1 inline h-3 w-3" />{injuryShield?.remaining ?? 0}</div>
         <div className="text-center">
