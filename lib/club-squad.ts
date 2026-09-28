@@ -239,6 +239,21 @@ export function saveClubSquad(players: Player[]) {
   }
 }
 
+export function addPackagePlayers(base: Player[], players: Player[]): { squad: Player[]; added: Player[] } {
+  const current = base.length ? base : loadClubSquad(base)
+  const added: Player[] = []
+  let next = [...current]
+  for (const player of players) {
+    if (next.some((p) => p.id === player.id)) continue
+    const normalCount = next.filter((p) => !p.id.startsWith("special-")).length
+    if (normalCount >= getSquadCapacity()) break
+    next = [...next, player]
+    added.push(player)
+  }
+  if (added.length) saveClubSquad(next)
+  return { squad: next, added }
+}
+
 export function addAuctionPlayer(base: Player[], player: AuctionPlayer): { squad: Player[]; added: boolean } {
   const current = base.length ? base : loadClubSquad(base)
   if (current.some((p) => p.id === "auction-" + player.id)) return { squad: current, added: false }
