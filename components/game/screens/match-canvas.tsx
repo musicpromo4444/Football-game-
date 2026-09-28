@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Play, Pause, RotateCcw, Hand, Star } from "lucide-react"
 import { squad, type PlayerRole } from "@/components/game/data"
+import { loadClubSquad } from "@/lib/club-squad"
 import { readPlayerTrainingBoost } from "@/lib/training-boosts"
 import { consumeTeamBoostsAfterMatch, getTeamBoostModifiers } from "@/lib/team-boosts"
 import { Button } from "@/components/ui/button"
@@ -83,11 +84,15 @@ function loadTrainingState(): Record<string, { completesAt: number; boost: numbe
 }
 
 function loadLineupIds() {
-  if (typeof window === "undefined") return squad.map((p) => p.id)
+  const club = loadClubSquad(squad)
+  if (typeof window === "undefined") return club.slice(0, 11).map((p) => p.id)
   try {
     const saved = JSON.parse(localStorage.getItem("pitchside-lineup") || "null")
-    return Array.isArray(saved) ? saved : squad.map((p) => p.id)
-  } catch { return squad.map((p) => p.id) }
+    const valid = Array.isArray(saved) ? saved.filter((id: unknown) => club.some((p) => p.id === id)) : []
+    const ordered = valid.map((id: string) => club.find((p) => p.id === id)).filter(Boolean) as typeof club
+    const bench = club.filter((p) => !valid.includes(p.id))
+    return [...ordered, ...bench].slice(0, Math.max(11, Math.min(club.length, 24))).map((p) => p.id)
+  } catch { return club.slice(0, 11).map((p) => p.id) }
 }
 
 
@@ -111,7 +116,7 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
   const [tactics] = useState(loadTactics)
   const playerArchetypes = useMemo(() => {
     const training = loadTrainingState(); const now = Date.now()
-    return loadLineupIds().map((id) => squad.find((p) => p.id === id)).filter(Boolean).map((p) => ({
+    return loadLineupIds().map((id) => loadClubSquad(squad).find((p) => p.id === id)).filter(Boolean).map((p) => ({
       id: p!.id, name: p!.name, role: p!.style as PlayerRole, specialStyle: p!.specialStyle, specialName: p!.specialName, pos: p!.pos, stamina: p!.stamina,
       trainingBoost: training[p!.id] && now >= training[p!.id].completesAt ? training[p!.id].boost : 0,
       shopBoost: readPlayerTrainingBoost(p!.id),
