@@ -51,6 +51,9 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
   const [matchReward, setMatchReward] = useState<number | null>(null)
   const [matchRewardLabel, setMatchRewardLabel] = useState<"WIN" | "DRAW" | null>(null)
   const [leagueFixture, setLeagueFixture] = useState<{ leagueId: string; fixtureId: string; userIsHome: boolean } | null>(null)
+  const [leagueProgress, setLeagueProgress] = useState(() => {
+    try { return JSON.parse(window.localStorage.getItem("pitchside-league-progress") || '{"leagueIndex":0}') } catch { return { leagueIndex: 0 } }
+  })
   const [friendMatchId, setFriendMatchId] = useState<string | null>(null)
   const [friendRole, setFriendRole] = useState<"challenger" | "opponent" | null>(null)
   const [rankedRole, setRankedRole] = useState<"challenger" | "opponent" | null>(null)
@@ -208,6 +211,14 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
     return () => window.clearTimeout(id)
   }, [challengeAdSeconds])
 
+  useEffect(() => {
+    const refresh = () => {
+      try { setLeagueProgress(JSON.parse(window.localStorage.getItem("pitchside-league-progress") || '{"leagueIndex":0}")) } catch {}
+    }
+    window.addEventListener("pitchside-league-progress-updated", refresh)
+    return () => window.removeEventListener("pitchside-league-progress-updated", refresh)
+  }, [])
+
   const finishOnlineMatch = async (outcome: { home: number; away: number }) => {
     if (!matchId || matchDone) return
     setMatchDone(true)
@@ -342,6 +353,7 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
     }
 
     const leagueResult = recordLeagueResult(outcome.home, outcome.away)
+    setLeagueProgress(leagueResult.progress)
     if (leagueResult.seasonResult === "promoted") setLeagueOutcome(`PROMOTED · +${leagueResult.reward.toLocaleString()} Bux`)
     else if (leagueResult.seasonResult === "relegated") setLeagueOutcome("RELEGATED · New season started")
     else if (leagueResult.seasonResult === "held") setLeagueOutcome("SEASON COMPLETE · League held")
