@@ -407,13 +407,6 @@ export const weeklyResetGrid = {
   ] satisfies WeeklyResetObjective[],
 }
 
-export const dailyLoginBonus = {
-  day: 4,
-  reward: "250 Bucks",
-  rewardIcon: "bucks" as const,
-  streak: 4,
-}
-
 export const manager = {
   name: "A. Vega",
   club: "Aurora FC",
