@@ -831,8 +831,11 @@ export function MatchCanvas({ onMatchComplete, onlineMatch, onMatchForfeit, chal
         accuracy = Math.min(0.995, accuracy + (teamBoosts.ghostFormation ? 0.16 : 0) + (shooter?.trainingBoost || 0) * 0.015 + (shooter?.shopBoost?.stats.SHO || 0) * 0.008 + (shooter?.shopBoost?.stats.CON || 0) * 0.003 + shooterCaptainBoost + (teamBoosts.team ? 0.05 : 0))
         power = Math.min(0.995, power + (teamBoosts.ghostFormation ? 0.10 : 0) + (shooter?.trainingBoost || 0) * 0.015 + (shooter?.shopBoost?.stats.SHO || 0) * 0.006 + (shooter?.shopBoost?.stats.STR || 0) * 0.003 + shooterCaptainBoost + (teamBoosts.team ? 0.05 : 0))
         const guardianOnPitch = playerArchetypes.some((p) => p?.specialStyle === "Guardian")
+        const opponentKeeperSave = challenge
+          ? challenge.rating >= 100 ? 0.985 : challenge.rating >= 95 ? 0.82 : challenge.rating >= 88 ? 0.64 : challenge.rating >= 80 ? 0.34 : 0.24
+          : 0.22
         const guardianSave = (teamBoosts.ghostFormation ? 0.16 : 0.22) + (guardianOnPitch ? 0.08 : 0) + (special === "Long-Range Sniper" ? 0.03 : 0) + (teamBoosts.goalkeeper ? 0.10 : 0) + (teamBoosts.team ? 0.03 : 0)
-        const saved = Math.random() > accuracy || Math.random() < guardianSave
+        const saved = Math.random() > accuracy || Math.random() < guardianSave + opponentKeeperSave
         const rebound = saved && Math.random() < (power > 0.88 ? 0.46 : 0.28)
 
         if (!saved) {
