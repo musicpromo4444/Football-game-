@@ -368,7 +368,7 @@ export function SquadManager() {
       </div>
 
       <div className="mt-4 space-y-3 px-5">
-        {view === "squad" && (
+        {(view === "squad" || view === "styles") && (
           <div className="space-y-3">
             <Card className="overflow-hidden p-3">
               <div className="mb-3 flex items-center justify-between">
