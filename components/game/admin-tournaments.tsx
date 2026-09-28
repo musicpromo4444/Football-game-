@@ -12,14 +12,21 @@ type Item = { id:string; item_type:string; name:string; rarity:string; descripti
 const prizeTypes = ["Bux","Gems","Special Player","Player Pack","Mystery Box","Kit/Jersey","Custom Kit","Cosmetic","Badge","Boost"]
 const places = ["1st Place","2nd Place","3rd Place","Semifinalist","Participation"]
 
-export function AdminTournaments() {
+export function AdminTournaments({ adminToken = "" }: { adminToken?: string }) {
   const [items,setItems]=useState<Item[]>([])
   const [prizes,setPrizes]=useState<Prize[]>([])
   const [saved,setSaved]=useState(false)
   const [t,setT]=useState({name:"",description:"",type:"Knockout Cup",start:"",end:"",entryType:"Free",entryAmount:0,maxPlayers:16,games:5,wins:3,drawAllowed:true,lossEliminates:true})
   const addPrize=()=>setPrizes(p=>[...p,{id:crypto.randomUUID(),place:"1st Place",rewardType:"Bux",itemId:"",quantity:1000,customValue:"",enabled:true}])
   useEffect(()=>{(async()=>{const {data}=await supabase.from("pitchside_game_items").select("id,item_type,name,rarity,description,image_url").eq("enabled",true).order("name");if(data)setItems(data)})()},[])
-  const save=()=>{localStorage.setItem("pitchside-tournament-draft",JSON.stringify({t,prizes}));setSaved(true);setTimeout(()=>setSaved(false),1500)}
+  const save=async()=>{ 
+  if (!adminToken) { setSaved(false); return }
+  const res=await fetch("/api/admin/tournaments",{method:"POST",headers:{"Content-Type":"application/json","x-pitchside-admin-token":adminToken},body:JSON.stringify({tournament:t,prizes})})
+  const data=await res.json()
+  if (!res.ok) { window.alert(data.error || "Could not publish tournament"); return }
+  localStorage.setItem("pitchside-tournament-draft",JSON.stringify({t,prizes,tournamentId:data.tournamentId}))
+  setSaved(true);setTimeout(()=>setSaved(false),1500)
+}
   return <div className="space-y-3">
     <Card glow="cyan" className="p-4">
       <div className="flex items-center gap-2"><Trophy className="h-5 w-5 text-primary"/><div><p className="text-xs uppercase tracking-wide text-muted-foreground">Tournament Builder</p><p className="font-bold">Create a featured tournament</p></div></div>
@@ -50,7 +57,7 @@ export function AdminTournaments() {
       </div>)}
       {!prizes.length&&<p className="rounded-xl bg-secondary/30 p-3 text-xs text-muted-foreground">No prize selected. This tournament can award nothing.</p>}
       </div>
-      <Button onClick={save} className="mt-3 w-full rounded-xl"><Save className="mr-1 h-4 w-4"/>{saved?"Saved":"Save tournament draft"}</Button>
+      <Button onClick={save} className="mt-3 w-full rounded-xl"><Save className="mr-1 h-4 w-4"/>{saved?"Published":"Publish tournament"}</Button>
     </Card>
     <Card className="p-4"><p className="text-xs font-black">Game Item Library</p><p className="mt-1 text-[10px] text-muted-foreground">Every kit, custom kit, cosmetic, player, pack, box, badge and future item can be registered here and selected as a prize.</p><div className="mt-2 flex flex-wrap gap-1">{items.map(i=><Pill key={i.id}>{i.name}</Pill>)}</div></Card>
   </div>
