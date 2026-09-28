@@ -40,8 +40,7 @@ export const DEFAULT_SHOP_ITEMS: ShopItem[] = [
   { id: "bucks-small", name: "Bucks Pack", description: "A small Bucks boost for upgrades and auctions.", currency: "gems", price: 25, bucks: 5000, gems: 0, icon: "💰", enabled: true },
   { id: "bucks-medium", name: "Bucks Vault", description: "A larger Bucks boost for your club.", currency: "gems", price: 100, bucks: 20000, gems: 0, icon: "💰", enabled: true },
   { id: "gem-small", name: "Gem Pack", description: "Premium currency for special purchases.", currency: "bucks", price: 6000, bucks: 0, gems: 25, icon: "💎", enabled: true },
-  { id: "training-super", name: "Super Training", description: "Start one Super Training session instantly.", currency: "gems", price: 50, bucks: 0, gems: 0, icon: "⚡", enabled: true },
-  { id: "stamina-boost", name: "Stamina Boost", description: "A temporary boost for training progression.", currency: "bucks", price: 3000, bucks: 0, gems: 0, icon: "🔥", enabled: true },
+
 ]
 export const SHOP_KEY = "pitchside-shop"
 export function readShopItems(): ShopItem[] {
