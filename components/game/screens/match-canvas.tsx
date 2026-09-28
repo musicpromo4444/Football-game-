@@ -628,6 +628,23 @@ export function MatchCanvas({ onMatchComplete, onlineMatch, onMatchForfeit, chal
           let y = p.y + dy * (d < 30 ? 0.05 : 0.025)
 
           if (i === opponentCarrierRef.current) {
+            // 88+ AI recognises shooting windows from distance and attacks early.
+            // It is deliberately very accurate, but never mathematically perfect.
+            if (challenge && challenge.rating >= 88 && p.y < 68 && p.y > 10 && Math.random() < (challenge.rating >= 100 ? 0.035 : challenge.rating >= 95 ? 0.026 : 0.018)) {
+              const longShotAccuracy = challenge.rating >= 100 ? 0.975 : challenge.rating >= 95 ? 0.90 : 0.78
+              if (Math.random() < longShotAccuracy) {
+                setScore((s) => ({ ...s, away: s.away + 1 }))
+                setShotResult("AI GOAL")
+                setMessage(`THE FINAL BOSS — clinical long-range finish from the AI`)
+                setBallOwner(null)
+                opponentCarrierRef.current = (i + 1) % current.length
+                setOpponentBallCarrier(opponentCarrierRef.current)
+                lastBallRef.current = { x: 50, y: 9 }
+                setBall({ x: 50, y: 9 })
+              } else {
+                setMessage("AI LONG-RANGE SHOT — narrowly misses")
+              }
+            }
             const style = opponentStyles[i]
             const homeDefender = positions[selectedDefenderRef.current ?? 0]
             const pressureDistance = homeDefender ? Math.hypot(homeDefender.x - p.x, homeDefender.y - p.y) : 99
@@ -957,10 +974,11 @@ export function MatchCanvas({ onMatchComplete, onlineMatch, onMatchForfeit, chal
           const projection = Math.max(0, Math.min(1, (wx * vx + wy * vy) / (len * len)))
           const cx = passerPos.x + vx * projection
           const cy = passerPos.y + vy * projection
-          return Math.hypot(op.x - cx, op.y - cy) < 5.5
+          return Math.hypot(op.x - cx, op.y - cy) < (challenge && challenge.rating >= 88 ? 8.5 : 5.5)
         })
         if (defenderOnLine) {
-          const errorChance = 0.03 + (1 - passQuality) * 0.38
+          const challengeIntercept = challenge ? (challenge.rating >= 100 ? 0.88 : challenge.rating >= 95 ? 0.76 : challenge.rating >= 88 ? 0.62 : 0) : 0
+          const errorChance = 0.03 + (1 - passQuality) * 0.38 + challengeIntercept
           const dribbleProtection = passer?.specialStyle === "Dribble King" ? 0.45 : 1
           intercepted = Math.random() < errorChance * dribbleProtection
         }
