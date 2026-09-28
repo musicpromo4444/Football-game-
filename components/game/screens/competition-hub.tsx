@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, ScreenHeader } from "@/components/game/ui-bits"
 import { PrivateLeagues } from "@/components/game/screens/private-leagues"
 import { supabase } from "@/lib/supabase"
+import { startImpossibleChallenge, readImpossibleChallenge, IMPOSSIBLE_CHALLENGE_TEAMS } from "@/lib/impossible-challenge"
 
 type Page = "home" | "tournaments" | "league" | "friends"
 
@@ -89,6 +90,11 @@ export function CompetitionHub() {
         <div className="px-5 pt-3"><Back onBack={() => setPage("home")} /></div>
         <ScreenHeader title="Tournaments" subtitle="Compete through rounds and chase the final" />
         <div className="space-y-3 px-5">
+          <Card className="overflow-hidden border-primary/40 bg-gradient-to-br from-primary/10 to-card p-4">
+            <div className="flex items-start gap-3"><span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary"><Swords className="h-6 w-6"/></span><div className="flex-1"><p className="font-display text-base font-black">IMPOSSIBLE CHALLENGE</p><p className="mt-1 text-[10px] text-muted-foreground">5 game-created super teams · OVR 77 → 80 → 88 → 95 → 100</p><p className="mt-2 text-[9px] font-black text-primary">5 total retry lives · watch an ad to rematch after a loss</p></div></div>
+            <div className="mt-3 grid grid-cols-5 gap-1">{IMPOSSIBLE_CHALLENGE_TEAMS.map((x)=><div key={x.stage} className="rounded-lg bg-secondary p-2 text-center"><p className="text-[8px] font-black">M{x.stage}</p><p className="text-[9px] font-black">{x.rating}</p></div>)}</div>
+            <Button className="mt-3 h-10 w-full rounded-xl" onClick={()=>{const state=readImpossibleChallenge(); if(state.completed || state.stage===1 && state.retriesUsed===0){startImpossibleChallenge()} window.dispatchEvent(new Event("pitchside-start-impossible-challenge"))}}><Swords className="mr-2 h-4 w-4"/> {readImpossibleChallenge().completed ? "Restart Challenge" : "Start Challenge"}</Button>
+          </Card>
           {tournamentNotice && <Card className="border-primary/30 p-3 text-center text-xs font-bold">{tournamentNotice}</Card>}
           {tournamentRows.map((t) => { const start=new Date(t.starts_at).getTime(); const end=new Date(t.ends_at).getTime(); const remaining=Math.max(0,(start-now)); const ending=Math.max(0,(end-now)); const active=now>=start&&now<end; const total=Math.floor((active?ending:remaining)/1000); const days=Math.floor(total/86400); const hours=Math.floor((total%86400)/3600); const mins=Math.floor((total%3600)/60); const secs=total%60; const countdown=active ? `ENDS IN ${days}D ${hours}H ${mins}M ${secs}S` : `STARTS IN ${days}D ${hours}H ${mins}M ${secs}S`; return (
             <Card key={t.id} className="overflow-hidden p-4">
