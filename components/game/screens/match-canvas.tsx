@@ -6,6 +6,7 @@ import { squad, type PlayerRole } from "@/components/game/data"
 import { loadClubSquad } from "@/lib/club-squad"
 import { readPlayerTrainingBoost } from "@/lib/training-boosts"
 import { consumeTeamBoostsAfterMatch, getTeamBoostModifiers } from "@/lib/team-boosts"
+import { awardMatchWin, awardMatchDraw } from "@/lib/economy"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -109,6 +110,7 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
   const [drag, setDrag] = useState<{ start: Point; current: Point } | null>(null)
   const pointerModeRef = useRef<"ball" | "player">("ball")
   const [score, setScore] = useState({ home: 2, away: 1 })
+  const [matchReward, setMatchReward] = useState<{ result: "WIN" | "DRAW" | "LOSS"; bucks: number } | null>(null)
   const teamBoosts = useMemo(() => getTeamBoostModifiers(), [])
   const [passes, setPasses] = useState(0)
   const [actions, setActions] = useState(0)
@@ -268,6 +270,9 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
     if (time === 0 && !completionSentRef.current) {
       completionSentRef.current = true
       consumeTeamBoostsAfterMatch()
+      const outcome = score.home > score.away ? "WIN" : score.home === score.away ? "DRAW" : "LOSS"
+      const reward = outcome === "WIN" ? awardMatchWin("academy") : outcome === "DRAW" ? awardMatchDraw() : null
+      setMatchReward({ result: outcome, bucks: reward?.reward ?? 0 })
       onMatchComplete?.(score)
     }
   }, [time, score, onMatchComplete])
@@ -917,6 +922,7 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
     completionSentRef.current = false
     setTime(120)
     setRunning(false)
+    setMatchReward(null)
     const center = { x: 50, y: 55 }
     lastBallRef.current = center
     setBall(center)
@@ -952,6 +958,22 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
 
   return (
     <div className="flex min-h-full flex-col px-5 pb-4">
+      {matchReward && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/85 p-5 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-3xl border border-primary/30 bg-card p-6 text-center shadow-2xl">
+            <div className="text-[10px] font-black uppercase tracking-[0.25em] text-primary">MATCH COMPLETE</div>
+            <div className="mt-2 text-4xl font-black">{matchReward.result}</div>
+            <div className="mt-2 text-sm text-muted-foreground">Final score {score.home} — {score.away}</div>
+            <div className="mt-5 rounded-2xl border border-primary/20 bg-primary/5 p-4">
+              <div className="text-[9px] font-black uppercase tracking-wider text-muted-foreground">MATCH REWARD</div>
+              <div className="mt-1 text-3xl font-black text-primary">+{matchReward.bucks.toLocaleString()} BUX</div>
+              {matchReward.result === "LOSS" && <div className="mt-1 text-[10px] text-muted-foreground">No Bux reward for a loss.</div>}
+            </div>
+            <Button onClick={() => setMatchReward(null)} className="mt-5 h-11 w-full rounded-xl font-black">CONTINUE</Button>
+          </div>
+        </div>
+      )}
+
       {trainingBlocked ? <div className="mt-4 rounded-xl border border-amber-400/40 bg-amber-400/10 px-4 py-3 text-center"><p className="text-xs font-black text-amber-300">PLAYER IN TRAINING</p><p className="mt-1 text-[10px] text-muted-foreground">{trainingUnavailable.map((p) => p.name).join(", ")} cannot play until training completes. Return to Tactics and choose an available player.</p></div> : null}
       <div className="mt-4 rounded-xl border border-primary/20 bg-card/70 px-3 py-2">
         <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-muted-foreground">
