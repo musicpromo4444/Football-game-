@@ -27,10 +27,21 @@ export function CompetitionHub() {
   const [friendRows, setFriendRows] = useState<any[]>([])
   const [tournamentRows, setTournamentRows] = useState<any[]>(fallbackTournaments)
   const [now, setNow] = useState(Date.now())
+  const [tournamentNotice, setTournamentNotice] = useState("")
+  const [enteredTournaments, setEnteredTournaments] = useState<Record<string,string>>({})
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1000)
-    supabase.from("pitchside_tournaments").select("id,name,tournament_type,entry_type,entry_amount,starts_at,ends_at,max_players").in("status",["published","open","live"]).order("starts_at").then(({data}) => { if (data?.length) setTournamentRows(data.map((x:any)=>({...x,players_count:0}))) })
+    supabase.from("pitchside_tournaments").select("id,name,tournament_type,entry_type,entry_amount,starts_at,ends_at,max_players").in("status",["published","open","live"]).order("starts_at").then(async({data}) => {
+      if (data?.length) {
+        setTournamentRows(data.map((x:any)=>({...x,players_count:0})))
+        const { data: me } = await supabase.auth.getUser()
+        if (me.user) {
+          const { data: entries } = await supabase.from("pitchside_tournament_entries").select("tournament_id,status").eq("user_id",me.user.id).in("tournament_id",data.map((x:any)=>x.id))
+          if (entries) setEnteredTournaments(Object.fromEntries(entries.map((e:any)=>[e.tournament_id,e.status])))
+        }
+      }
+    })
     let channel: any
     let inviteChannel: any
     let cancelled = false
@@ -63,6 +74,7 @@ export function CompetitionHub() {
         <div className="px-5 pt-3"><Back onBack={() => setPage("home")} /></div>
         <ScreenHeader title="Tournaments" subtitle="Compete through rounds and chase the final" />
         <div className="space-y-3 px-5">
+          {tournamentNotice && <Card className="border-primary/30 p-3 text-center text-xs font-bold">{tournamentNotice}</Card>}
           {tournamentRows.map((t) => { const start=new Date(t.starts_at).getTime(); const end=new Date(t.ends_at).getTime(); const remaining=Math.max(0,(start-now)); const ending=Math.max(0,(end-now)); const active=now>=start&&now<end; const total=Math.floor((active?ending:remaining)/1000); const days=Math.floor(total/86400); const hours=Math.floor((total%86400)/3600); const mins=Math.floor((total%3600)/60); const secs=total%60; const countdown=active ? `ENDS IN ${days}D ${hours}H ${mins}M ${secs}S` : `STARTS IN ${days}D ${hours}H ${mins}M ${secs}S`; return (
             <Card key={t.id} className="overflow-hidden p-4">
               <div className="flex items-start gap-3">
@@ -77,8 +89,16 @@ export function CompetitionHub() {
                   </div>
                 </div>
               </div>
-              <Button className="mt-3 h-10 w-full rounded-xl" onClick={() => { window.localStorage.setItem("pitchside-tournament", t.id); window.dispatchEvent(new Event("pitchside-start-tournament")) }}>
-                <Play className="mr-2 h-4 w-4" /> {active ? "Enter Tournament" : "View Countdown"}
+              <Button className="mt-3 h-10 w-full rounded-xl" onClick={async() => {
+                const { data:u } = await supabase.auth.getUser()
+                if (!u.user) { setTournamentNotice("Sign in to enter tournaments."); return }
+                const { data, error } = await supabase.rpc("pitchside_join_tournament",{p_tournament_id:t.id})
+                if (error) { setTournamentNotice(error.message); return }
+                setEnteredTournaments((x)=>({...x,[t.id]:"active"}))
+                if (active) { window.localStorage.setItem("pitchside-tournament",t.id); window.dispatchEvent(new Event("pitchside-start-tournament")) }
+                else setTournamentNotice("Entry secured. Your tournament will open when the countdown reaches zero.")
+              }}>
+                <Play className="mr-2 h-4 w-4" /> {enteredTournaments[t.id] ? (active ? "Play Tournament" : "Entered") : (active ? "Enter Tournament" : "Enter & Reserve")}
               </Button>
             </Card>
           )})}
