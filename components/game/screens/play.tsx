@@ -52,6 +52,7 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
   const [leagueFixture, setLeagueFixture] = useState<{ leagueId: string; fixtureId: string; userIsHome: boolean } | null>(null)
   const [friendMatchId, setFriendMatchId] = useState<string | null>(null)
   const [friendRole, setFriendRole] = useState<"challenger" | "opponent" | null>(null)
+  const [rankedRole, setRankedRole] = useState<"challenger" | "opponent" | null>(null)
   const [tournamentId, setTournamentId] = useState<string | null>(null)
 
   useEffect(() => {
@@ -301,7 +302,7 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
             <p className="text-xs text-muted-foreground">Online Ranked · Sudden Death</p>
           </div>
         </div>
-        <MatchCanvas onMatchComplete={finishOnlineMatch} onMatchForfeit={handleFriendForfeit} onlineMatch={friendMatchId && friendRole ? { matchId: friendMatchId, role: friendRole } : undefined} />
+        <MatchCanvas onMatchComplete={finishOnlineMatch} onMatchForfeit={handleFriendForfeit} onlineMatch={friendMatchId && friendRole ? { matchId: friendMatchId, role: friendRole, kind: "friend" as const } : rankedRole && matchId ? { matchId, role: rankedRole, kind: "ranked" as const } : undefined} />
         {leagueOutcome ? <div className="mx-5 mt-3 rounded-2xl border border-cyan-500/35 bg-cyan-500/10 px-4 py-3 text-center"><p className="text-[10px] font-black uppercase tracking-widest text-cyan-300">League Update</p><p className="mt-1 text-sm font-black text-cyan-100">{leagueOutcome}</p></div> : null}
         {matchReward !== null ? (
           <div className="mx-5 mt-3 rounded-2xl border border-emerald-500/35 bg-emerald-500/10 px-4 py-3 text-center">
