@@ -21,8 +21,8 @@ export const TEAM_BOOSTS: Record<TeamBoostType, {
   "ghost-formation": {
     name: "Ghost Formation",
     icon: "👻",
-    description: "Hides your tactical shape and makes your formation harder to read.",
-    effect: "Formation movement +8% · tactical unpredictability",
+    description: "A hidden attacking formation. The shape is never revealed before kickoff.",
+    effect: "Elite attacking positioning · very high scoring pressure",
     prices: { "1-match": { gems: 50 }, "2-matches": { gems: 75 }, "10-matches": { usd: 1.00 }, "20-matches": { usd: 1.80 } },
   },
   "team-boost": {
@@ -137,4 +137,20 @@ export function getTeamBoostModifiers() {
     defense: active.some((b) => b.type === "defense-shield"),
     goalkeeper: active.some((b) => b.type === "goalkeeper-boost"),
   }
+}
+
+export function activateGhostFormationForLeague(): ActiveTeamBoost {
+  const now = Date.now()
+  let leagueIndex: number | null = null
+  if (typeof window !== "undefined") {
+    try {
+      const progress = JSON.parse(localStorage.getItem("pitchside-league-progress") || "null")
+      if (progress && Number.isInteger(progress.leagueIndex)) leagueIndex = progress.leagueIndex
+    } catch {}
+  }
+  const boost: ActiveTeamBoost = { type: "ghost-formation", duration: "20-matches", activatedAt: now, expiresAt: null, matchesRemaining: null, leagueIndex }
+  const current = readActiveTeamBoosts().filter((entry) => entry.type !== "ghost-formation")
+  current.push(boost)
+  writeAll(current)
+  return boost
 }
