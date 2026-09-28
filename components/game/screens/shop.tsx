@@ -176,6 +176,10 @@ export function Shop() {
   const trainingState = getTrainingState()
 
   const runTraining = (mode: TrainingMode) => {
+    if (mode.endsWith("-team")) {
+      const price = TRAINING_CONFIG[mode].priceUsd.toFixed(2)
+      return flash("Full-team training is priced at $" + price + ". Real-money billing is not connected yet.")
+    }
     const result = startTraining(mode, selectedPlayerId, club.map((p) => p.id))
     if (!result.ok) return flash(result.message)
     setTrainingAd({ mode, seconds: TRAINING_CONFIG[mode].adSeconds })
