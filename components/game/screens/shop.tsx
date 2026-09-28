@@ -241,7 +241,7 @@ export function Shop() {
       <section>
         <SectionTitle icon={<Trophy className="h-3.5 w-3.5" />} title="PLAYER CARD PACKAGE STORE" meta="Guaranteed Player" />
         <div className="grid grid-cols-3 gap-2.5">
-          <ProductCard kind="card" icon={<Gift className="h-8 w-8 text-fuchsia-200" />} title="Freemystery" subtitle="80% Silver · 40% Gold · 5% Rare" price={<><Play className="mr-1 inline h-3 w-3" />WATCH AD</>} onBuy={() => claimTimed("free-card", 0, 0, "Mystery card reward claimed.")} accent="pink" badge="FREE" />
+          <ProductCard kind="card" icon={<Gift className="h-8 w-8 text-fuchsia-200" />} title="Free" subtitle="Reward details coming later" price="COMING SOON" onBuy={() => flash("This free reward will be defined later.")} accent="pink" badge="FREE" />
           <ProductCard kind="card" icon={<Package className="h-8 w-8 text-slate-200" />} title="Silver Scout" subtitle="Rating 75–82 · 1 player" price="11,000 Bux" priceIcon={<Banknote className="mr-1 inline h-3 w-3" />} onBuy={() => spend("bucks", 11000, {}, "Silver Scout pack purchased.")} accent="cyan" />
           <ProductCard kind="card" icon={<Crown className="h-8 w-8 text-amber-200" />} title="Gold Elite" subtitle="Rating 83–88 · Poacher" price="28,000 Bux" priceIcon={<Banknote className="mr-1 inline h-3 w-3" />} onBuy={() => spend("bucks", 28000, {}, "Gold Elite pack purchased.")} accent="gold" />
           <ProductCard kind="card" icon={<Star className="h-8 w-8 text-cyan-200" />} title="Diamond Stars" subtitle="Rating 90–92 · Commander" price="45,000 Bux" priceIcon={<Banknote className="mr-1 inline h-3 w-3" />} onBuy={() => spend("bucks", 45000, {}, "Diamond Stars pack purchased.")} accent="cyan" />
@@ -269,7 +269,7 @@ export function Shop() {
           <ProductCard kind="bux" icon={<Banknote className="h-8 w-8 text-emerald-200" />} title="1,500 Bux" subtitle="Pile of Bux" price="30 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 30, { bucks: wallet.bucks + 1500 }, "1,500 Bux added.")} accent="green" />
           <ProductCard kind="bux" icon={<Banknote className="h-8 w-8 text-emerald-200" />} title="3,500 Bux" subtitle="+15% Bonus" price="60 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 60, { bucks: wallet.bucks + 3500 }, "3,500 Bux added.")} accent="green" />
           <ProductCard kind="bux" icon={<Banknote className="h-8 w-8 text-emerald-200" />} title="8,000 Bux" subtitle="+30% Best Deal" price="130 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 130, { bucks: wallet.bucks + 8000 }, "8,000 Bux added.")} accent="green" />
-          <ProductCard kind="bux" icon={<Banknote className="h-8 w-8 text-emerald-200" />} title="20,000 Bux" subtitle="+50% Value" price="300 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 300, { bucks: wallet.bucks + 20000 }, "20,000 Bux added.")} accent="green" />
+          <ProductCard kind="bux" icon={<Banknote className="h-8 w-8 text-emerald-200" />} title="20,000 Bux" subtitle="+50% Value" price="350 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 350, { bucks: wallet.bucks + 20000 }, "20,000 Bux added.")} accent="green" />
           <ProductCard kind="bux" icon={<Banknote className="h-8 w-8 text-emerald-200" />} title="50,000 Bux" subtitle="Treasury Pallet" price="₦6,500" onBuy={() => flash("Payment will open when store billing is connected.")} accent="green" />
         </div>
       </section>
