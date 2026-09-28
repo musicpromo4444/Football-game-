@@ -31,26 +31,31 @@ export function CompetitionHub() {
   const [notice, setNotice] = useState("")
   const [presence, setPresence] = useState<Record<string, string>>({})
   const [invite, setInvite] = useState<any>(null)
+  const [friendRows, setFriendRows] = useState<any[]>([])
 
   useEffect(() => {
     let channel: any
+    let inviteChannel: any
     let cancelled = false
     ;(async () => {
       const { data } = await supabase.auth.getUser()
       if (!data.user || cancelled) return
+      const { data: rows } = await supabase.from("pitchside_friendships").select("friend_id,status").eq("user_id", data.user.id).eq("status","accepted")
+      if (rows?.length) {
+        const ids = rows.map((r:any)=>r.friend_id)
+        const { data: profiles } = await supabase.from("players").select("user_id,display_name").in("user_id", ids)
+        setFriendRows(rows.map((r:any)=>({ ...r, name: profiles?.find((p:any)=>p.user_id===r.friend_id)?.display_name || "Panda Manager", club: "PFC" })))
+      }
       channel = supabase.channel("pitchside-friends-presence")
         .on("presence", { event: "sync" }, () => {
-          const state = channel.presenceState()
-          const next: Record<string, string> = {}
-          Object.entries(state).forEach(([key, value]: any) => { next[key] = value?.[0]?.status || "online" })
-          setPresence(next)
+          const state = channel.presenceState(); const next: Record<string,string> = {}
+          Object.entries(state).forEach(([key,value]:any)=>{ next[key]=value?.[0]?.status || "online" }); setPresence(next)
         })
-        .on("broadcast", { event: "friend-invite" }, ({ payload }: any) => setInvite(payload))
-        .subscribe(async (status: string) => {
-          if (status === "SUBSCRIBED") await channel.track({ status: "online" })
-        })
+        .subscribe(async (status:string)=>{ if(status==="SUBSCRIBED") await channel.track({status:"online"}) })
+      inviteChannel = supabase.channel(`pitchside-friend-invite:${data.user.id}`)
+        .on("broadcast",{event:"friend-invite"},({payload}:any)=>setInvite(payload)).subscribe()
     })()
-    return () => { cancelled = true; if (channel) supabase.removeChannel(channel) }
+    return () => { cancelled=true; if(channel) supabase.removeChannel(channel); if(inviteChannel) supabase.removeChannel(inviteChannel) }
   }, [])
 
   if (page === "league") return <div className="pb-4"><div className="px-5 pt-3"><Back onBack={() => setPage("home")} /></div><PrivateLeagues onBack={() => setPage("home")} /></div>
@@ -98,7 +103,7 @@ export function CompetitionHub() {
         <ScreenHeader title="Friends" subtitle="Challenge friends and build your football circle" />
         <div className="space-y-3 px-5">
           {invite && <Card className="border-primary/30 p-4"><p className="text-xs font-black">{invite.from} challenged you</p><div className="mt-3 flex gap-2"><Button className="flex-1" onClick={()=>{window.localStorage.setItem("pitchside-friend-challenge",invite.from);window.dispatchEvent(new Event("pitchside-start-friend-match"));setInvite(null)}}>Accept</Button><Button variant="outline" onClick={()=>setInvite(null)}>Decline</Button></div></Card>}<Card className="p-4"><input value={friendCode} onChange={e=>setFriendCode(e.target.value)} placeholder="Friend code or manager name" className="h-10 flex-1 rounded-xl border border-border bg-secondary px-3 text-xs outline-none" /><Button onClick={async()=>{ if(!friendCode.trim()) return; if(supabase){const {data:u}=await supabase.auth.getUser(); if(u.user){const {data}=await supabase.from("pitchside_friendships").select("id").eq("friend_code",friendCode.trim()).maybeSingle(); setNotice(data?"Friend found.":"Friend code not found.")}} else setNotice("Enter a friend code.")}} className="h-10 rounded-xl"><UserPlus className="mr-1 h-4 w-4"/> Add</Button></div></Card>
-          {friends.map((f,i) => { const key=Object.keys(presence)[i]; const status=key ? presence[key] : (f.online ? "online" : "offline"); const available=status==="online"; return <Card key={f.name} className="flex items-center gap-3 p-4"><span className={`h-3 w-3 rounded-full ${available ? "bg-emerald-400" : status==="in-match" ? "bg-amber-400" : "bg-muted-foreground"}`}/><div className="flex-1"><p className="text-sm font-bold">{f.name}</p><p className="text-[9px] text-muted-foreground">{f.club} · {available ? "Online" : status==="in-match" ? "In Match" : "Offline"}</p></div><Button disabled={!available} onClick={async()=>{ const channel=supabase.channel("pitchside-friends-presence"); await channel.subscribe(); await channel.send({type:"broadcast",event:"friend-invite",payload:{from:f.name,challengeId:crypto.randomUUID()}}); await supabase.removeChannel(channel); setNotice(`Match invite sent to ${f.name}.`)}} variant="outline" className="h-9 rounded-xl text-[10px]"><Swords className="mr-1 h-3.5 w-3.5"/> {available ? "Challenge" : status==="in-match" ? "In Match" : "Offline"}</Button></Card>})}
+          {(friendRows.length ? friendRows.map((r:any)=>({name:r.name,club:r.club,friendId:r.friend_id})) : friends.map(f=>({name:f.name,club:f.club,friendId:"",online:f.online}))).map((f:any,i:number) => { const status=f.friendId ? (presence[f.friendId] || "offline") : (f.online ? "online" : "offline"); const available=status==="online"; return <Card key={f.name+i} className="flex items-center gap-3 p-4"><span className={`h-3 w-3 rounded-full ${available ? "bg-emerald-400" : status==="in-match" ? "bg-amber-400" : "bg-muted-foreground"}`}/><div className="flex-1"><p className="text-sm font-bold">{f.name}</p><p className="text-[9px] text-muted-foreground">{f.club} · {available ? "Online" : status==="in-match" ? "In Match" : "Offline"}</p></div><Button disabled={!available || !f.friendId} onClick={async()=>{const {data:u}=await supabase.auth.getUser();if(!u.user||!f.friendId)return;await supabase.from("pitchside_friend_matches").insert({challenger_id:u.user.id,opponent_id:f.friendId,status:"pending"});const ch=supabase.channel(`pitchside-friend-invite:${f.friendId}`);await ch.subscribe();await ch.send({type:"broadcast",event:"friend-invite",payload:{from:u.user.id,matchType:"friend"}});await supabase.removeChannel(ch);setNotice(`Match invite sent to ${f.name}.`)}} variant="outline" className="h-9 rounded-xl text-[10px]"><Swords className="mr-1 h-3.5 w-3.5"/>{available ? "Challenge" : status==="in-match" ? "In Match" : "Offline"}</Button></Card>})}
         </div>
       </div>
     )
