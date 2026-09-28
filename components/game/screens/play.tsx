@@ -131,16 +131,27 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
     setMatchDone(true)
 
     if (friendMatchId) {
-      const isDraw = outcome.home === outcome.away
-      const userWon = outcome.home > outcome.away
       try {
-        const { readWallet, saveWallet } = await import("@/lib/economy")
-        const current = readWallet()
-        if (isDraw) { saveWallet({ ...current, bucks: current.bucks + 100 }); setMatchReward(100); setMatchRewardLabel("DRAW") }
-        else if (userWon) { saveWallet({ ...current, bucks: current.bucks + 180 }); setMatchReward(180); setMatchRewardLabel("WIN") }
-        else { setMatchReward(0); setMatchRewardLabel("WIN") }
-        await supabase.from("pitchside_friend_matches").update({ challenger_score: outcome.home, opponent_score: outcome.away, status: "completed", completed_at: new Date().toISOString(), stake_status: isDraw ? "refunded" : "settled" }).eq("id", friendMatchId)
-      } catch {}
+        const { data, error } = await supabase.rpc("pitchside_submit_friend_result", {
+          p_match_id: friendMatchId,
+          p_home_goals: outcome.home,
+          p_away_goals: outcome.away,
+        })
+        if (error) throw error
+        if (data?.status === "completed") {
+          const payout = Number(data?.payout || 0)
+          setMatchReward(payout)
+          setMatchRewardLabel(payout === 100 ? "DRAW" : "WIN")
+          const { saveWallet, readWallet } = await import("@/lib/economy")
+          const local = readWallet()
+          saveWallet({ ...local, bucks: Number(data?.bucks ?? local.bucks) })
+        } else {
+          setMatchReward(null)
+          setMatchRewardLabel(null)
+        }
+      } catch (error) {
+        setOnlineError(error instanceof Error ? error.message : "Could not save the friend match result.")
+      }
       setFriendMatchId(null)
       return
     }
