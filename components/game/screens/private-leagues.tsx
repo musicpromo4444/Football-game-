@@ -6,7 +6,7 @@ function buildKnockout(teams: Team[]): Fixture[] {
 }
 se client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Plus, Copy, Check, Users, Crown, Sparkles, Globe2, MapPin, ShieldCheck, Hash, Trophy, CalendarDays, ArrowLeft, Home, RotateCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ScreenHeader, Card } from "@/components/game/ui-bits"
@@ -75,6 +75,23 @@ export function PrivateLeagues({ onBack }: { onBack?: () => void }) {
   const [joinCode, setJoinCode] = useState("")
   const [copied, setCopied] = useState<string | null>(null)
   const [message, setMessage] = useState("")
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const { data: session } = await supabase.auth.getSession()
+      if (!session.session?.user || cancelled) return
+      const { data: rows } = await supabase.from("pitchside_private_leagues").select("id,name,scope,country,min_rating,max_users,invitation_code,mode,status").order("created_at",{ascending:false})
+      if (!rows || cancelled) return
+      const mapped = rows.map((r:any) => ({ id:r.id,name:r.name,scope:r.scope,country:r.country || undefined,minRating:r.min_rating,maxUsers:r.max_users,members:1,code:r.invitation_code,owner:r.owner_id===session.session.user.id,mode:r.mode,started:r.status==="started" }))
+      for (const l of mapped) {
+        const { count } = await supabase.from("pitchside_private_league_members").select("id",{count:"exact",head:true}).eq("league_id",l.id)
+        l.members = count || 0
+      }
+      if (!cancelled) setLeagues(mapped)
+    })()
+    return () => { cancelled = true }
+  }, [])
+
   const codePreview = useMemo(() => makeCode(), [leagueName])
 
   const copy = (code: string) => { navigator.clipboard?.writeText(code).catch(() => {}); setCopied(code); setTimeout(() => setCopied(c => c === code ? null : c), 1500) }
@@ -177,7 +194,7 @@ export function PrivateLeagues({ onBack }: { onBack?: () => void }) {
           <div className="flex items-center gap-3"><Trophy className="h-6 w-6 text-primary"/><div><p className="text-sm font-black">Competition</p><p className="text-[10px] text-muted-foreground">{selectedLeague.scope}{selectedLeague.country ? " · " + selectedLeague.country : ""} · {selectedLeague.minRating ? "Min OVR " + selectedLeague.minRating : "No rating minimum"}</p></div></div>
           {!selectedLeague.started && selectedLeague.owner && <Button onClick={startLeague} className="mt-3 w-full rounded-xl">Start League</Button>}
           {!selectedLeague.started && !selectedLeague.owner && <p className="mt-3 rounded-xl bg-secondary p-3 text-[10px] text-muted-foreground">Waiting for the league creator to start the competition.</p>}
-          {selectedLeague.owner && selectedDetail.teams.length < selectedLeague.maxUsers && <Button variant="outline" onClick={addDemoOpponent} className="mt-2 w-full rounded-xl text-xs">Add Test Opponent</Button>}
+
         </Card>
 
         <Card className="p-4">
@@ -188,7 +205,7 @@ export function PrivateLeagues({ onBack }: { onBack?: () => void }) {
 
         {selectedLeague.mode === "Home & Away" ? <Card className="p-4">
           <div className="flex items-center gap-2 mb-3"><CalendarDays className="h-4 w-4 text-primary"/><p className="text-xs font-black">Fixtures</p></div>
-          {selectedDetail.fixtures.length === 0 ? <p className="text-[10px] text-muted-foreground">Fixtures will appear when the league starts with at least two players.</p> : <div className="space-y-2">{selectedDetail.fixtures.slice(0,12).map(f => { const me=selectedDetail.teams[0]; const mine=!!me && (f.home===me.id || f.away===me.id); return <div key={f.id} className="rounded-xl bg-secondary/50 p-3 text-[9px]"><div className="flex justify-between"><span>{selectedDetail.teams.find(t=>t.id===f.home)?.name}</span><b>{f.played ? f.homeGoals + " - " + f.awayGoals : "vs"}</b><span>{selectedDetail.teams.find(t=>t.id===f.away)?.name}</span></div>{!f.played && mine ? <Button onClick={() => window.dispatchEvent(new CustomEvent("pitchside-start-league-fixture",{detail:{leagueId:selectedLeague.id,fixtureId:f.id,userIsHome:f.home===me.id}}))} className="mt-2 h-8 w-full rounded-lg text-[9px]">Play Fixture</Button> : null}</div> })}</div>}
+          {selectedDetail.fixtures.length === 0 ? <p className="text-[10px] text-muted-foreground">Fixtures will appear when the league starts with at least two players.</p> : <div className="space-y-2">{selectedDetail.fixtures.map(f => { const me=selectedDetail.teams[0]; const mine=!!me && (f.home===me.id || f.away===me.id); return <div key={f.id} className="rounded-xl bg-secondary/50 p-3 text-[9px]"><div className="flex justify-between"><span>{selectedDetail.teams.find(t=>t.id===f.home)?.name}</span><b>{f.played ? f.homeGoals + " - " + f.awayGoals : "vs"}</b><span>{selectedDetail.teams.find(t=>t.id===f.away)?.name}</span></div>{!f.played && mine ? <Button onClick={() => window.dispatchEvent(new CustomEvent("pitchside-start-league-fixture",{detail:{leagueId:selectedLeague.id,fixtureId:f.id,userIsHome:f.home===me.id}}))} className="mt-2 h-8 w-full rounded-lg text-[9px]">Play Fixture</Button> : null}</div> })}</div>}
         </Card> : <Card className="p-4"><div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-primary"/><p className="text-xs font-black">Knockout</p></div><p className="mt-2 text-[10px] text-muted-foreground">Players are paired into rounds. Winners advance and losers are eliminated. The knockout bracket will use the same match engine.</p></Card>}
 
         <Button variant="outline" onClick={() => setSelected(null)} className="w-full rounded-xl"><Home className="mr-2 h-4 w-4"/> Back to Leagues</Button>
