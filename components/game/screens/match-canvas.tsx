@@ -652,7 +652,12 @@ export function MatchCanvas({ onMatchComplete, onlineMatch, onMatchForfeit, chal
             const challengeBoost = challenge
               ? challenge.rating >= 100 ? 2.25 : challenge.rating >= 95 ? 1.85 : challenge.rating >= 88 ? 1.55 : Math.max(1, challenge.rating / 84)
               : 1
-            const skill = Math.min(1, (style.skill / 100) * challengeBoost)
+            const rawDribbleSkill = challenge && challenge.rating >= 88
+              ? (challenge.rating >= 100 ? 0.99 : challenge.rating >= 95 ? 0.95 : 0.90)
+              : style.skill / 100
+            const skill = style.decision === "dribble"
+              ? Math.min(1, rawDribbleSkill * challengeBoost)
+              : Math.min(1, (style.skill / 100) * challengeBoost)
             const elitePressure = challenge ? (challenge.rating >= 100 ? 0.92 : challenge.rating >= 95 ? 0.78 : challenge.rating >= 88 ? 0.62 : 0) : 0
 
             if (pressureDistance < 22) {
@@ -661,10 +666,10 @@ export function MatchCanvas({ onMatchComplete, onlineMatch, onMatchForfeit, chal
                 // escape movement at higher skill.
                 const escapeX = p.x - (homeDefender?.x ?? p.x)
                 const escapeY = p.y - (homeDefender?.y ?? p.y)
-                x += escapeX * (0.18 + skill * 0.12 + elitePressure * 0.12)
+                x += escapeX * (0.18 + skill * 0.12 + elitePressure * 0.16)
                 y += escapeY * (0.18 + skill * 0.12 + elitePressure * 0.12)
-                x += Math.sin(t * 4 + i) * 1.5
-                y += Math.cos(t * 4 + i) * 1.0
+                x += Math.sin(t * 4 + i) * (1.5 + elitePressure * 1.2)
+                y += Math.cos(t * 4 + i) * (1.0 + elitePressure * 0.9)
               } else if (style.decision === "pass") {
                 // Playmakers release early toward the teammate with the clearest
                 // forward/goal angle rather than waiting to be tackled.
