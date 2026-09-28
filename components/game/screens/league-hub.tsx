@@ -99,7 +99,9 @@ export function LeagueHub() {
             </div>
           </div>
 
-          <div className="mb-3 rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3"><div className="flex items-center justify-between"><span className="text-[10px] font-black uppercase tracking-widest text-cyan-300">League Progress</span><span className="text-[10px] font-bold text-white/60">{progress.played} matches</span></div><div className="mt-2 flex items-end justify-between"><div><p className="text-2xl font-black">{progress.points} <span className="text-xs text-white/40">PTS</span></p><p className="text-[9px] text-white/45">W {progress.wins} · D {progress.draws} · L {progress.losses}</p></div><div className="text-right text-[9px] text-white/50"><p>Qualify: {requiredPoints === null ? "Classified" : `${requiredPoints} pts`}</p><p>Wins: {requiredWins === null ? "Classified" : requiredWins}</p></div></div></div>\n\n          <div className="mt-4 grid grid-cols-3 gap-2">
+          <div className="mb-3 rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3"><div className="flex items-center justify-between"><span className="text-[10px] font-black uppercase tracking-widest text-cyan-300">League Progress</span><span className="text-[10px] font-bold text-white/60">{progress.played} matches</span></div><div className="mt-2 flex items-end justify-between"><div><p className="text-2xl font-black">{progress.points} <span className="text-xs text-white/40">PTS</span></p><p className="text-[9px] text-white/45">W {progress.wins} · D {progress.draws} · L {progress.losses}</p></div><div className="text-right text-[9px] text-white/50"><p>Qualify: {requiredPoints === null ? "Classified" : `${requiredPoints} pts`}</p><p>Wins: {requiredWins === null ? "Classified" : requiredWins}</p></div></div></div>
+
+          <div className="mt-4 grid grid-cols-3 gap-2">
             <RewardCard icon="▰" title={<>CLUB<br />CURRENCY</>} value="1,000" suffix="Box / Bucks" tone="emerald" />
             <RewardCard icon="◆" title={<>PREMIUM<br />GEMS</>} value="50" suffix="Gems 💎" tone="cyan" />
             <RewardCard icon="★" title={<>#9 CB</>} value="89" suffix="SANDBERG (TITA..." tone="amber" />
