@@ -37,6 +37,7 @@ import {
 } from "@/components/game/data"
 import { awardMatchWin, awardMatchDraw, type MatchWinLevel } from "@/lib/economy"
 import { recordLeagueResult } from "@/lib/league-progression"
+import { IMPOSSIBLE_CHALLENGE_TEAMS, readImpossibleChallenge, saveImpossibleChallenge, restartImpossibleChallenge, type ImpossibleChallengeState } from "@/lib/impossible-challenge"
 
 export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
   const [inMatch, setInMatch] = useState(false)
@@ -54,6 +55,9 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
   const [friendRole, setFriendRole] = useState<"challenger" | "opponent" | null>(null)
   const [rankedRole, setRankedRole] = useState<"challenger" | "opponent" | null>(null)
   const [tournamentId, setTournamentId] = useState<string | null>(null)
+  const [impossibleChallenge, setImpossibleChallenge] = useState<ImpossibleChallengeState | null>(null)
+  const [challengeAdSeconds, setChallengeAdSeconds] = useState<number | null>(null)
+  const [challengeMessage, setChallengeMessage] = useState<string | null>(null)
 
   useEffect(() => {
     const startLeagueFixture = (event: Event) => {
@@ -70,9 +74,11 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
     const startTournament = async () => { const id = window.localStorage.getItem("pitchside-tournament"); if (!id) return; const {data,error}=await supabase.rpc("pitchside_join_tournament",{p_tournament_id:id}); if(error){setOnlineError(error.message);return} setTournamentId(id); setLeagueFixture(null); setFriendMatchId(null); setMatchId("tournament-"+id); setMatchDone(false); setMatchReward(null); setMatchRewardLabel(null); setOnlineError(null); setInMatch(true) }
     const startFriendMatch = (event: Event) => { const detail = (event as CustomEvent).detail || {}; setTournamentId(null); setLeagueFixture(null); setFriendMatchId(detail.matchId || null); setFriendRole(detail.role || null); setMatchId(detail.matchId ? "friend-" + detail.matchId : "friend-match"); setMatchDone(false); setMatchReward(null); setMatchRewardLabel(null); setOnlineError(null); setInMatch(true) }
     window.addEventListener("pitchside-start-league-fixture", startLeagueFixture)
+    const startImpossible = () => { const state=readImpossibleChallenge(); setImpossibleChallenge(state); setChallengeMessage(null); setChallengeAdSeconds(null); setMatchDone(false); setTournamentId(null); setLeagueFixture(null); setFriendMatchId(null); setMatchId("impossible-"+state.stage+"-"+state.retriesUsed); setOnlineError(null); setInMatch(true) }
     window.addEventListener("pitchside-start-tournament", startTournament)
+    window.addEventListener("pitchside-start-impossible-challenge", startImpossible)
     window.addEventListener("pitchside-start-friend-match", startFriendMatch)
-    return () => { window.removeEventListener("pitchside-start-league-fixture", startLeagueFixture); window.removeEventListener("pitchside-start-friend-match", startFriendMatch); window.removeEventListener("pitchside-start-tournament", startTournament) }
+    return () => { window.removeEventListener("pitchside-start-league-fixture", startLeagueFixture); window.removeEventListener("pitchside-start-friend-match", startFriendMatch); window.removeEventListener("pitchside-start-tournament", startTournament); window.removeEventListener("pitchside-start-impossible-challenge", startImpossible) }
   }, [])
 
   useEffect(() => {
@@ -160,9 +166,57 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
     setFriendRole(null)
   }
 
+  useEffect(() => {
+    if (challengeAdSeconds === null) return
+    if (challengeAdSeconds <= 0) {
+      setChallengeAdSeconds(null)
+      setChallengeMessage(null)
+      setMatchDone(false)
+      setInMatch(true)
+      return
+    }
+    const id = window.setTimeout(() => setChallengeAdSeconds((n) => n === null ? null : n - 1), 1000)
+    return () => window.clearTimeout(id)
+  }, [challengeAdSeconds])
+
   const finishOnlineMatch = async (outcome: { home: number; away: number }) => {
     if (!matchId || matchDone) return
     setMatchDone(true)
+
+    if (impossibleChallenge) {
+      const state = { ...impossibleChallenge }
+      if (outcome.home > outcome.away) {
+        if (state.stage >= 5) {
+          state.completed = true
+          saveImpossibleChallenge(state)
+          setChallengeMessage("🏆 IMPOSSIBLE CHALLENGE COMPLETE! You beat the 100 OVR final boss.")
+          setImpossibleChallenge(state)
+          setInMatch(false)
+          return
+        }
+        state.stage += 1
+        saveImpossibleChallenge(state)
+        setImpossibleChallenge(state)
+        setChallengeMessage("MATCH WON! The next team is even stronger.")
+        setMatchDone(false)
+        setMatchId("impossible-" + state.stage + "-" + state.retriesUsed)
+        return
+      }
+      state.retriesUsed += 1
+      saveImpossibleChallenge(state)
+      if (state.retriesUsed >= 5) {
+        setChallengeMessage("Five retries used. The challenge has restarted from Match 1.")
+        restartImpossibleChallenge()
+        const fresh = readImpossibleChallenge()
+        setImpossibleChallenge(fresh)
+        setMatchDone(false)
+        setMatchId("impossible-" + fresh.stage + "-" + fresh.retriesUsed)
+        return
+      }
+      setImpossibleChallenge(state)
+      setChallengeMessage("You lost. Watch an ad to rematch this team, or restart the challenge.")
+      return
+    }
 
     if (tournamentId) {
       try { const {error}=await supabase.rpc("pitchside_record_tournament_result",{p_tournament_id:tournamentId,p_goals:outcome.home,p_opponent_goals:outcome.away}); if(error) throw error; } catch(error) { setOnlineError(error instanceof Error ? error.message : "Could not save tournament result."); } setMatchReward(null); setMatchRewardLabel(null); setTournamentId(null); return
@@ -315,7 +369,7 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
             <p className="text-xs text-muted-foreground">Online Ranked · Sudden Death</p>
           </div>
         </div>
-        <MatchCanvas onMatchComplete={finishOnlineMatch} onMatchForfeit={handleFriendForfeit} onlineMatch={friendMatchId && friendRole ? { matchId: friendMatchId, role: friendRole, kind: "friend" as const } : rankedRole && matchId ? { matchId, role: rankedRole, kind: "ranked" as const } : undefined} />
+        <MatchCanvas key={impossibleChallenge ? `impossible-${impossibleChallenge.stage}-${impossibleChallenge.retriesUsed}` : undefined} onMatchComplete={finishOnlineMatch} onMatchForfeit={handleFriendForfeit} challenge={impossibleChallenge ? IMPOSSIBLE_CHALLENGE_TEAMS[impossibleChallenge.stage - 1] : undefined} onlineMatch={friendMatchId && friendRole ? { matchId: friendMatchId, role: friendRole, kind: "friend" as const } : rankedRole && matchId ? { matchId, role: rankedRole, kind: "ranked" as const } : undefined} />
         {leagueOutcome ? <div className="mx-5 mt-3 rounded-2xl border border-cyan-500/35 bg-cyan-500/10 px-4 py-3 text-center"><p className="text-[10px] font-black uppercase tracking-widest text-cyan-300">League Update</p><p className="mt-1 text-sm font-black text-cyan-100">{leagueOutcome}</p></div> : null}
         {matchReward !== null ? (
           <div className="mx-5 mt-3 rounded-2xl border border-emerald-500/35 bg-emerald-500/10 px-4 py-3 text-center">
@@ -333,6 +387,8 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
             </div>
           </div>
         ) : null}
+        {challengeMessage ? <div className="mx-5 mt-3 rounded-2xl border border-primary/40 bg-primary/10 p-4 text-center"><p className="text-xs font-black">{challengeMessage}</p>{impossibleChallenge && !impossibleChallenge.completed && impossibleChallenge.retriesUsed < 5 && challengeMessage.startsWith("You lost") ? <div className="mt-3 grid grid-cols-2 gap-2"><button className="rounded-xl bg-primary px-3 py-3 text-[10px] font-black" onClick={()=>{setChallengeAdSeconds(5)}}>WATCH AD · REMATCH</button><button className="rounded-xl border border-border px-3 py-3 text-[10px] font-black" onClick={()=>{restartImpossibleChallenge();const fresh=readImpossibleChallenge();setImpossibleChallenge(fresh);setChallengeMessage(null);setMatchDone(false);setMatchId("impossible-1-0")}}>RESTART</button></div> : null}</div> : null}
+        {challengeAdSeconds !== null ? <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-5"><div className="w-full max-w-sm rounded-3xl border border-primary/30 bg-card p-6 text-center"><p className="text-[10px] font-black uppercase tracking-[0.25em] text-primary">SPONSOR AD</p><p className="mt-3 text-lg font-black">Rematch unlocked in {challengeAdSeconds}</p><p className="mt-2 text-[10px] text-muted-foreground">Watch the sponsor message to continue your Impossible Challenge.</p></div></div> : null}
         {onlineError ? <p className="mx-5 mt-2 text-center text-[11px] text-destructive">{onlineError}</p> : null}
       </div>
     )
