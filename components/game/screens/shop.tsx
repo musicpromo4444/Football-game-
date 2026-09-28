@@ -12,7 +12,7 @@ import { readWallet, saveWallet, type Wallet } from "@/lib/economy"
 import { formatRealMoney, getCountry, readProfile } from "@/lib/locale"
 import { readRealMoneyPacks } from "@/lib/shop-pricing"
 import { claimSpecialPlayer, getSpecialPlayerClaims, addPackagePlayers, loadClubSquad } from "@/lib/club-squad"
-import { activateTeamBoost, TEAM_BOOSTS, type TeamBoostDuration, type TeamBoostType } from "@/lib/team-boosts"
+import { activateTeamBoost, activateGhostFormationForLeague, TEAM_BOOSTS, type TeamBoostDuration, type TeamBoostType } from "@/lib/team-boosts"
 import { specialPlayers, squad } from "@/components/game/data"
 import { KitEditor } from "@/components/game/screens/kit-editor"
 import { cn } from "@/lib/utils"
@@ -250,6 +250,18 @@ export function Shop() {
     activateTeamBoost(type, duration)
     flash(`${TEAM_BOOSTS[type].name} activated for ${durationLabel(duration)}.`)
   }
+  const buyGhostFormation = () => {
+    const price = GHOST_FORMATION_PRICES[leagueProgress.leagueIndex] ?? 9
+    const saved = localStorage.getItem(GHOST_FORMATION_KEY)
+    if (saved === String(leagueProgress.leagueIndex)) return flash("Ghost Formation is already active in this league.")
+    flash(`Ghost Formation is ${price.toFixed(2)} for ${currentLeague}. Billing will open when store payments are connected.`)
+  }
+
+  const activateGhostFromPurchase = () => {
+    localStorage.setItem(GHOST_FORMATION_KEY, String(leagueProgress.leagueIndex))
+    activateGhostFormationForLeague()
+    flash(`👻 Ghost Formation activated for ${currentLeague}. The formation remains hidden.`)
+  }
 
   const spend = (currency: "bucks" | "gems", amount: number, reward: { bucks?: number; gems?: number }, label: string) => {
     if (wallet[currency] < amount) return flash(`Not enough ${currency === "bucks" ? "Bucks" : "Gems"}.`)
@@ -338,6 +350,21 @@ export function Shop() {
         </div>
       </section>
 
+      <section className="mt-6">
+        <SectionTitle icon={<span className="text-sm">👻</span>} title="GHOST FORMATION" meta={`Current league · ${formatRealMoney(ghostPrice, profile?.countryCode)}`} />
+        <Card className="border-amber-300/15 bg-[#111416] p-3">
+          <div className="flex items-start gap-3">
+            <ProductArt kind="item" icon={<span className="text-3xl">👻</span>} label="HIDDEN" />
+            <div className="min-w-0 flex-1">
+              <p className="font-black">Mystery Formation</p>
+              <p className="mt-0.5 text-[8px] leading-3 text-muted-foreground">No shape is revealed. Tap to activate and the match automatically uses the hidden attacking formation.</p>
+              <p className="mt-1 text-[8px] font-bold text-amber-300">Elite attacking positioning · very high goal-scoring pressure · current league only</p>
+              <PriceButton onClick={buyGhostFormation} accent="gold">PURCHASE · {formatRealMoney(ghostPrice, profile?.countryCode)}</PriceButton>
+              <Button size="sm" variant="outline" className="mt-1 w-full rounded-xl text-[9px] font-black" onClick={activateGhostFromPurchase}>ACTIVATE / TEST</Button>
+            </div>
+          </div>
+        </Card>
+      </section>
       <section className="mt-6">
         <SectionTitle icon={<Swords className="h-3.5 w-3.5" />} title="TACTICAL MATCH BOOSTS" meta="Different durations & prices" />
         <div className="space-y-2.5">
