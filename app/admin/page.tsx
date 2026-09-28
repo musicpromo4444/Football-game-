@@ -5,6 +5,7 @@ import { ArrowLeft, Plus, Save, Trash2, LockKeyhole, ShieldCheck, CreditCard, Me
 import { Button } from "@/components/ui/button"
 import { Card, Pill, ScreenHeader } from "@/components/game/ui-bits"
 import { AdminShop } from "@/components/game/admin-shop"
+import { AdminTournaments } from "@/components/game/admin-tournaments"
 import { AuctionPlayer, generateAuctionPlayers, readAuctionPlayers, saveAuctionPlayers } from "@/lib/auction"
 import { AuctionDisplaySettings, DEFAULT_AUCTION_DISPLAY, readAuctionDisplay, saveAuctionDisplay } from "@/lib/auction-display"
 
@@ -185,6 +186,7 @@ export default function AdminPage() {
           <Button onClick={() => { try { localStorage.setItem("pitchside-ad-campaigns", JSON.stringify(adCampaigns)); setSecretMessage("Ad campaign settings saved") } catch {} }} className="mt-3 w-full rounded-xl"><Save className="mr-1 h-4 w-4" />Save ad campaign settings</Button>
         </Card>
 
+        <AdminTournaments />
         <AdminShop />
         <a href="/" className="flex items-center justify-center gap-2 py-3 text-xs font-bold text-muted-foreground"><ArrowLeft className="h-4 w-4" /> Back to PitchSide</a>
       </div>
