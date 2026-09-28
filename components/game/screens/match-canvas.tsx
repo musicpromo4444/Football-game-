@@ -11,6 +11,7 @@ import { addMatchXp, calculateMatchXp, revealPackage, equipPackage, type Package
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { protectInjury, readInjuryShield } from "@/lib/injury-shield"
+import { supabase } from "@/lib/supabase"
 
 type Point = { x: number; y: number }
 type Formation = "4-3-3" | "4-4-2" | "3-5-2" | "4-2-3-1" | "4-1-4-1"
