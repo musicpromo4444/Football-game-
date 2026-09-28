@@ -117,14 +117,24 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
   const startOnlineMatch = async () => {
     setQueueing(true)
     setOnlineError(null)
+    setRankedRole(null)
     try {
-      const result = await queueForOnlineMatch()
-      if (result.match) {
-        setMatchId(result.match.match_id)
-        setMatchLevel(result.match.league_id || "academy")
-        setInMatch(true)
-        setMatchReward(null)
+      for (let attempt = 0; attempt < 60; attempt++) {
+        const result = await queueForOnlineMatch()
+        if (result.match) {
+          const { data: row } = await supabase.from("matches").select("player_a,player_b").eq("id", result.match.match_id).maybeSingle()
+          const { data: me } = await supabase.auth.getUser()
+          setMatchId(result.match.match_id)
+          setMatchLevel(result.match.league_id || "academy")
+          setRankedRole(row && me.user ? (row.player_a === me.user.id ? "challenger" : "opponent") : null)
+          setInMatch(true)
+          setMatchReward(null)
+          setQueueing(false)
+          return
+        }
+        await new Promise((resolve) => setTimeout(resolve, 2000))
       }
+      throw new Error("No opponent found yet. Please try again.")
     } catch (error) {
       setOnlineError(error instanceof Error ? error.message : "Online matchmaking failed.")
       setQueueing(false)
