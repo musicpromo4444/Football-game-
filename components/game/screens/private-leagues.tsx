@@ -1,9 +1,16 @@
-"use client"
+"u
+function buildKnockout(teams: Team[]): Fixture[] {
+  const out: Fixture[] = []
+  for (let i = 0; i + 1 < teams.length; i += 2) out.push({id:"r1-"+i,home:teams[i].id,away:teams[i+1].id,homeGoals:null,awayGoals:null,played:false})
+  return out
+}
+se client"
 
 import { useMemo, useState } from "react"
 import { Plus, Copy, Check, Users, Crown, Sparkles, Globe2, MapPin, ShieldCheck, Hash, Trophy, CalendarDays, ArrowLeft, Home, RotateCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ScreenHeader, Card } from "@/components/game/ui-bits"
+import { supabase } from "@/lib/supabase"
 
 type Mode = "Home & Away" | "Knockout"
 type League = {
@@ -66,19 +73,41 @@ export function PrivateLeagues({ onBack }: { onBack?: () => void }) {
 
   const copy = (code: string) => { navigator.clipboard?.writeText(code).catch(() => {}); setCopied(code); setTimeout(() => setCopied(c => c === code ? null : c), 1500) }
 
-  const createLeague = () => {
+  const createLeague = async () => {
     if (!leagueName.trim()) return setMessage("Enter a league name.")
     if (scope === "Country" && !country.trim()) return setMessage("Choose a country.")
     const league: League = { id: crypto.randomUUID?.() || Date.now().toString(), name: leagueName.trim(), scope, country: scope === "Country" ? country.trim() : undefined, minRating: minRating === "Minimum" ? null : Number(minRating), maxUsers: Number(maxUsers), members: 1, code: codePreview, owner: true, mode }
+    let remoteId: string | null = null
+    if (supabase) {
+      const { data: session } = await supabase.auth.getSession()
+      if (session.session?.user) {
+        const { data: remote, error } = await supabase.from("pitchside_private_leagues").insert({
+          owner_id: session.session.user.id, name: league.name, mode: league.mode, scope: league.scope,
+          country: league.country || null, min_rating: league.minRating, max_users: league.maxUsers, invitation_code: league.code
+        }).select().single()
+        if (!error && remote) {
+          remoteId = remote.id
+          await supabase.from("pitchside_private_league_members").insert({league_id: remote.id,user_id:session.session.user.id,team_name:"My FC"})
+        }
+      }
+    }
+    if (remoteId) league.id = remoteId
     const next = [league, ...leagues]; setLeagues(next); saveLeagues(next)
     setLeagueName(""); setMessage("League created. Share the invitation code."); setSelected(league.id)
     const team: Team = { id: league.id + "-me", name: "My FC", played: 0, wins: 0, draws: 0, losses: 0, gf: 0, ga: 0 }
     const d = { ...details, [league.id]: { teams: [team], fixtures: [] } }; setDetails(d); saveDetails(d)
   }
 
-  const joinLeague = () => {
+  const joinLeague = async () => {
     const code = joinCode.trim().toUpperCase()
-    const own = leagues.find(l => l.code.toUpperCase() === code)
+    let own = leagues.find(l => l.code.toUpperCase() === code)
+    if (!own && supabase) {
+      const { data, error } = await supabase.rpc("pitchside_join_private_league", { p_code: code })
+      if (!error && data) {
+        own = { id:data.id, name:data.name, scope:data.scope, country:data.country || undefined, minRating:data.min_rating, maxUsers:data.max_users, members:2, code:data.invitation_code, owner:false, mode:data.mode }
+        const next = [own, ...leagues.filter(l => l.id !== own!.id)]; setLeagues(next); saveLeagues(next); setJoinCode(""); setSelected(own.id); setMessage("You joined the league successfully."); return
+      }
+    }
     if (!own) return setMessage("League not found. Check the invitation code.")
     if (own.members >= own.maxUsers) return setMessage("This league is full.")
     const next = leagues.map(l => l.id === own.id ? { ...l, members: l.members + 1, owner: false } : l)
@@ -95,15 +124,22 @@ export function PrivateLeagues({ onBack }: { onBack?: () => void }) {
     setSelected(id)
   }
 
-  const startLeague = () => {
+  const startLeague = async () => {
     if (!selected) return
     const l = leagues.find(x => x.id === selected); if (!l) return
     const d = details[selected] || { teams: [], fixtures: [] }
     if (d.teams.length < 2) return setMessage("Invite at least one more player before starting.")
-    const fixtures = l.mode === "Home & Away" ? buildRoundRobin(d.teams) : []
-    const nextDetails = { ...details, [selected]: { ...d, fixtures } }
+    let teams = d.teams
+    if (supabase) {
+      const { data: members } = await supabase.from("pitchside_private_league_members").select("user_id,team_name").eq("league_id",selected)
+      if (members && members.length >= 2) teams = members.map((m:any) => ({id:m.user_id,name:m.team_name || "My FC",played:0,wins:0,draws:0,losses:0,gf:0,ga:0}))
+    }
+    const fixtures = l.mode === "Home & Away" ? buildRoundRobin(teams) : buildKnockout(teams)
+
+    const nextDetails = { ...details, [selected]: { ...d, teams, fixtures } }
     setDetails(nextDetails); saveDetails(nextDetails)
     const nextLeagues = leagues.map(x => x.id === selected ? { ...x, started: true } : x); setLeagues(nextLeagues); saveLeagues(nextLeagues)
+    if (supabase) await supabase.from("pitchside_private_leagues").update({status:"started",started_at:new Date().toISOString()}).eq("id",selected)
     setMessage("League started.")
   }
 
