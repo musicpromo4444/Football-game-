@@ -83,10 +83,12 @@ export function recordLeagueResult(home: number, away: number) {
     const reward = awardPromotion(LEAGUE_LEVELS[leagueIndex]).reward.bux
     const promoted: LeagueProgress = { leagueIndex, played: 0, points: 0, wins: 0, draws: 0, losses: 0 }
     saveLeagueProgress(promoted)
+    if (typeof window !== "undefined") window.dispatchEvent(new Event("pitchside-league-progress-updated"))
     return { progress: promoted, seasonResult: "promoted" as const, reward, requiredPoints, requiredWins }
   }
 
   saveLeagueProgress(next)
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("pitchside-league-progress-updated"))
   return {
     progress: next,
     seasonResult: "ongoing" as const,
