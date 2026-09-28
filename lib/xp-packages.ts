@@ -1,8 +1,62 @@
 import { loadClubSquad, claimSpecialPlayer } from "@/lib/club-squad"
+import { playerPool, squad, type Player } from "@/components/game/data"
 import { readWallet, saveWallet } from "@/lib/economy"
 
 export type PackageTier = "silver" | "gold" | "platinum"
 export type PackageReward = { tier: PackageTier; players: string[]; bucks: number; gems: number; rareBonus?: "captain-boost" | "ghost-summon"; specialPlayer?: string }
+export type StorePackageType = "starter-box" | "arena-special" | "mega-bundle"
+export type StorePackageReward = {
+  type: StorePackageType
+  players: string[]
+  count: number
+  guaranteedRange: string
+  remainingRange: string
+  bucks: number
+  gems: number
+}
+
+const STORE_PACKAGE_RULES: Record<StorePackageType, { count: number; guaranteed: [number, number]; remaining: [number, number]; bucks: number; gems: number }> = {
+  "starter-box": { count: 5, guaranteed: [80, 84], remaining: [75, 79], bucks: 500, gems: 3 },
+  "arena-special": { count: 9, guaranteed: [84, 88], remaining: [77, 82], bucks: 2000, gems: 0 },
+  "mega-bundle": { count: 13, guaranteed: [88, 90], remaining: [77, 80], bucks: 60000, gems: 20 },
+}
+
+function shuffleStorePlayers(players: Player[]) {
+  const result = [...players]
+  for (let i = result.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[result[i], result[j]] = [result[j], result[i]]
+  }
+  return result
+}
+
+function pickStorePlayers(range: [number, number], count: number, excluded: Set<string>) {
+  return shuffleStorePlayers([...squad, ...playerPool]).filter((player) =>
+    player.rating >= range[0] && player.rating <= range[1] && !excluded.has(player.id)
+  ).slice(0, count)
+}
+
+export function getStorePackageContents(type: StorePackageType): StorePackageReward {
+  const rule = STORE_PACKAGE_RULES[type]
+  const guaranteed = pickStorePlayers(rule.guaranteed, 1, new Set())
+  const selected = [...guaranteed]
+  const used = new Set(selected.map((player) => player.id))
+  selected.push(...pickStorePlayers(rule.remaining, rule.count - selected.length, used))
+  return {
+    type,
+    players: selected.map((player) => player.id),
+    count: selected.length,
+    guaranteedRange: rule.guaranteed[0] + "–" + rule.guaranteed[1],
+    remainingRange: rule.remaining[0] + "–" + rule.remaining[1],
+    bucks: rule.bucks,
+    gems: rule.gems,
+  }
+}
+
+export function getStorePlayer(id: string): Player | undefined {
+  return [...squad, ...playerPool].find((player) => player.id === id)
+}
+
 
 export type PlayerCardAttribute = "SPE" | "ACC" | "STA" | "STR" | "CON" | "PAS" | "SHO" | "TAC"
 export type PlayerCardReward = { id: string; attribute: PlayerCardAttribute; amount: 2; claimedAt: number }
