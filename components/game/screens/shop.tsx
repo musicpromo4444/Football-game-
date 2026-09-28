@@ -394,10 +394,11 @@ export function Shop() {
                 const player = getStorePlayer(id)
                 if (!player) return null
                 const stats = player.attributes || { pace: player.rating, passing: player.rating, shooting: player.rating, defending: player.rating, stamina: player.stamina, heading: player.rating, strength: player.rating }
+                const dribbling = Math.round(((stats.pace || player.rating) + (stats.passing || player.rating)) / 2)
                 return <div key={id} className={cn("relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-slate-950 via-[#15191a] to-cyan-500/5 p-2 transition-all duration-500", equippingPackage ? "translate-y-8 scale-75 opacity-0" : "")} style={equippingPackage ? { transitionDelay: (index * 35) + "ms" } : undefined}>
                   <div className="relative h-28 overflow-hidden rounded-xl bg-black/30"><div className="absolute right-1 top-1 z-10 rounded-lg bg-black/70 px-1.5 py-1 text-[10px] font-black text-cyan-300">{player.rating}</div>{player.face ? <img src={player.face} alt="" className="h-full w-full object-cover object-top" /> : <div className="flex h-full items-center justify-center text-2xl font-black">{player.name.split(" ").map((n) => n[0]).join("").slice(0,2)}</div>}</div>
                   <p className="mt-1.5 truncate text-[10px] font-black">{player.name}</p><p className="text-[7px] uppercase text-muted-foreground">{player.pos} · {player.style}</p>
-                  <div className="mt-1.5 grid grid-cols-4 gap-1">{[["PAC",stats.pace],["PAS",stats.passing],["SHO",stats.shooting],["DEF",stats.defending]].map(([label,value]) => <div key={label} className="rounded-md bg-white/5 px-1 py-1 text-center"><p className="text-[6px] text-muted-foreground">{label}</p><p className="text-[9px] font-black">{value}</p></div>)}</div>
+                  <div className="mt-1.5 grid grid-cols-3 gap-1">{[["SPD",stats.pace],["DRB",dribbling],["PAS",stats.passing],["SHO",stats.shooting],["STR",stats.strength],["DEF",stats.defending]].map(([label,value]) => <div key={label} className="rounded-md bg-white/5 px-1 py-1 text-center"><p className="text-[6px] text-muted-foreground">{label}</p><p className="text-[9px] font-black">{value}</p></div>)}</div>
                 </div>
               })}
             </div>
