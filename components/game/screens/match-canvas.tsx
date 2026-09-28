@@ -1020,8 +1020,8 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
       {trainingBlocked ? <div className="mt-4 rounded-xl border border-amber-400/40 bg-amber-400/10 px-4 py-3 text-center"><p className="text-xs font-black text-amber-300">PLAYER IN TRAINING</p><p className="mt-1 text-[10px] text-muted-foreground">{trainingUnavailable.map((p) => p.name).join(", ")} cannot play until training completes. Return to Tactics and choose an available player.</p></div> : null}
       <div className="mt-4 rounded-xl border border-primary/20 bg-card/70 px-3 py-2">
         <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-muted-foreground">
-          <span>Formation</span><span className="font-bold text-primary">{tactics.formation}</span>
-          <span>Preset</span><span className="font-bold text-accent">{tactics.preset.replace("-", " ")}</span>
+          <span>Formation</span><span className="font-bold text-primary">{teamBoosts.ghostFormation ? "👻" : tactics.formation}</span>
+          <span>Preset</span><span className="font-bold text-accent">{teamBoosts.ghostFormation ? "MYSTERY" : tactics.preset.replace("-", " ")}</span>
         </div>
         <p className="mt-1 text-[10px] text-muted-foreground">{teamBoosts.ghostFormation ? "Hidden formation · attacking positioning is automatic" : "Shape controls positioning · instruction controls team behaviour"}</p>
       </div>
