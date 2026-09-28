@@ -134,6 +134,9 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
   const [injuredOpponent, setInjuredOpponent] = useState<number | null>(null)
   const [injuries, setInjuries] = useState<Record<number, "light" | "heavy">>({})
   const [opponentInjuries, setOpponentInjuries] = useState<Record<number, "light" | "heavy">>({})
+  const [stamina, setStamina] = useState<Record<number, number>>(() => Object.fromEntries(Array.from({ length: 11 }, (_, i) => [i, 100])))
+  const [substituted, setSubstituted] = useState<Record<number, boolean>>({})
+  const [substitutionUses, setSubstitutionUses] = useState(3)
   const [substitutionPending, setSubstitutionPending] = useState<number | null>(null)
   const [substitutionCountdown, setSubstitutionCountdown] = useState(0)
   const [turnover, setTurnover] = useState(false)
@@ -158,6 +161,24 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
   useEffect(() => {
     if (time === 0) setRunning(false)
   }, [time])
+
+  useEffect(() => {
+    if (!running) return
+    const id = setInterval(() => {
+      setStamina((current) => {
+        const next = { ...current }
+        for (let i = 0; i < 11; i += 1) {
+          if (substituted[i]) continue
+          const player = playerArchetypes[i]
+          const tacticalDrain = tactics.preset === "gegenpress" || tactics.preset === "high-press" ? 0.22 : 0
+          const specialDrain = player?.specialStyle === "Speed Demon" ? 0.16 : player?.specialStyle === "Pressing Forward" ? 0.12 : 0
+          next[i] = Math.max(0, (next[i] ?? 100) - 0.55 - tacticalDrain - specialDrain)
+        }
+        return next
+      })
+    }, 1000)
+    return () => clearInterval(id)
+  }, [running, tactics.preset, substituted, playerArchetypes])
 
   useEffect(() => {
     if (!running || ballOwner === null || substitutionPending !== null) {
@@ -274,11 +295,13 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
       setPositions((current) => current.map((p, i) => {
         const player = playerArchetypes[i]
         const injuryFactor = injuries[i] === "heavy" ? 0.4 : injuries[i] === "light" ? 0.7 : 1
+        const fatigueFactor = Math.max(0.55, (stamina[i] ?? 100) / 100)
+        const effectiveFactor = injuryFactor * fatigueFactor
         const trainingFactor = 1 + (player?.trainingBoost || 0) * 0.01
         const specialSpeed = player?.specialStyle === "Speed Demon" ? 0.16 : player?.specialStyle === "Wingback Master" ? 0.08 : player?.specialStyle === "Pressing Forward" ? 0.06 : 0
-        const speedBoost = (1 + specialSpeed + ((player?.shopBoost?.stats.SPE || 0) + (player?.shopBoost?.stats.ACC || 0)) * 0.004) * (teamBoosts.team ? 1.05 : 1) * (teamBoosts.ghostFormation ? 1.08 : 1)
+        const speedBoost = (1 + specialSpeed + ((player?.shopBoost?.stats.SPE || 0) + (player?.shopBoost?.stats.ACC || 0)) * 0.004) * (teamBoosts.team ? 1.05 : 1) * (teamBoosts.ghostFormation ? 1.08 : 1) * effectiveFactor
         const anchor = base[i] || p
-        if (injuries[i] === "heavy") return { ...anchor }
+        if (injuries[i] === "heavy" || substituted[i]) return { ...anchor }
         const dx = ballNow.x - p.x
         const dy = ballNow.y - p.y
         const distanceToBall = Math.hypot(dx, dy)
@@ -868,6 +891,28 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
     setDrag(null)
   }
 
+  const substitutePlayer = (index: number) => {
+    if (substitutionUses <= 0 || substituted[index]) return
+    setSubstituted((current) => ({ ...current, [index]: true }))
+    setStamina((current) => ({ ...current, [index]: 0 }))
+    setInjuries((current) => {
+      const next = { ...current }
+      delete next[index]
+      return next
+    })
+    setSubstitutionUses((uses) => Math.max(0, uses - 1))
+    if (ballOwner === index) {
+      setBallOwner(null)
+      setMessage("Player substituted — possession resets")
+    } else {
+      setMessage((playerArchetypes[index]?.name || "Player") + " substituted")
+    }
+    if (selectedDefenderRef.current === index) {
+      selectedDefenderRef.current = null
+      setSelectedDefender(null)
+    }
+  }
+
   const reset = () => {
     completionSentRef.current = false
     setTime(120)
@@ -885,6 +930,9 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
     setSelectedDefender(2)
     setInjuries({})
     setOpponentInjuries({})
+    setStamina(Object.fromEntries(Array.from({ length: 11 }, (_, i) => [i, 100])))
+    setSubstituted({})
+    setSubstitutionUses(3)
     setSubstitutionPending(null)
     setSubstitutionCountdown(0)
     setTurnover(false)
@@ -1107,9 +1155,36 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
         <span className="font-display text-sm font-bold tabular-nums text-primary">{passes} / {actions}</span>
       </div>
 
-      {/* injury status */}
-      <div className="mt-3 rounded-xl border border-border bg-card/70 px-3 py-2 text-[10px] text-muted-foreground">
-        Injuries replace stamina fatigue. Light injuries reduce attributes by 30%; heavy injuries reduce them by 60%.
+      {/* squad fitness */}
+      <div className="mt-3 rounded-xl border border-border bg-card/70 p-3">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-[10px] font-black uppercase tracking-wider">Squad Fitness</span>
+          <span className="text-[10px] font-bold text-primary">{substitutionUses} substitutions left</span>
+        </div>
+        <div className="space-y-2">
+          {playerArchetypes.slice(0, 11).map((player, i) => {
+            const fit = Math.round(stamina[i] ?? 100)
+            const injured = injuries[i]
+            const isOut = substituted[i]
+            return (
+              <div key={player.id} className="flex items-center gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between text-[9px] font-bold">
+                    <span className="truncate">{player.name}</span>
+                    <span className={fit < 30 ? "text-destructive" : "text-muted-foreground"}>{isOut ? "OUT" : injured === "heavy" ? "INJURED" : String(fit) + "%"}</span>
+                  </div>
+                  <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted">
+                    <div className="h-full rounded-full bg-primary transition-all" style={{ width: String(fit) + "%" }} />
+                  </div>
+                </div>
+                <Button type="button" size="sm" variant="outline" disabled={substitutionUses <= 0 || isOut} onClick={() => substitutePlayer(i)} className="h-7 rounded-lg px-2 text-[8px] font-black uppercase">
+                  {isOut ? "Subbed" : injured === "heavy" ? "Replace" : "Substitute"}
+                </Button>
+              </div>
+            )
+          })}
+        </div>
+        <p className="mt-2 text-[9px] text-muted-foreground">Fatigue reduces movement. Light injuries reduce attributes by 30%; heavy injuries reduce them by 60% and can be replaced.</p>
       </div>
 
       {/* controls */}
