@@ -28,7 +28,7 @@ const FREE_REWARDS = [
 
 const BOOST_TYPES: TeamBoostType[] = ["ghost-formation", "team-boost", "captain-boost", "defense-shield", "goalkeeper-boost"]
 const BOOST_DURATIONS: TeamBoostDuration[] = ["1-match", "2-matches", "10-matches", "20-matches"]
-const GHOST_FORMATION_PRICES = [2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7] as const
+const GHOST_FORMATION_PRICES = [4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9] as const
 const GHOST_FORMATION_KEY = "pitchside-ghost-formation-league"
 
 type ArtKind = "card" | "gems" | "bux" | "item" | "package"
