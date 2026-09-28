@@ -9,16 +9,17 @@ export type StorePackageReward = {
   type: StorePackageType
   players: string[]
   count: number
+  boosts: number
   guaranteedRange: string
   remainingRange: string
   bucks: number
   gems: number
 }
 
-const STORE_PACKAGE_RULES: Record<StorePackageType, { count: number; guaranteed: [number, number]; remaining: [number, number]; bucks: number; gems: number }> = {
-  "starter-box": { count: 5, guaranteed: [80, 84], remaining: [75, 79], bucks: 500, gems: 3 },
-  "arena-special": { count: 9, guaranteed: [84, 88], remaining: [77, 82], bucks: 2000, gems: 0 },
-  "mega-bundle": { count: 13, guaranteed: [88, 90], remaining: [77, 80], bucks: 60000, gems: 20 },
+const STORE_PACKAGE_RULES: Record<StorePackageType, { count: number; guaranteed: [number, number]; remaining: [number, number]; bucks: number; gems: number; boosts: number }> = {
+  "starter-box": { count: 5, guaranteed: [80, 84], remaining: [75, 79], bucks: 500, gems: 3, boosts: 0 },
+  "arena-special": { count: 9, guaranteed: [84, 88], remaining: [77, 82], bucks: 2000, gems: 0, boosts: 2 },
+  "mega-bundle": { count: 13, guaranteed: [88, 90], remaining: [77, 80], bucks: 60000, gems: 20, boosts: 3 },
 }
 
 function shuffleStorePlayers(players: Player[]) {
@@ -46,6 +47,7 @@ export function getStorePackageContents(type: StorePackageType): StorePackageRew
     type,
     players: selected.map((player) => player.id),
     count: selected.length,
+    boosts: rule.boosts,
     guaranteedRange: rule.guaranteed[0] + "–" + rule.guaranteed[1],
     remainingRange: rule.remaining[0] + "–" + rule.remaining[1],
     bucks: rule.bucks,
