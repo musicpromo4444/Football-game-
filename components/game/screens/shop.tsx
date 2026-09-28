@@ -278,7 +278,7 @@ export function Shop() {
         <SectionTitle icon={<Crown className="h-3.5 w-3.5" />} title="ITEM STORE" meta="Team Boosts & Gear" />
         <div className="grid grid-cols-3 gap-2.5">
           <ProductCard kind="item" icon={<Crown className="h-8 w-8 text-amber-200" />} title="Captain Boost" subtitle="Boosts your captain" price={<><Play className="mr-1 inline h-3 w-3" />WATCH AD</>} onBuy={() => claimFreeTeamBoost("captain-boost")} accent="gold" badge="FREE" />
-          <ProductCard kind="item" icon={<Zap className="h-8 w-8 text-cyan-200" />} title="3-5-2 Tactic" subtitle="Wing play formation" price="UNLOCKED" onBuy={() => flash("3-5-2 Tactic is already unlocked.")} accent="cyan" />
+          <ProductCard kind="item" icon={<Zap className="h-8 w-8 text-cyan-200" />} title="Ghost Formation" subtitle="Unlocks Ghost Formation" price="$2.00" onBuy={() => flash("Ghost Formation purchase will open when store billing is connected.")} accent="cyan" />
           <ProductCard kind="item" icon={<Shirt className="h-8 w-8 text-emerald-200" />} title="Kit Editor" subtitle="Normal · Pro · Legendary · Special Event" price="OPEN" onBuy={() => setKitEditorOpen(true)} accent="green" badge="CUSTOMIZE" />
           <ProductCard kind="item" icon={<Footprints className="h-8 w-8 text-orange-200" />} title="Speed Boots" subtitle="+2% speed per match" price="40 Gems" priceIcon={<Gem className="mr-1 inline h-3 w-3" />} onBuy={() => spend("gems", 40, {}, "Speed Boots activated.")} accent="pink" />
           <ProductCard kind="item" icon={<HeartPulse className="h-8 w-8 text-rose-200" />} title="Injury Shield" subtitle="20 matches guard" price="8,000 Bux" priceIcon={<Banknote className="mr-1 inline h-3 w-3" />} onBuy={() => spend("bucks", 8000, {}, "Injury Shield activated.")} accent="gold" />
@@ -289,9 +289,9 @@ export function Shop() {
       <section className="mt-6">
         <SectionTitle icon={<Package className="h-3.5 w-3.5" />} title="PACKAGE STORE" meta="Limited Bundles" />
         <div className="grid grid-cols-3 gap-2.5">
-          <ProductCard kind="package" icon={<Package className="h-8 w-8 text-amber-200" />} title="Starter Box" subtitle="20 Cards · 500 Bux · 3 Boosts" price="₦1,250" onBuy={() => flash("Payment will open when store billing is connected.")} accent="gold" />
-          <ProductCard kind="package" icon={<Trophy className="h-8 w-8 text-orange-200" />} title="Arena Special" subtitle="45 Cards · 2,000 Bux" price="₦2,800" onBuy={() => flash("Payment will open when store billing is connected.")} accent="gold" />
-          <ProductCard kind="package" icon={<Package className="h-8 w-8 text-cyan-200" />} title="Mega Bundle" subtitle="100 Cards · 60,000 Bux" price="₦12,500" onBuy={() => flash("Payment will open when store billing is connected.")} accent="cyan" badge="BEST VALUE" />
+          <ProductCard kind="package" icon={<Package className="h-8 w-8 text-amber-200" />} title="Starter Box" subtitle="20 Cards · 500 Bux · 3 Boosts" price="$2.00" onBuy={() => flash("Payment will open when store billing is connected.")} accent="gold" />
+          <ProductCard kind="package" icon={<Trophy className="h-8 w-8 text-orange-200" />} title="Arena Special" subtitle="45 Cards · 2,000 Bux" price="$4.00" onBuy={() => flash("Payment will open when store billing is connected.")} accent="gold" />
+          <ProductCard kind="package" icon={<Package className="h-8 w-8 text-cyan-200" />} title="Mega Bundle" subtitle="100 Cards · 60,000 Bux" price="$10.00" onBuy={() => flash("Payment will open when store billing is connected.")} accent="cyan" badge="BEST VALUE" />
         </div>
       </section>
 
