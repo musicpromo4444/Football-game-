@@ -69,7 +69,7 @@ export function CompetitionHub() {
         <div className="px-5 pt-3"><Back onBack={() => setPage("home")} /></div>
         <ScreenHeader title="Tournaments" subtitle="Compete through rounds and chase the final" />
         <div className="space-y-3 px-5">
-          {tournamentRows.map((t) => { const start=new Date(t.starts_at).getTime(); const end=new Date(t.ends_at).getTime(); const remaining=Math.max(0,(start-now)); const ending=Math.max(0,(end-now)); const active=now>=start&&now<end; const total=Math.floor(remaining/1000); const days=Math.floor(total/86400); const hours=Math.floor((total%86400)/3600); const mins=Math.floor((total%3600)/60); const secs=total%60; const countdown=active ? "LIVE NOW" : `${days}D ${hours}H ${mins}M ${secs}S`; return (
+          {tournamentRows.map((t) => { const start=new Date(t.starts_at).getTime(); const end=new Date(t.ends_at).getTime(); const remaining=Math.max(0,(start-now)); const ending=Math.max(0,(end-now)); const active=now>=start&&now<end; const total=Math.floor((active?ending:remaining)/1000); const days=Math.floor(total/86400); const hours=Math.floor((total%86400)/3600); const mins=Math.floor((total%3600)/60); const secs=total%60; const countdown=active ? `ENDS IN ${days}D ${hours}H ${mins}M ${secs}S` : `STARTS IN ${days}D ${hours}H ${mins}M ${secs}S`; return (
             <Card key={t.id} className="overflow-hidden p-4">
               <div className="flex items-start gap-3">
                 <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary"><Trophy className="h-6 w-6" /></span>
@@ -78,8 +78,8 @@ export function CompetitionHub() {
                   <p className="text-[10px] text-muted-foreground">{t.tournament_type} · {t.players_count || 0}/{t.max_players}</p>
                   <p className={`mt-1 text-[11px] font-black ${active ? "text-emerald-400" : "text-primary"}`}>{countdown}</p>
                   <div className="mt-2 grid grid-cols-2 gap-2 text-[9px]">
-                    <div className="rounded-lg bg-secondary p-2"><span className="text-muted-foreground">Prize</span><br/><b>{t.entry_type === "Free" ? "Free" : `${t.entry_amount} ${t.entry_type}`}</b></div>
-                    <div className="rounded-lg bg-secondary p-2"><span className="text-muted-foreground">Entry</span><br/><b>{active ? "Open now" : `Starts in ${days}d ${hours}h`}</b></div>
+                    <div className="rounded-lg bg-secondary p-2"><span className="text-muted-foreground">Entry</span><br/><b>{t.entry_type === "Free" ? "Free" : `${t.entry_amount} ${t.entry_type}`}</b></div>
+                    <div className="rounded-lg bg-secondary p-2"><span className="text-muted-foreground">Status</span><br/><b>{active ? "Open now" : "Scheduled"}</b></div>
                   </div>
                 </div>
               </div>
