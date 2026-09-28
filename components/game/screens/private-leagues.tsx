@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { ScreenHeader, Card, Pill } from "@/components/game/ui-bits"
 import { privateLeagues } from "@/components/game/data"
 
-export function PrivateLeagues() {
+export function PrivateLeagues({ onBack }: { onBack?: () => void }) {
   const [copied, setCopied] = useState<string | null>(null)
   const [leagueName, setLeagueName] = useState("")
   const [joinCode, setJoinCode] = useState("")
