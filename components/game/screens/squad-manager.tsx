@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils"
 import { readWallet, saveWallet } from "@/lib/economy"
 import { MAX_SQUAD_SIZE, SQUAD_CAPACITIES, SQUAD_UPGRADE_GEMS, addAuctionPlayer, getSquadCapacity, loadClubSquad, saveClubSquad, upgradeSquadCapacity } from "@/lib/club-squad"
 import { getTrainingState, readPlayerTrainingBoost, startTraining, TRAINING_CONFIG, type TrainingMode, type TrainingStatKey } from "@/lib/training-boosts"
-import { readPlayerCardBoosts } from "@/lib/xp-packages"
+import { readPlayerCardBoosts, getPlayerCards, applyPlayerCard } from "@/lib/xp-packages"
 
 type View = "squad" | "styles" | "training" | "market"
 type Formation = "4-3-3" | "4-4-2" | "3-5-2" | "4-2-3-1" | "4-1-4-1"
@@ -211,6 +211,8 @@ export function SquadManager() {
   const [trainingMode, setTrainingMode] = useState<TrainingMode | null>(null)
   const [trainingAdSeconds, setTrainingAdSeconds] = useState(0)
   const [trainingMessage, setTrainingMessage] = useState("")
+  const [playerCards, setPlayerCards] = useState(() => getPlayerCards())
+  const [cardTargetId, setCardTargetId] = useState(() => loadClubSquad(squad)[0]?.id || "")
   const [auctionNow, setAuctionNow] = useState(() => Date.now())
   const [auctionPlayers, setAuctionPlayers] = useState<AuctionPlayer[]>(() => readAuctionPlayers())
   const [currency, setCurrency] = useState<{ bucks: number; gems: number }>(() => {
@@ -654,6 +656,17 @@ export function SquadManager() {
               <p className="mt-1 font-display text-xl font-black">Regular +3 · Super +3 × 2</p>
               <p className="mt-2 text-xs text-muted-foreground">Regular trains 3 players at once with +3 to 1 random attribute after a 30-second ad. Super trains 1 player with +3 to 2 random attributes after up to 60 seconds of ads. Training lasts 24 hours and the same player is locked for 14 days.</p>
             </Card>
+            <Card glow="cyan" className="p-3">
+              <div className="flex items-center justify-between">
+                <div><p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Player Cards</p><p className="mt-1 text-[9px] text-muted-foreground">Every 400 XP earns a card worth +2 to one attribute. Every 6 attribute points = +1 OVR.</p></div>
+                <Pill accent="gold">{playerCards.length} READY</Pill>
+              </div>
+              <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
+                {teamPlayers.map((p) => <button key={p.id} type="button" onClick={() => setCardTargetId(p.id)} className={cn("min-w-[92px] rounded-xl border px-2 py-2 text-left", cardTargetId === p.id ? "border-primary bg-primary/15" : "border-border bg-card/70")}><p className="truncate text-[9px] font-black">{p.name}</p><p className="text-[8px] text-muted-foreground">{p.pos} · OVR {p.rating}</p></button>)}
+              </div>
+              {playerCards.length ? <div className="mt-2 space-y-2">{playerCards.map((card) => <div key={card.id} className="flex items-center gap-2 rounded-xl border border-amber-300/20 bg-amber-300/5 p-2.5"><div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-300/10 text-xs font-black text-amber-200">+2</div><div className="min-w-0 flex-1"><p className="text-[10px] font-black">+2 {card.attribute}</p><p className="text-[8px] text-muted-foreground">Apply to {teamPlayers.find((p) => p.id === cardTargetId)?.name || "player"}</p></div><Button size="sm" onClick={() => { const result = applyPlayerCard(card.id, cardTargetId); if (!result.ok) { setTrainingMessage(result.message); return } setPlayerCards(getPlayerCards()); setTrainingMessage("+2 " + card.attribute + " applied. OVR updates every 6 total attribute points.") }} className="rounded-lg text-[8px] font-black">APPLY</Button></div>)}</div> : <p className="mt-2 rounded-xl bg-card/60 p-3 text-center text-[9px] text-muted-foreground">Win matches to reach 400 XP and earn your first Player Card.</p>}
+            </Card>
+
             <Card className="p-3">
               <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Select players</p>
               <div className="mt-2 grid grid-cols-2 gap-2">
