@@ -275,7 +275,8 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
         const player = playerArchetypes[i]
         const injuryFactor = injuries[i] === "heavy" ? 0.4 : injuries[i] === "light" ? 0.7 : 1
         const trainingFactor = 1 + (player?.trainingBoost || 0) * 0.01
-        const speedBoost = (1 + ((player?.shopBoost?.stats.SPE || 0) + (player?.shopBoost?.stats.ACC || 0)) * 0.004) * (teamBoosts.team ? 1.05 : 1) * (teamBoosts.ghostFormation ? 1.08 : 1)
+        const specialSpeed = player?.specialStyle === "Speed Demon" ? 0.16 : player?.specialStyle === "Wingback Master" ? 0.08 : player?.specialStyle === "Pressing Forward" ? 0.06 : 0
+        const speedBoost = (1 + specialSpeed + ((player?.shopBoost?.stats.SPE || 0) + (player?.shopBoost?.stats.ACC || 0)) * 0.004) * (teamBoosts.team ? 1.05 : 1) * (teamBoosts.ghostFormation ? 1.08 : 1)
         const anchor = base[i] || p
         if (injuries[i] === "heavy") return { ...anchor }
         const dx = ballNow.x - p.x
@@ -349,6 +350,14 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
         const isSelected = selectedDefenderRef.current === i
         const defensiveRole = ["Ball Winner", "Stopper", "Ball-Playing Defender", "Inverted Fullback", "Wingback"].includes(player.role)
         if (ballOwner === null) {
+          if (player?.specialStyle === "Pressing Forward" && opponentCarrier.distance < 34) {
+            x += (opponentPositions[opponentCarrier.index].x - p.x) * 0.22
+            y += (opponentPositions[opponentCarrier.index].y - p.y) * 0.22
+          }
+          if (player?.specialStyle === "Wall" && opponentCarrier.distance < 30) {
+            x += (50 - p.x) * 0.08
+            y += (60 - p.y) * 0.08
+          }
           if (isSelected) {
             // Instant user-controlled press: no loading/selection delay.
             x += (ballNow.x - p.x) * 0.58
@@ -615,6 +624,7 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
         const shooter = playerArchetypes[ballOwner]
         const shooterRole = shooter?.role
         const special = shooter?.specialStyle
+        const specialAbility = shooter?.attributes ? shooter.specialStyle : undefined
         const distance = Math.hypot(50 - (positions[ballOwner]?.x ?? 50), 4 - (positions[ballOwner]?.y ?? 50))
         let accuracy = 0.58
         let power = 0.65
@@ -631,6 +641,18 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
           accuracy = 0.78
           power = 0.95
           finishText = "HAMMER HEADER"
+        } else if (special === "Power Finisher") {
+          accuracy = 0.86
+          power = 0.99
+          finishText = "POWER FINISHER"
+        } else if (special === "Dribble King") {
+          accuracy = 0.84
+          power = 0.82
+          finishText = "DRIBBLE KING FINISH"
+        } else if (special === "Maestro") {
+          accuracy = 0.76
+          power = 0.70
+          finishText = "MAESTRO PLACER"
         } else if (shooterRole === "Poacher") {
           accuracy = 0.9
           power = 0.7
@@ -658,7 +680,8 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
         const shooterCaptainBoost = teamBoosts.captain && shooter?.id === captainId ? 0.10 : 0
         accuracy = Math.min(0.99, accuracy + (shooter?.trainingBoost || 0) * 0.015 + (shooter?.shopBoost?.stats.SHO || 0) * 0.008 + (shooter?.shopBoost?.stats.CON || 0) * 0.003 + shooterCaptainBoost + (teamBoosts.team ? 0.05 : 0))
         power = Math.min(0.99, power + (shooter?.trainingBoost || 0) * 0.015 + (shooter?.shopBoost?.stats.SHO || 0) * 0.006 + (shooter?.shopBoost?.stats.STR || 0) * 0.003 + shooterCaptainBoost + (teamBoosts.team ? 0.05 : 0))
-        const guardianSave = 0.22 + (special === "Long-Range Sniper" ? 0.03 : 0) + (teamBoosts.goalkeeper ? 0.10 : 0) + (teamBoosts.team ? 0.03 : 0)
+        const guardianOnPitch = playerArchetypes.some((p) => p?.specialStyle === "Guardian")
+        const guardianSave = 0.22 + (guardianOnPitch ? 0.08 : 0) + (special === "Long-Range Sniper" ? 0.03 : 0) + (teamBoosts.goalkeeper ? 0.10 : 0) + (teamBoosts.team ? 0.03 : 0)
         const saved = Math.random() > accuracy || Math.random() < guardianSave
         const rebound = saved && Math.random() < (power > 0.88 ? 0.46 : 0.28)
 
@@ -718,6 +741,7 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
           (tactics.preset === "possession" || tactics.preset === "tiki-taka") &&
             ["Playmaker", "Deep-Lying Playmaker", "Mezzala", "Box-to-Box"].includes(player.role) ? 10 : 0
         const widthBonus = tactics.preset === "wing-play" ? wide * 0.28 : 0
+        const specialPassBonus = player?.specialStyle === "Maestro" ? 16 : player?.specialStyle === "Mezzala" ? 10 : player?.specialStyle === "Dribble King" ? 7 : 0
         const distanceWeight =
           tactics.preset === "possession" || tactics.preset === "tiki-taka" ? -d * 1.05 :
           tactics.preset === "long-ball" ? -d * 0.12 : -d * 0.4
@@ -725,7 +749,7 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
           tactics.preset === "possession" || tactics.preset === "tiki-taka" ? forward * 0.08 :
           tactics.preset === "counter-attack" || tactics.preset === "direct-play" || tactics.preset === "long-ball" ? forward * 0.65 :
           forward * 0.2
-        return roleBonus + widthBonus + distanceWeight + forwardWeight
+        return roleBonus + specialPassBonus + widthBonus + distanceWeight + forwardWeight
       }
 
       let targetIndex: number | null = null
