@@ -56,6 +56,12 @@ function buildRoundRobin(teams: Team[]): Fixture[] {
   return out
 }
 
+function buildKnockout(teams: Team[]): Fixture[] {
+  const out: Fixture[] = []
+  for (let i = 0; i + 1 < teams.length; i += 2) out.push({id:"r1-"+i,home:teams[i].id,away:teams[i+1].id,homeGoals:null,awayGoals:null,played:false})
+  return out
+}
+
 export function PrivateLeagues({ onBack }: { onBack?: () => void }) {
   const [leagues, setLeagues] = useState<League[]>(readLeagues)
   const [details, setDetails] = useState(readDetails)
