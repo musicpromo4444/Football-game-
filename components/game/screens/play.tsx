@@ -138,6 +138,10 @@ export function Play({ onNavigate }: { onNavigate: (tab: TabId) => void }) {
           p_away_goals: outcome.away,
         })
         if (error) throw error
+        if (data?.status === "disputed") {
+          setOnlineError("The two players reported different scores. The match was cancelled and both 100 Bux stakes were refunded.");
+          return;
+        }
         if (data?.status === "completed") {
           const payout = Number(data?.payout || 0)
           setMatchReward(payout)
