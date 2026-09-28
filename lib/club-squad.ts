@@ -81,6 +81,9 @@ export function claimSpecialPlayer(templateId: string): { player: Player | null;
   const claims = readSpecialClaims()
   if (claims[templateId]) return { player: claims[templateId], alreadyClaimed: true, message: "Already claimed." }
 
+  const currentSquad = loadClubSquad([])
+  if (currentSquad.length >= getSquadCapacity()) return { player: null, alreadyClaimed: false, message: "Squad is full. Upgrade your squad first." }
+
   const usedNames = new Set(Object.values(claims).map((player) => player.name))
   const availableNames = SPECIAL_NAMES.filter((name) => !usedNames.has(name))
   const name = randomFrom(availableNames.length ? availableNames : SPECIAL_NAMES)
@@ -201,7 +204,7 @@ export function loadClubSquad(base: Player[]): Player[] {
         ? saved.auctionPlayers.filter((player: Player) => player && typeof player.id === "string")
         : []
 
-      return [...ownedBase, ...auctionPlayers].slice(0, getSquadCapacity())
+      return [...ownedBase, ...auctionPlayers, ...getSpecialPlayerClaims()].slice(0, getSquadCapacity())
     }
 
     // Migrate the previous auction-only storage format without giving every
@@ -213,10 +216,10 @@ export function loadClubSquad(base: Player[]): Player[] {
         profileStorageKey(CLUB_SQUAD_KEY),
         JSON.stringify({ baseIds: starting.map((player) => player.id), auctionPlayers }),
       )
-      return [...starting, ...auctionPlayers].slice(0, getSquadCapacity())
+      return [...starting, ...auctionPlayers, ...getSpecialPlayerClaims()].slice(0, getSquadCapacity())
     }
 
-    return []
+    return getSpecialPlayerClaims().slice(0, getSquadCapacity())
   } catch {
     const starting = shufflePlayers(starterPool).slice(0, Math.min(24, getSquadCapacity()))
     try {
