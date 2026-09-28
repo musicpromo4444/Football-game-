@@ -111,6 +111,21 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
   const pointerModeRef = useRef<"ball" | "player">("ball")
   const [score, setScore] = useState({ home: 2, away: 1 })
   const [matchReward, setMatchReward] = useState<{ result: "WIN" | "DRAW" | "LOSS"; bucks: number } | null>(null)
+  const [kit, setKit] = useState<{ design: string; colorA: string; colorB: string } | null>(null)
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("pitchside-kit-collection") || "[]")
+      const equipped = Array.isArray(saved) ? saved[0] : null
+      if (equipped) setKit({ design: equipped.design || "Solid", colorA: equipped.colorA || "#10b981", colorB: equipped.colorB || "#08090a" })
+    } catch {}
+  }, [])
+
+  const kitBackground = useMemo(() => {
+    if (!kit) return "linear-gradient(145deg,#10b981,#08090a)"
+    if (kit.design === "Solid") return kit.colorA
+    return "linear-gradient(145deg," + kit.colorA + " 0 45%," + kit.colorB + " 45% 55%," + kit.colorA + " 55%)"
+  }, [kit])
   const teamBoosts = useMemo(() => getTeamBoostModifiers(), [])
   const [passes, setPasses] = useState(0)
   const [actions, setActions] = useState(0)
@@ -1135,6 +1150,13 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
             ) : tactics.preset.replace("-", " ")}
           </div>
         )}
+
+        {/* equipped home kit */}
+        {kit && positions.slice(0, 11).map((p, i) => (
+          <div key={"kit-" + i} className="pointer-events-none absolute z-10 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/30 shadow-lg" style={{ left: p.x + "%", top: p.y + "%", width: i === 0 ? 24 : 20, height: i === 0 ? 24 : 20, background: kitBackground }}>
+            <span className="text-[6px] font-black text-white drop-shadow">{i + 1}</span>
+          </div>
+        ))}
 
         {/* ball */}
         <span
