@@ -29,7 +29,9 @@ const tacticalPresets: Record<TacticalPresetId, { formation: Formation; instruct
   balanced: { formation: "4-2-3-1", instruction: "Possession", width: 1.0, tempo: 0.95, line: 0, direct: 0.5 },
 }
 
-const ghostFormationSlots: Point[] = [{x:50,y:90},{x:10,y:72},{x:30,y:78},{x:70,y:78},{x:90,y:72},{x:18,y:50},{x:42,y:55},{x:58,y:55},{x:82,y:50},{x:34,y:27},{x:66,y:27}]\n\nconst formationSlots: Record<Formation, Point[]> = {
+const ghostFormationSlots: Point[] = [{x:50,y:90},{x:10,y:72},{x:30,y:78},{x:70,y:78},{x:90,y:72},{x:18,y:50},{x:42,y:55},{x:58,y:55},{x:82,y:50},{x:34,y:27},{x:66,y:27}]
+
+const formationSlots: Record<Formation, Point[]> = {
   "4-3-3": [{x:50,y:90},{x:15,y:72},{x:37,y:75},{x:63,y:75},{x:85,y:72},{x:28,y:54},{x:50,y:51},{x:72,y:54},{x:18,y:31},{x:50,y:25},{x:82,y:31}],
   "4-4-2": [{x:50,y:90},{x:15,y:72},{x:37,y:75},{x:63,y:75},{x:85,y:72},{x:15,y:51},{x:38,y:53},{x:62,y:53},{x:85,y:51},{x:36,y:29},{x:64,y:29}],
   "3-5-2": [{x:50,y:90},{x:25,y:74},{x:50,y:76},{x:75,y:74},{x:10,y:51},{x:30,y:54},{x:50,y:56},{x:70,y:54},{x:90,y:51},{x:38,y:29},{x:62,y:29}],
@@ -105,7 +107,9 @@ function format(t: number) {
   return `${m}:${s.toString().padStart(2, "0")}`
 }
 
-export type MatchOutcome = { home: number; away: number }\n\nexport function MatchCanvas({ onMatchComplete }: { onMatchComplete?: (outcome: MatchOutcome) => void }) {
+export type MatchOutcome = { home: number; away: number }
+
+export function MatchCanvas({ onMatchComplete }: { onMatchComplete?: (outcome: MatchOutcome) => void }) {
   const [time, setTime] = useState(120)
   const [running, setRunning] = useState(false)
   const [ball, setBall] = useState<Point>({ x: 50, y: 55 })
@@ -174,7 +178,8 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
   const pitchRef = useRef<HTMLDivElement>(null)
   const lastBallRef = useRef(ball)
   const selectedDefenderRef = useRef<number | null>(2)
-  const opponentCarrierRef = useRef(0)\n  const completionSentRef = useRef(false)
+  const opponentCarrierRef = useRef(0)
+  const completionSentRef = useRef(false)
 
   useEffect(() => {
     if (trainingBlocked) { setRunning(false); return }
@@ -333,7 +338,14 @@ export type MatchOutcome = { home: number; away: number }\n\nexport function Mat
         const trainingFactor = 1 + (player?.trainingBoost || 0) * 0.01
         const specialSpeed = player?.specialStyle === "Speed Demon" ? 0.16 : player?.specialStyle === "Wingback Master" ? 0.08 : player?.specialStyle === "Pressing Forward" ? 0.06 : 0
         const speedBoost = (1 + specialSpeed + ((player?.shopBoost?.stats.SPE || 0) + (player?.shopBoost?.stats.ACC || 0)) * 0.004) * (teamBoosts.team ? 1.05 : 1) * (teamBoosts.ghostFormation ? 1.18 : 1) * effectiveFactor
-        const anchor = base[i] || p\n        if (teamBoosts.ghostFormation) {\n          const attacker = player?.pos === "FWD" || ["Advanced Forward", "Complete Forward", "Poacher", "Target Forward", "Inside Forward", "Winger"].includes(player?.role || "")\n          if (attacker) {\n            y -= 7\n            x += (50 - x) * 0.08\n          }\n        }
+        const anchor = base[i] || p
+        if (teamBoosts.ghostFormation) {
+          const attacker = player?.pos === "FWD" || ["Advanced Forward", "Complete Forward", "Poacher", "Target Forward", "Inside Forward", "Winger"].includes(player?.role || "")
+          if (attacker) {
+            y -= 7
+            x += (50 - x) * 0.08
+          }
+        }
         if (injuries[i] === "heavy" || substituted[i]) return { ...anchor }
         const dx = ballNow.x - p.x
         const dy = ballNow.y - p.y
