@@ -85,7 +85,7 @@ const playerFaceImages: Record<string, string> = {
 
 function PlayerFace({ player }: { player: Player }) {
   const initials = player.name.replace(/[^A-Za-z ]/g, "").split(" ").map((n) => n[0]).join("").slice(0, 2)
-  const face = playerFaceImages[player.id]
+  const face = player.face || playerFaceImages[player.id]
   return (
     <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full border-2 border-white/30 bg-slate-800 shadow-inner">
       {face ? (
@@ -148,7 +148,7 @@ function PlayerCard({ player, compact = false, trainingBoost = 0, shopStats = {}
     ["SPE", "SPE"], ["ACC", "ACC"], ["STA", "STA"], ["STR", "STR"],
     ["CON", "CON"], ["PAS", "PAS"], ["SHO", "SHO"], ["TAC", "TAC"],
   ]
-  const face = playerFaceImages[player.id]
+  const face = player.face || playerFaceImages[player.id]
   return (
     <div className={cn(
       "relative overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-b from-slate-950 via-card to-primary/5 shadow-xl",
