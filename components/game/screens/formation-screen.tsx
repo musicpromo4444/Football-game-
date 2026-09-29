@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react"
 import { ArrowLeft, ChevronDown, CircleDot, Crosshair, Flag, Shield, Trophy, Users } from "lucide-react"
-import { squad, type Player } from "@/components/game/data"
+import { squad } from "@/components/game/data"
+import { KitEditor } from "@/components/game/screens/kit-editor"
 
 type Formation = "4-3-3" | "4-4-2" | "3-5-2" | "4-2-3-1" | "4-1-4-1"
 type SetPiece = "Free Kick" | "Penalty" | "Corner"
@@ -23,9 +24,10 @@ const roleFor = (slot: string, i: number) => {
   return starters.find(p => p.pos === "DEF") || starters[i]
 }
 
-export function FormationScreen({ onClose }: { onClose: () => void }) {
+export function FormationScreen({ onClose, onTraining }: { onClose: () => void; onTraining?: () => void }) {
   const [formation, setFormation] = useState<Formation>("4-3-3")
   const [piece, setPiece] = useState<SetPiece>("Free Kick")
+  const [kitsOpen, setKitsOpen] = useState(false)
   const [takers, setTakers] = useState<Record<SetPiece,string>>({
     "Free Kick": starters[4]?.id || "p5",
     "Penalty": starters[5]?.id || "p6",
@@ -45,9 +47,11 @@ export function FormationScreen({ onClose }: { onClose: () => void }) {
 
       <div className="grid grid-cols-3 gap-1 bg-black/20 p-2">
         {(["Formation","Training","Kits"] as const).map((x) => (
-          <button key={x} onClick={() => x === "Formation" ? undefined : onClose()} className={x === "Formation" ? "rounded-xl bg-emerald-400 py-2 text-xs font-black text-black" : "rounded-xl py-2 text-xs font-bold text-white/55"}>{x}</button>
+          <button key={x} onClick={() => x === "Formation" ? undefined : x === "Training" ? onTraining?.() : setKitsOpen(true)} className={x === "Formation" ? "rounded-xl bg-emerald-400 py-2 text-xs font-black text-black" : "rounded-xl py-2 text-xs font-bold text-white/55"}>{x}</button>
         ))}
       </div>
+
+      {kitsOpen ? <div className="absolute inset-0 z-[110] overflow-y-auto bg-[#070909]"><KitEditor onClose={() => setKitsOpen(false)} /></div> : null}
 
       <div className="flex-1 overflow-y-auto px-3 pb-5">
         <div className="relative mx-auto mt-3 aspect-[0.72] w-full max-w-md overflow-hidden rounded-[28px] border border-white/15 bg-[#1d6b43] shadow-2xl">
