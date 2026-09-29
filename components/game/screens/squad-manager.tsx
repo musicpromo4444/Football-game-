@@ -351,6 +351,7 @@ export function SquadManager() {
 
   return (
     <div className="pb-5">
+      {formationOpen && <FormationScreen onClose={() => setFormationOpen(false)} onTraining={() => { setFormationOpen(false); setView("training") }} />}
       <Button onClick={() => setFormationOpen(true)} className="rounded-xl">Formation</Button>
       <ScreenHeader title="Tactics" subtitle="Set your formation, starting XI and substitutions" />
 
