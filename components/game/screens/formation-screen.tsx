@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react"
 import { ArrowLeft, ChevronDown, CircleDot, Crosshair, Flag, Shield, Trophy, Users } from "lucide-react"
 import { squad } from "@/components/game/data"
+import { loadClubSquad } from "@/lib/club-squad"
 import { KitEditor } from "@/components/game/screens/kit-editor"
 
 type Formation = "4-3-3" | "4-4-2" | "3-5-2" | "4-2-3-1" | "4-1-4-1"
@@ -16,15 +17,9 @@ const layouts: Record<Formation, Array<[string, number, number]>> = {
   "4-1-4-1": [["GK",50,90],["LB",18,70],["CB",38,73],["CB",62,73],["RB",82,70],["CDM",50,60],["LM",15,42],["CM",38,44],["CM",62,44],["RM",85,42],["ST",50,20]],
 }
 
-const starters = squad.slice(0, 11)
-const roleFor = (slot: string, i: number) => {
-  if (slot === "GK") return starters.find(p => p.pos === "GK") || starters[i]
-  if (["ST","LW","RW","LAM","RAM"].includes(slot)) return starters.find(p => p.pos === "FWD") || starters[i]
-  if (["CM","CDM","CAM","LM","RM","LWB","RWB"].includes(slot)) return starters.find(p => p.pos === "MID") || starters[i]
-  return starters.find(p => p.pos === "DEF") || starters[i]
-}
 
 export function FormationScreen({ onClose, onTraining }: { onClose: () => void; onTraining?: () => void }) {
+  const club = loadClubSquad(squad)
   const [formation, setFormation] = useState<Formation>(() => { try { return (localStorage.getItem("pitchside-formation") as Formation) || "4-3-3" } catch { return "4-3-3" } })
   const [piece, setPiece] = useState<SetPiece>("Free Kick")
   const [kitsOpen, setKitsOpen] = useState(false)
@@ -33,7 +28,15 @@ export function FormationScreen({ onClose, onTraining }: { onClose: () => void; 
     "Penalty": starters[5]?.id || "p6",
     "Corner": starters[3]?.id || "p4",
   } } catch { return { "Free Kick": starters[4]?.id || "p5", "Penalty": starters[5]?.id || "p6", "Corner": starters[3]?.id || "p4" } } })
-  const bench = squad.slice(11, 18)
+  const lineup = (() => { try { const saved = JSON.parse(localStorage.getItem("pitchside-lineup") || "null"); if (Array.isArray(saved)) { const ordered = saved.map((id: string) => club.find(p => p.id === id)).filter(Boolean); const rest = club.filter(p => !saved.includes(p.id)); return [...ordered, ...rest] } } catch {} return club } )()
+  const starters = lineup.slice(0, 11)
+  const bench = lineup.slice(11, 18)
+  const roleFor = (slot: string, i: number) => {
+    if (slot === "GK") return starters.find(p => p.pos === "GK") || starters[i]
+    if (["ST","LW","RW","LAM","RAM"].includes(slot)) return starters.filter(p => p.pos === "FWD")[Math.min(i, starters.filter(p => p.pos === "FWD").length - 1)] || starters[i]
+    if (["CM","CDM","CAM","LM","RM","LWB","RWB"].includes(slot)) return starters.filter(p => p.pos === "MID")[Math.min(i, starters.filter(p => p.pos === "MID").length - 1)] || starters[i]
+    return starters.filter(p => p.pos === "DEF")[Math.min(i, starters.filter(p => p.pos === "DEF").length - 1)] || starters[i]
+  }
 
   const current = useMemo(() => layouts[formation], [formation])
   const saveTeamSetup = () => { localStorage.setItem("pitchside-formation", formation); localStorage.setItem("pitchside-set-piece-takers", JSON.stringify(takers)); window.dispatchEvent(new Event("pitchside-team-setup-updated")); onClose() }
@@ -85,7 +88,7 @@ export function FormationScreen({ onClose, onTraining }: { onClose: () => void; 
           <div className="mt-3 flex items-center gap-3">
             {piece === "Corner" ? <Flag className="h-5 w-5 text-emerald-300"/> : piece === "Penalty" ? <Trophy className="h-5 w-5 text-emerald-300"/> : <CircleDot className="h-5 w-5 text-emerald-300"/>}
             <select value={takers[piece]} onChange={e => setTakers(v => ({...v,[piece]:e.target.value}))} className="flex-1 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-xs font-bold">
-              {squad.filter(p => piece === "Penalty" ? p.pos === "FWD" || p.pos === "MID" : p.pos !== "GK").slice(0,10).map(p => <option key={p.id} value={p.id}>{p.name} · {p.style}</option>)}
+              {club.filter(p => piece === "Penalty" ? p.pos === "FWD" || p.pos === "MID" : p.pos !== "GK").slice(0,10).map(p => <option key={p.id} value={p.id}>{p.name} · {p.style}</option>)}
             </select>
           </div>
         </div>
