@@ -11,6 +11,7 @@ import { readWallet, saveWallet } from "@/lib/economy"
 import { MAX_SQUAD_SIZE, SQUAD_CAPACITIES, SQUAD_UPGRADE_GEMS, addAuctionPlayer, getSquadCapacity, loadClubSquad, saveClubSquad, upgradeSquadCapacity } from "@/lib/club-squad"
 import { getTrainingState, readPlayerTrainingBoost, startTraining, TRAINING_CONFIG, type TrainingMode, type TrainingStatKey } from "@/lib/training-boosts"
 import { readPlayerCardBoosts, getPlayerCards, applyPlayerCard } from "@/lib/xp-packages"
+import { FormationScreen } from "@/components/game/screens/formation-screen"
 
 type View = "squad" | "styles" | "training" | "market"
 type Formation = "4-3-3" | "4-4-2" | "3-5-2" | "4-2-3-1" | "4-1-4-1"
@@ -70,7 +71,7 @@ const playerFaceImages: Record<string, string> = {
 function PlayerFace({ player }: { player: Player }) {
   const initials = player.name.replace(/[^A-Za-z ]/g, "").split(" ").map((n) => n[0]).join("").slice(0, 2)
   const face = player.face || playerFaceImages[player.id]
-  return (
+  if (formationOpen) return <FormationScreen onClose={() => setFormationOpen(false)} />\n  return (
     <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full border-2 border-white/30 bg-slate-800 shadow-inner">
       {face ? (
         <img
@@ -188,7 +189,7 @@ function PlayerCard({ player, compact = false, trainingBoost = 0, shopStats = {}
   )
 }
 
-export function SquadManager() {
+export function SquadManager() {\n  const [formationOpen, setFormationOpen] = useState(false)
   const [view, setView] = useState<View>("styles")
   const [previewTick, setPreviewTick] = useState(0)
   useEffect(() => { const id = window.setInterval(() => setPreviewTick((v) => v + 1), 500); return () => window.clearInterval(id) }, [])
@@ -349,7 +350,7 @@ export function SquadManager() {
 
   return (
     <div className="pb-5">
-      <ScreenHeader title="Tactics" subtitle="Set your formation, starting XI and substitutions" />
+      <Button onClick={() => setFormationOpen(true)} className="rounded-xl">Formation</Button>\n      <ScreenHeader title="Tactics" subtitle="Set your formation, starting XI and substitutions" />
 
       <div className="px-5">
         <div className="flex rounded-xl border border-border bg-card/70 p-1">
