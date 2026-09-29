@@ -25,24 +25,25 @@ const roleFor = (slot: string, i: number) => {
 }
 
 export function FormationScreen({ onClose, onTraining }: { onClose: () => void; onTraining?: () => void }) {
-  const [formation, setFormation] = useState<Formation>("4-3-3")
+  const [formation, setFormation] = useState<Formation>(() => { try { return (localStorage.getItem("pitchside-formation") as Formation) || "4-3-3" } catch { return "4-3-3" } })
   const [piece, setPiece] = useState<SetPiece>("Free Kick")
   const [kitsOpen, setKitsOpen] = useState(false)
-  const [takers, setTakers] = useState<Record<SetPiece,string>>({
+  const [takers, setTakers] = useState<Record<SetPiece,string>>(() => { try { return JSON.parse(localStorage.getItem("pitchside-set-piece-takers") || "null") || {
     "Free Kick": starters[4]?.id || "p5",
     "Penalty": starters[5]?.id || "p6",
     "Corner": starters[3]?.id || "p4",
-  })
+  } } catch { return { "Free Kick": starters[4]?.id || "p5", "Penalty": starters[5]?.id || "p6", "Corner": starters[3]?.id || "p4" } } })
   const bench = squad.slice(11, 18)
 
   const current = useMemo(() => layouts[formation], [formation])
+  const saveTeamSetup = () => { localStorage.setItem("pitchside-formation", formation); localStorage.setItem("pitchside-set-piece-takers", JSON.stringify(takers)); window.dispatchEvent(new Event("pitchside-team-setup-updated")); onClose() }
 
   return (
     <div className="fixed inset-0 z-[100] flex min-h-screen flex-col bg-[#071713] text-white">
       <div className="flex items-center justify-between border-b border-white/10 bg-black/25 px-4 py-3">
         <button onClick={onClose} className="flex items-center gap-2 rounded-xl px-2 py-2 text-sm font-bold"><ArrowLeft className="h-5 w-5" /> Team</button>
         <div className="text-center"><p className="text-[9px] font-black uppercase tracking-[0.25em] text-emerald-300">Matchday XI</p><h1 className="text-lg font-black">Formation</h1></div>
-        <button className="rounded-xl bg-emerald-400 px-3 py-2 text-xs font-black text-black">SAVE</button>
+        <button onClick={saveTeamSetup} className="rounded-xl bg-emerald-400 px-3 py-2 text-xs font-black text-black">SAVE</button>
       </div>
 
       <div className="grid grid-cols-3 gap-1 bg-black/20 p-2">
