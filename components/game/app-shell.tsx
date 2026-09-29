@@ -17,12 +17,14 @@ import { getCountry, readProfile } from "@/lib/locale"
 import { squad } from "@/components/game/data"
 import { StoreItemSpotlight } from "@/components/game/store-item-spotlight"
 import { FastMatchTutorial } from "@/components/game/fast-match-tutorial"
+import { DailyRewards } from "@/components/game/screens/daily-rewards"
 
 export function AppShell() {
   const [tab, setTab] = useState<TabId>("play")
   const [auctionOpen, setAuctionOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [captainEditOpen, setCaptainEditOpen] = useState(false)
+  const [dailyRewardsOpen, setDailyRewardsOpen] = useState(false)
   const [captainName, setCaptainName] = useState(squad[5]?.name || "Captain")
   const captain = squad[5]
   const [auctionDisplay, setAuctionDisplay] = useState(readAuctionDisplay())
@@ -55,6 +57,7 @@ export function AppShell() {
             <UserCircle className="h-6 w-6 text-primary" />
           </button>
         </div>
+        {dailyRewardsOpen && <DailyRewards onClose={() => setDailyRewardsOpen(false)} />}
         {profileOpen && (
           <div className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm" onClick={() => setProfileOpen(false)}>
             <div className="mx-auto flex min-h-full max-w-md items-start justify-end px-4 pt-16" onClick={(e) => e.stopPropagation()}>
@@ -96,6 +99,9 @@ export function AppShell() {
                   </div>
                 )}
 
+                <button type="button" onClick={() => { setProfileOpen(false); setDailyRewardsOpen(true) }} className="mt-3 flex w-full items-center gap-3 rounded-2xl border border-emerald-400/20 bg-emerald-400/5 px-4 py-3 text-left">
+                  <span className="text-xl">🎁</span><span className="flex-1"><span className="block text-sm font-bold">Daily Rewards</span><span className="block text-[10px] text-muted-foreground">Claim your daily streak reward</span></span><span className="text-xs font-black text-emerald-300">OPEN</span>
+                </button>
                 <div className="mt-3 overflow-hidden rounded-2xl border border-border bg-background/50">
                   <button type="button" onClick={() => { setProfileOpen(false); setCaptainEditOpen(false); setTab("settings") }} className="flex w-full items-center gap-3 border-b border-border px-4 py-3 text-left">
                     <SettingsIcon className="h-5 w-5 text-primary" />
