@@ -71,7 +71,6 @@ const playerFaceImages: Record<string, string> = {
 function PlayerFace({ player }: { player: Player }) {
   const initials = player.name.replace(/[^A-Za-z ]/g, "").split(" ").map((n) => n[0]).join("").slice(0, 2)
   const face = player.face || playerFaceImages[player.id]
-  if (formationOpen) return <FormationScreen onClose={() => setFormationOpen(false)} onTraining={() => { setFormationOpen(false); setView("training") }} />
   return (
     <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full border-2 border-white/30 bg-slate-800 shadow-inner">
       {face ? (
